@@ -17,8 +17,14 @@ C++20 and better where the [SDL2 library](https://www.libsdl.org/) and [SFML lib
 
 ### Build Dependencies
 - CMake 3.13+ but >= 3.18 is recommended
-- gcc >= 8.3.0
-  - or clang >= 10.0
+- C++20 compiler
+  - gcc >= 10
+  - clang >= 15
+- [SDL2 library](https://www.libsdl.org/) 
+- [SFML library](https://www.sfml-dev.org/)
+- Optional
+  - clang-tidy >= 15
+  - clang-format >= 15
 
 Installing build dependencies on Debian (11 or better):
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
@@ -61,4 +67,41 @@ To build documentation run:
 ~~~~~~~~~~~~~
 make doc
 ~~~~~~~~~~~~~
+
+### IDE Integration
+
+#### Eclipse 
+IDE integration configuration files are provided for 
+- [Eclipse](https://download.eclipse.org/eclipse/downloads/) with extensions
+  - [CDT](https://github.com/eclipse-cdt/) or [CDT @ eclipse.org](https://projects.eclipse.org/projects/tools.cdt)
+  - `CMake Support`, install `C/C++ CMake Build Support` with ID `org.eclipse.cdt.cmake.feature.group`
+
+You can import the project to your workspace via `File . Import...` and `Existing Projects into Workspace` menu item.
+
+For Eclipse one might need to adjust some setting in the `.project` and `.cproject` (CDT) 
+via Eclipse settings UI, but it should just work out of the box.
+
+#### VSCodium or VS Code
+
+IDE integration configuration files are provided for 
+- [VSCodium](https://vscodium.com/) or [VS Code](https://code.visualstudio.com/) with extensions
+  - [vscode-clangd](https://github.com/clangd/vscode-clangd)
+    - Notable, `.settings/org.eclipse.cdt.core.prefs` describes the clang-format setup for this extension.
+  - [twxs.cmake](https://github.com/twxs/vs.language.cmake)
+  - [ms-vscode.cmake-tools](https://github.com/microsoft/vscode-cmake-tools)
+  - [notskm.clang-tidy](https://github.com/notskm/vscode-clang-tidy)
+  - [cschlosser.doxdocgen](https://github.com/cschlosser/doxdocgen)
+  - [jerrygoyal.shortcut-menu-bar](https://github.com/GorvGoyl/Shortcut-Menu-Bar-VSCode-Extension)
+
+For VSCodium one might copy the [example root-workspace file](https://jausoft.com/cgit/cs_class/gfxbox2.git/tree/.vscode/gfxbox2.code-workspace_example)
+to the parent folder of this project (*note the filename change*) and adjust the `path` to your filesystem.
+~~~~~~~~~~~~~
+cp .vscode/gfxbox2.code-workspace_example ../gfxbox2.code-workspace
+vi ../gfxbox2.code-workspace
+~~~~~~~~~~~~~
+Then you can open it via `File . Open Workspace from File...` menu item.
+- All listed extensions are added in this workspace file
+- The [local settings.json](.vscode/settings.json) and has `clang-tidy` enabled
+  - If using `clang-tidy` is too slow, just remove it from the settings file.
+  - `clangd` will still contain a good portion of `clang-tidy` checks
 
