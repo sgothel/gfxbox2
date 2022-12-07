@@ -43,6 +43,9 @@ apt install doxygen graphviz
 
 Perhaps change the clang version-suffix of above clang install line to the appropriate version.
 
+After complete clang installation, you might want to setup the latest version as your default.
+For Debian you can use this [clang alternatives setup script](https://jausoft.com/cgit/cs_class/gfxbox2.git/tree/scripts/setup_clang_alternatives.sh).
+
 ### Build Procedure
 The following is covered with [a convenient build script](https://jausoft.com/cgit/cs_class/gfxbox2.git/tree/scripts/build.sh).
 
