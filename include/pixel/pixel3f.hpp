@@ -1,5 +1,5 @@
-#ifndef PIXEL2DF_HPP_
-#define PIXEL2DF_HPP_
+#ifndef PIXEL3F_HPP_
+#define PIXEL3F_HPP_
 
 #include "pixel.hpp"
 
@@ -485,4 +485,4 @@ namespace pixel::f3 {
 
 } // namespace pixel_3f
 
-#endif /*  PIXEL2DI_HPP_ */
+#endif /*  PIXEL3F_HPP_ */

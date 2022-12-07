@@ -1,5 +1,5 @@
-#ifndef PIXEL2DI_HPP_
-#define PIXEL2DI_HPP_
+#ifndef PIXEL2I_HPP_
+#define PIXEL2I_HPP_
 
 #include "pixel.hpp"
 
@@ -22,10 +22,10 @@ namespace pixel::i2 {
             rotate(sin, cos, ctr);
         }
         void rotate(const float sin, const float cos, const point_t& ctr) {
-            const float x0 = x - ctr.x;
-            const float y0 = y - ctr.y;
-            const int tmp = std::round( x0 * cos - y0 * sin ) + ctr.x;
-                        y = std::round( x0 * sin + y0 * cos ) + ctr.y;
+            const float x0 = (float)(x - ctr.x);
+            const float y0 = (float)(y - ctr.y);
+            const int tmp = pixel::round_to_int( x0 * cos - y0 * sin ) + ctr.x;
+                        y = pixel::round_to_int( x0 * sin + y0 * cos ) + ctr.y;
             x = tmp;
         }
 
@@ -52,7 +52,7 @@ namespace pixel::i2 {
         std::string toString() const { return "L[" + p0.toString() + ", " + p1.toString() + "]"; }
 
         static void for_all_points(const point_t& p0, const point_t& p1,
-                                   point_action_t point_action)
+                                   const point_action_t& point_action)
         {
             const int dx = p1.x - p0.x;
             const int dy = p1.y - p0.y;
@@ -62,7 +62,7 @@ namespace pixel::i2 {
                 int sy=0;
                 float sx=0.0f;
                 for(; sy != dy; sy+=step_y, sx+=step_x) {
-                    const point_t p { (int)std::round( p0.x + sx ), p0.y + sy };
+                    const point_t p { pixel::round_to_int( (float)p0.x + sx ), p0.y + sy };
                     if( !point_action(p) ) {
                         return;
                     }
@@ -73,7 +73,7 @@ namespace pixel::i2 {
                 int sx=0;
                 float sy=0.0f;
                 for(; sx != dx; sx+=step_x, sy+=step_y) {
-                    point_t p { p0.x + sx, (int)std::round( p0.y + sy ) };
+                    point_t p { p0.x + sx, pixel::round_to_int( (float)p0.y + sy ) };
                     if( !point_action(p) ) {
                         return;
                     }
@@ -190,7 +190,7 @@ namespace pixel::i2 {
             for(int x=x1; x<=x2; ++x) {
                 const int dx=x-cx;
                 const int dy=y-cy;
-                const int rt=sqrt(dx*dx + dy*dy);
+                const int rt=pixel::round_to_int( std::sqrt( (float)(dx*dx + dy*dy) ) );
                 bool draw;
                 switch( mode ) {
                     case CircleDrawType::OUTLINE:
@@ -262,12 +262,12 @@ namespace pixel::i2 {
         int width() const {
             const int dx = tr.x - tl.x;
             const int dy = tr.y - tl.y;
-            return std::sqrt(dx*dx + dy*dy);
+            return pixel::round_to_int( std::sqrt( (float)(dx*dx + dy*dy) ) );
         }
         int height() const {
             const int dx = bl.x - tl.x;
             const int dy = bl.y - tl.y;
-            return std::sqrt(dx*dx + dy*dy);
+            return pixel::round_to_int( std::sqrt( (float)(dx*dx + dy*dy) ) );
         }
 
         void move_dir(const int d) {
@@ -492,5 +492,5 @@ namespace pixel::i2 {
 
 } // namespace pixel_2i
 
-#endif /*  PIXEL2DI_HPP_ */
+#endif /*  PIXEL2I_HPP_ */
 

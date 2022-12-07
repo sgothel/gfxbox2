@@ -13,7 +13,7 @@ CheckOptions:
     value:           'true'
 
 WarningsAsErrors: '*'
-HeaderFilterRegex: '(include/picel/.*)\.hpp'
+HeaderFilterRegex: '(include/pixel/.*)\.hpp'
 AnalyzeTemporaryDtors: false
 FormatStyle:     none
 InheritParentConfig: false
