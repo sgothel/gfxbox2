@@ -1,0 +1,150 @@
+#include "pixel/pixel.hpp"
+
+#include <SFML/Graphics.hpp>
+
+using namespace pixel;
+
+static std::shared_ptr<sf::RenderWindow> window;
+static float fb_origin_norm[2] = { 0.0f, 0.0f };
+static size_t fb_pixels_dim_size = 0;
+static size_t fb_pixels_byte_size = 0;
+static size_t fb_pixels_byte_width = 0;
+static sf::Texture fb_tbuffer;
+static std::shared_ptr<sf::Sprite> fb_sbuffer;
+
+uint32_t pixel::rgba_to_uint32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
+    // 32-bit ABGR8888
+    return ( ( (uint32_t)a << 24 ) & 0xff000000U ) |
+           ( ( (uint32_t)b << 16 ) & 0x00ff0000U ) |
+           ( ( (uint32_t)g <<  8 ) & 0x0000ff00U ) |
+           ( ( (uint32_t)r       ) & 0x000000ffU );
+}
+
+static void on_window_resized(bool set_view) noexcept {
+    sf::Vector2u size = window->getSize();
+    fb_width = (int)size.x;
+    fb_height = (int)size.y;
+    fb_max_x = fb_width - 1;
+    fb_max_y = fb_height - 1;
+
+    if( set_view ) {
+        sf::FloatRect visibleArea(0, 0, (float)fb_width, (float)fb_height);
+        window->setView(sf::View(visibleArea));
+    }
+
+    cart_origin[0] = round_to_int((float)fb_width * fb_origin_norm[0]);
+    cart_origin[1] = round_to_int((float)fb_height * fb_origin_norm[1]);
+
+    cart_min_x = -cart_origin[0];
+    cart_min_y = -cart_origin[1];
+    cart_max_x =  cart_origin[0]-1;
+    cart_max_y =  cart_origin[1]-1;
+
+    printf("Screen size %d x %d, min 0 / 0, max %d / %d \n",
+            fb_width, fb_height, fb_max_x, fb_max_y);
+
+    printf("Math origin %d / %d, min %d / %d, max %d / %d \n",
+            cart_origin[0], cart_origin[1], cart_min_x, cart_min_y, cart_max_x, cart_max_y);
+
+    frames_per_sec = 60;
+    window->setFramerateLimit(frames_per_sec);
+
+    fb_pixels_dim_size = (size_t)(fb_width * fb_height);
+    fb_pixels_byte_size = fb_pixels_dim_size * 4;
+    fb_pixels_byte_width = (size_t)(fb_width * 4);
+    fb_pixels.reserve(fb_pixels_dim_size);
+    fb_pixels.resize(fb_pixels_dim_size);
+
+    fb_tbuffer = sf::Texture();
+    fb_tbuffer.create(fb_width, fb_height);
+    fb_tbuffer.update((uint8_t*)fb_pixels.data());
+    fb_sbuffer = std::make_shared<sf::Sprite>(fb_tbuffer);
+}
+
+void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2]) {
+    fb_origin_norm[0] = origin_norm[0];
+    fb_origin_norm[1] = origin_norm[1];
+
+    window = std::make_shared<sf::RenderWindow>(sf::VideoMode(win_width, win_height), "Freefall01b");
+    window->setTitle(std::string(title));
+    window->setVerticalSyncEnabled(true);
+
+    on_window_resized(false /* set_view */);
+}
+
+void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
+    window->clear(sf::Color(r, g, b, a));
+
+    const uint32_t c = rgba_to_uint32(r, g, b, a);
+    size_t count = fb_pixels_dim_size;
+    uint32_t* p = fb_pixels.data();
+    while(count--) { *p++ = c; }
+    // std::fill(p, p+count, c);
+    // ::memset(fb_pixels.data(), 0, fb_pixels_byte_size);
+}
+
+void pixel::swap_pixel_fb() noexcept {
+    fb_tbuffer.update((uint8_t*)fb_pixels.data());
+    window->draw(*fb_sbuffer);
+    window->display();
+}
+
+void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir) noexcept {
+    static sf::Keyboard::Key scancode = sf::Keyboard::Key::Escape;
+    close = false;
+    resized = false;
+
+    sf::Event event;
+    while ( window->pollEvent(event) ) {
+        if (event.type == sf::Event::Closed) {
+            close = true;
+        } else if (event.type == sf::Event::Resized) {
+            printf("Window Resized: %u x %u\n", event.size.width, event.size.height);
+            resized = true;
+            on_window_resized(true /* set_view */);
+        } else if (event.type == sf::Event::KeyReleased) {
+            /**
+             * The following key sequence is possible, hence we need to validate whether the KEYUP
+             * matches and releases the current active keyscan/direction:
+             * - KEY DOWN: scancode 81 -> 'D', scancode 81, set_dir 1)
+             * - [    3,131] KEY DOWN: scancode 81 -> 'D', scancode 81, set_dir 1)
+             * - [    3,347] KEY DOWN: scancode 80 -> 'L', scancode 80, set_dir 1)
+             * - [    3,394] KEY UP: scancode 81 (ignored) -> 'L', scancode 80, set_dir 1)
+             * - [    4,061] KEY UP: scancode 80 (release) -> 'L', scancode 80, set_dir 0)
+             */
+            if ( event.key.code == scancode ) {
+                set_dir = false;
+            }
+            break;
+        } else if (event.type == sf::Event::KeyPressed) {
+            switch( event.key.code ) {
+                case sf::Keyboard::Key::Q:
+                    [[fallthrough]];
+                case sf::Keyboard::Key::Escape:
+                    close = true;
+                    break;
+                case sf::Keyboard::Key::Up:
+                    dir = direction_t::UP;
+                    set_dir = true;
+                    break;
+                case sf::Keyboard::Key::Left:
+                    dir = direction_t::LEFT;
+                    set_dir = true;
+                    break;
+                case sf::Keyboard::Key::Down:
+                    dir = direction_t::DOWN;
+                    set_dir = true;
+                    break;
+                case sf::Keyboard::Key::Right:
+                    dir = direction_t::RIGHT;
+                    set_dir = true;
+                    break;
+                default:
+                    break;
+            }
+            if( set_dir ) {
+                scancode = event.key.code;
+            }
+        }
+    }
+}
