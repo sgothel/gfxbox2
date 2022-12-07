@@ -1,4 +1,4 @@
-# gfxbox2, a C++ Computer Graphics Sandbox for our computer science class
+# gfxbox2, a C++ Computer Graphics Sandbox
 
 [Original document location](https://jausoft.com/cgit/cs_class/gfxbox2.git/about/).
 
@@ -31,12 +31,12 @@ apt install doxygen graphviz
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ### Build Procedure
-The following is covered with [a convenient build script](https://jausoft.com/cgit/gfxbox2.git/tree/scripts/build.sh).
+The following is covered with [a convenient build script](https://jausoft.com/cgit/cs_class/gfxbox2.git/tree/scripts/build.sh).
 
 For a generic build use:
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 CPU_COUNT=`getconf _NPROCESSORS_ONLN`
-git clone --recurse-submodule git://jausoft.com/srv/scm/gfxbox2.git
+git clone --recurse-submodule git://jausoft.com/srv/scm/cs_class/gfxbox2.git
 cd gfxbox2
 mkdir build
 cd build
