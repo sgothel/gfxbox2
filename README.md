@@ -22,19 +22,26 @@ C++20 and better where the [SDL2 library](https://www.libsdl.org/) and [SFML lib
   - clang >= 15
 - [SDL2 library](https://www.libsdl.org/) 
 - [SFML library](https://www.sfml-dev.org/)
-- Optional
+- Optional for `lint` validation
   - clang-tidy >= 15
+- Optional for `vscodium` integration
+  - clangd >= 15
+  - clang-tools >= 15
   - clang-format >= 15
+
 
 Installing build dependencies on Debian (11 or better):
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 apt install git
 apt install build-essential g++ gcc libc-dev libpthread-stubs0-dev 
+apt install clang-15 clang-tidy-15 clangd-15 clang-tools-15 clang-format-15
 apt install cmake cmake-extras extra-cmake-modules pkg-config
 apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev
 apt install libsfml-dev
 apt install doxygen graphviz
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Perhaps change the clang version-suffix of above clang install line to the appropriate version.
 
 ### Build Procedure
 The following is covered with [a convenient build script](https://jausoft.com/cgit/cs_class/gfxbox2.git/tree/scripts/build.sh).
@@ -61,6 +68,13 @@ Changing install path from /usr/local to /usr
 Building debug build:
 ~~~~~~~~~~~~~
 -DDEBUG=ON
+~~~~~~~~~~~~~
+
+Building with clang and clang-tidy `lint` validation
+~~~~~~~~~~~~~
+-DCMAKE_C_COMPILER=/usr/bin/clang 
+-DCMAKE_CXX_COMPILER=/usr/bin/clang++ 
+-DCMAKE_CXX_CLANG_TIDY=/usr/bin/clang-tidy;-p;$rootdir/$build_dir
 ~~~~~~~~~~~~~
 
 To build documentation run: 
