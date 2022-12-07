@@ -118,7 +118,7 @@ vi ../gfxbox2.code-workspace
 ~~~~~~~~~~~~~
 Then you can open it via `File . Open Workspace from File...` menu item.
 - All listed extensions are referenced in this workspace file to be installed via the IDE
-- The [local settings.json](.vscode/settings.json) and has `clang-tidy` enabled
+- The [local settings.json](.vscode/settings.json) has `clang-tidy` enabled
   - If using `clang-tidy` is too slow, just remove it from the settings file.
   - `clangd` will still contain a good portion of `clang-tidy` checks
 
