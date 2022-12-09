@@ -103,7 +103,6 @@ via Eclipse settings UI, but it should just work out of the box.
 IDE integration configuration files are provided for 
 - [VSCodium](https://vscodium.com/) or [VS Code](https://code.visualstudio.com/) with extensions
   - [vscode-clangd](https://github.com/clangd/vscode-clangd)
-    - Notable, `.settings/org.eclipse.cdt.core.prefs` describes the clang-format setup for this extension.
   - [twxs.cmake](https://github.com/twxs/vs.language.cmake)
   - [ms-vscode.cmake-tools](https://github.com/microsoft/vscode-cmake-tools)
   - [notskm.clang-tidy](https://github.com/notskm/vscode-clang-tidy)
