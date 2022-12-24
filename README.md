@@ -21,7 +21,12 @@ C++20 and better where the [SDL2 library](https://www.libsdl.org/) and [SFML lib
   - gcc >= 10
   - clang >= 15
 - [SDL2 library](https://www.libsdl.org/) 
-- [SFML library](https://www.sfml-dev.org/)
+- [SFML library](https://www.sfml-dev.org/) **optional**
+- Example funcdraw
+    - Parser generator
+        - [bison >= 3.2](https://www.gnu.org/software/bison/manual/) 
+    - Lexer generator
+        - [flex](https://github.com/westes/flex)
 - Optional for `lint` validation
   - clang-tidy >= 15
 - Optional for `vscodium` integration
@@ -38,6 +43,7 @@ apt install clang-15 clang-tidy-15 clangd-15 clang-tools-15 clang-format-15
 apt install cmake cmake-extras extra-cmake-modules pkg-config
 apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev
 apt install libsfml-dev
+apt install bison flex
 apt install doxygen graphviz
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -78,6 +84,11 @@ Building with clang and clang-tidy `lint` validation
 -DCMAKE_C_COMPILER=/usr/bin/clang 
 -DCMAKE_CXX_COMPILER=/usr/bin/clang++ 
 -DCMAKE_CXX_CLANG_TIDY=/usr/bin/clang-tidy;-p;$rootdir/$build_dir
+~~~~~~~~~~~~~
+
+Building examples with SFML
+~~~~~~~~~~~~~
+-DUSE_SFML=ON
 ~~~~~~~~~~~~~
 
 To build documentation run: 
