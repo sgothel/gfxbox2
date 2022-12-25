@@ -64,14 +64,24 @@ int main(int argc, char *argv[])
     pixel::f2::rect_t hero(blob0_home, 200, 100);
     int blob0_speed = 2;
 
-    size_t frame_count = 0;
     bool close = false;
     bool resized = false;
     bool set_dir = false;
     pixel::direction_t dir = pixel::direction_t::UP;
+    pixel::texture_ref hud_text;
+    float last_fps = -1.0f;
 
     while(!close) {
         handle_events(close, resized, set_dir, dir);
+        {
+            float fps = pixel::get_gpu_fps();
+            if( fps != last_fps ) {
+                pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
+                hud_text = pixel::make_text_texture("fps "+std::to_string(fps));
+                // printf("XX: fps %f -> %f, hud %d\n", last_fps, fps, nullptr!=hud_text);
+                last_fps = fps;
+            }
+        }
 
         // black background
         pixel::clear_pixel_fb(0, 0, 0, 255);
@@ -136,9 +146,6 @@ int main(int argc, char *argv[])
             ph = 5;
         }
         (void)ph;
-        if( false ) {
-            printf("XXX %zu: %d: %s, %d\n", frame_count, ph, la.toString().c_str(), anim_step);
-        }
         pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
         la.draw();
 
@@ -209,8 +216,11 @@ int main(int argc, char *argv[])
         hero.draw();
         hero.box().draw();
 
-        pixel::swap_pixel_fb();
-        ++frame_count;
+        pixel::swap_pixel_fb(false);
+        if( nullptr != hud_text ) {
+            hud_text->draw(0, 0);
+        }
+        pixel::swap_gpu_buffer();
     }
     exit(0);
 }
