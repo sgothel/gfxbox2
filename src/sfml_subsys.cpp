@@ -12,12 +12,24 @@ static size_t fb_pixels_byte_width = 0;
 static sf::Texture fb_tbuffer;
 static std::shared_ptr<sf::Sprite> fb_sbuffer;
 
+static float gpu_fps = 0.0f;
+static int gpu_fps_count = 0;
+static uint64_t gpu_fps_t0 = 0;
+
 uint32_t pixel::rgba_to_uint32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
     // 32-bit ABGR8888
     return ( ( (uint32_t)a << 24 ) & 0xff000000U ) |
            ( ( (uint32_t)b << 16 ) & 0x00ff0000U ) |
            ( ( (uint32_t)g <<  8 ) & 0x0000ff00U ) |
            ( ( (uint32_t)r       ) & 0x000000ffU );
+}
+
+void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a) noexcept {
+    // 32-bit ABGR8888
+    a = ( ui32 & 0xff000000U ) >> 24;
+    b = ( ui32 & 0x00ff0000U ) >> 16;
+    g = ( ui32 & 0x0000ff00U ) >>  8;
+    r = ( ui32 & 0x000000ffU );
 }
 
 static void on_window_resized(bool set_view) noexcept {
@@ -69,6 +81,10 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
     window->setTitle(std::string(title));
     window->setVerticalSyncEnabled(true);
 
+    gpu_fps = 0.0f;
+    gpu_fps_t0 = getCurrentMilliseconds();
+    gpu_fps_count = 0;
+
     on_window_resized(false /* set_view */);
 }
 
@@ -83,13 +99,48 @@ void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept 
     // ::memset(fb_pixels.data(), 0, fb_pixels_byte_size);
 }
 
-void pixel::swap_pixel_fb() noexcept {
+void pixel::swap_pixel_fb(const bool swap_buffer) noexcept {
     fb_tbuffer.update((uint8_t*)fb_pixels.data());
     window->draw(*fb_sbuffer);
+    if( swap_buffer ) {
+        pixel::swap_gpu_buffer();
+    }
+}
+void pixel::swap_gpu_buffer() noexcept {
     window->display();
+    if( ++gpu_fps_count >= 5*60 ) {
+        const uint64_t t1 = getCurrentMilliseconds();
+        const uint64_t td = t1 - gpu_fps_t0;
+        gpu_fps = (float)gpu_fps_count / ( (float)td / 1000.0f );
+        gpu_fps_t0 = t1;
+        gpu_fps_count = 0;
+    }
 }
 
-void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir) noexcept {
+float pixel::get_gpu_fps() noexcept {
+    return gpu_fps;
+}
+
+void pixel::texture_t::destroy() noexcept {
+    // TODO
+}
+
+void pixel::texture_t::draw(const int x_pos, const int y_pos, const float scale) noexcept {
+    (void)x_pos;
+    (void)y_pos;
+    (void)scale;
+    // TODO
+}
+
+pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
+{
+    // TODO
+    (void)text;
+    return nullptr;
+}
+
+void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir, mouse_motion_t& mouse_motion) noexcept {
+    mouse_motion.id = -1;
     static sf::Keyboard::Key scancode = sf::Keyboard::Key::Escape;
     close = false;
     resized = false;

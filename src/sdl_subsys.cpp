@@ -1,6 +1,8 @@
 #include "pixel/pixel.hpp"
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
 
 using namespace pixel;
 
@@ -11,6 +13,11 @@ static size_t fb_pixels_dim_size = 0;
 static size_t fb_pixels_byte_size = 0;
 static size_t fb_pixels_byte_width = 0;
 static SDL_Texture * fb_texture = nullptr;
+static TTF_Font* sdl_font = nullptr;
+
+static float gpu_fps = 0.0f;
+static int gpu_fps_count = 0;
+static uint64_t gpu_fps_t0 = 0;
 
 uint32_t pixel::rgba_to_uint32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
     // SDL_PIXELFORMAT_ARGB8888
@@ -18,6 +25,14 @@ uint32_t pixel::rgba_to_uint32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexc
            ( ( (uint32_t)r << 16 ) & 0x00ff0000U ) |
            ( ( (uint32_t)g <<  8 ) & 0x0000ff00U ) |
            ( ( (uint32_t)b       ) & 0x000000ffU );
+}
+
+void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a) noexcept {
+    // SDL_PIXELFORMAT_ARGB8888
+    a = ( ui32 & 0xff000000U ) >> 24;
+    r = ( ui32 & 0x00ff0000U ) >> 16;
+    g = ( ui32 & 0x0000ff00U ) >>  8;
+    b = ( ui32 & 0x000000ffU );
 }
 
 static void on_window_resized() noexcept {
@@ -61,6 +76,21 @@ static void on_window_resized() noexcept {
     fb_texture = SDL_CreateTexture(sdl_rend, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, fb_width, fb_height);
     fb_pixels.reserve(fb_pixels_dim_size);
     fb_pixels.resize(fb_pixels_dim_size);
+
+    {
+        if( nullptr != sdl_font ) {
+            TTF_CloseFont(sdl_font);
+            sdl_font = nullptr;
+        }
+        const std::string fontfilename = "fonts/freefont/FreeSansBold.ttf";
+        const int font_height = std::max(24, fb_height / 40);
+        sdl_font = TTF_OpenFont(fontfilename.c_str(), font_height);
+        if( nullptr == sdl_font ) {
+            fprintf(stderr, "font: Null font for '%s': %s\n", fontfilename.c_str(), SDL_GetError());
+        } else {
+            printf("Using font %s, size %d\n", fontfilename.c_str(), font_height);
+        }
+    }
 }
 
 void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2]) {
@@ -68,6 +98,15 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
         printf("SDL: Error initializing: %s\n", SDL_GetError());
         exit(1);
     }
+    if ( ( IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG ) != IMG_INIT_PNG ) {
+        printf("SDL_image: Error initializing: %s\n", SDL_GetError());
+        exit(1);
+    }
+    if( 0 != TTF_Init() ) {
+        printf("SDL_TTF: Error initializing: %s\n", SDL_GetError());
+        exit(1);
+    }
+
     fb_origin_norm[0] = origin_norm[0];
     fb_origin_norm[1] = origin_norm[1];
 
@@ -80,6 +119,10 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
 
     const Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
     sdl_rend = SDL_CreateRenderer(sdl_win, -1, render_flags);
+
+    gpu_fps = 0.0f;
+    gpu_fps_t0 = getCurrentMilliseconds();
+    gpu_fps_count = 0;
 
     on_window_resized();
 }
@@ -96,13 +139,70 @@ void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept 
     // ::memset(fb_pixels.data(), 0, fb_pixels_byte_size);
 }
 
-void pixel::swap_pixel_fb() noexcept {
+void pixel::swap_pixel_fb(const bool swap_buffer) noexcept {
     SDL_UpdateTexture(fb_texture, nullptr, fb_pixels.data(), (int)fb_pixels_byte_width);
     SDL_RenderCopy(sdl_rend, fb_texture, nullptr, nullptr);
+    if( swap_buffer ) {
+        pixel::swap_gpu_buffer();
+    }
+}
+void pixel::swap_gpu_buffer() noexcept {
     SDL_RenderPresent(sdl_rend);
+    if( ++gpu_fps_count >= 5*60 ) {
+        const uint64_t t1 = getCurrentMilliseconds();
+        const uint64_t td = t1 - gpu_fps_t0;
+        gpu_fps = (float)gpu_fps_count / ( (float)td / 1000.0f );
+        gpu_fps_t0 = t1;
+        gpu_fps_count = 0;
+    }
 }
 
-void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir) noexcept {
+float pixel::get_gpu_fps() noexcept {
+    return gpu_fps;
+}
+
+void pixel::texture_t::destroy() noexcept {
+    SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(data);
+    if( nullptr != tex ) {
+        SDL_DestroyTexture(tex);
+    }
+    data = nullptr;
+}
+
+void pixel::texture_t::draw(const int x_pos, const int y_pos, const float scale) noexcept {
+    SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(data);
+    if( nullptr != tex ) {
+        SDL_Rect src = { .x=x, .y=y, .w=width, .h=height};
+        SDL_Rect dest = { .x=x_pos,
+                          .y=y_pos,
+                          .w=round_to_int(width*scale), .h=round_to_int(height*scale) };
+        SDL_RenderCopy(sdl_rend, tex, &src, &dest);
+    }
+}
+
+pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
+{
+    if( nullptr == sdl_rend || nullptr == sdl_font ) {
+        return nullptr;
+    }
+    uint8_t r, g, b, a;
+    pixel::uint32_to_rgba(draw_color, r, g, b, a);
+    SDL_Color foregroundColor = { r, g, b, 255 };
+
+    SDL_Surface* textSurface = TTF_RenderText_Solid(sdl_font, text.c_str(), foregroundColor);
+    if( nullptr == textSurface ) {
+        fprintf(stderr, "make_text_texture: Null texture for '%s': %s\n", text.c_str(), SDL_GetError());
+        return nullptr;
+    }
+    SDL_Texture* sdl_tex = SDL_CreateTextureFromSurface(sdl_rend, textSurface);
+    texture_ref tex = std::make_shared<texture_t>(reinterpret_cast<void*>(sdl_tex), 0, 0, 0, 0);
+    SDL_QueryTexture(sdl_tex, NULL, NULL, &tex->width, &tex->height);
+    SDL_FreeSurface(textSurface);
+    return tex;
+}
+
+void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir, mouse_motion_t& mouse_motion) noexcept {
+    mouse_motion.id = -1;
     static SDL_Scancode scancode = SDL_SCANCODE_STOP;
     close = false;
     resized = false;
@@ -133,6 +233,12 @@ void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t
                 }
                 break;
 
+            case SDL_MOUSEMOTION: {
+                    mouse_motion.id = (int)event.motion.which;
+                    mouse_motion.x = (int)event.motion.x;
+                    mouse_motion.y = (int)event.motion.y;
+                }
+                break;
             case SDL_KEYUP:
                 /**
                  * The following key sequence is possible, hence we need to validate whether the KEYUP

@@ -144,10 +144,41 @@ namespace pixel {
     /** Convert 32-bit RGBA components to the gfx-toolkit specific RGBA 32-bit integer presentation. */
     uint32_t rgba_to_uint32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
 
+    /** Convert gfx-toolkit specific RGBA 32-bit integer to 32-bit RGBA components. */
+    void uint32_to_rgba(uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a) noexcept;
+
     /** Set current pixel draw color */
     inline void set_pixel_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
         draw_color = pixel::rgba_to_uint32(r, g, b, a);
     }
+
+    class texture_t {
+        private:
+            void* data;
+        public:
+            int x;
+            int y;
+            int width;
+            int height;
+
+            texture_t(void* data_, const int x_, const int y_, const int width_, const int height_) noexcept
+            : data(data_), x(x_), y(y_), width(width_), height(height_) {}
+
+            texture_t() noexcept
+            : data(nullptr), x(0), y(0), width(0), height(0) {}
+
+            texture_t(const texture_t&) = delete;
+            void operator=(const texture_t&) = delete;
+
+            ~texture_t() noexcept {
+                destroy();
+            }
+
+            void destroy() noexcept;
+
+            void draw(const int x_pos, const int y_pos, const float scale=1.0f) noexcept;
+    };
+    typedef std::shared_ptr<texture_t> texture_ref;
 
     //
     // gfx toolkit dependent API
@@ -155,13 +186,25 @@ namespace pixel {
 
     /** GFX Toolkit: Initialize a window of given size with a usable framebuffer. */
     void init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2]);
-    /** GFX Toolkit: Clear the framebuffer. */
+    /** GFX Toolkit: Clear the soft-framebuffer. */
     void clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
-    /** GFX Toolkit: Swap back to front framebuffer while maintaining vertical monitor synchronization if possible. */
-    void swap_pixel_fb() noexcept;
+    /** GFX Toolkit: Copy the soft-framebuffer to the GPU back-buffer, if swap_buffer is true (default) also swap_gpu_buffer(). */
+    void swap_pixel_fb(const bool swap_buffer=true) noexcept;
+    /** GFX Toolkit: Swap GPU back to front framebuffer while maintaining vertical monitor synchronization if possible. */
+    void swap_gpu_buffer() noexcept;
+    float get_gpu_fps() noexcept;
+
+    texture_ref make_text_texture(const std::string& text) noexcept;
+
+    struct mouse_motion_t {
+        int id;
+        int x;
+        int y;
+    };
 
     /** GFX Toolkit: Handle windowing and keyboard events. */
     void handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir) noexcept;
+    void handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir, mouse_motion_t& mouse_motion) noexcept;
 
     //
     // data packing macros
