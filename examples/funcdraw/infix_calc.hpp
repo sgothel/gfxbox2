@@ -34,6 +34,8 @@
 #include <map>
 #include <ostream>
 
+#include "rpn_calc.hpp"
+
 namespace infix_calc_yy {
     class scanner; // fwd
     class parser; // fwd
@@ -41,54 +43,6 @@ namespace infix_calc_yy {
 }
 
 namespace infix_calc {
-
-    enum class RPNStatus : unsigned int {
-        No_Error,
-        /*-----------------------*/
-        Too_Complex,
-        Unresolved_Variables,
-        Division_by_zero,
-        Overflow,
-        Undefined,
-        RPN_Underflow,
-        /*-----------------------*/
-    };
-    std::string to_string(RPNStatus status) noexcept;
-
-    enum class rpn_token_t : unsigned int {
-        UREAL, VARIABLE,
-        SUB, ADD,
-        MUL, DIV, MOD,
-        ABS, SIN, COS, TAN, ARCSIN, ARCCOS, ARCTAN,
-        POW, LOG, LOG10, EXP,
-        SQRT, NEG
-    };
-    std::string to_string(const rpn_token_t ts) noexcept;
-
-    struct rpn_token {
-        /** Terminal Symbol (TOKEN) */
-        rpn_token_t ts;
-        /** Real value */
-        double value;
-        /** Variable identifier */
-        std::string id;
-    };
-    std::string to_string(const rpn_token& v) noexcept;
-
-    std::string to_string(const std::vector<rpn_token>& rpn_stack) noexcept;
-
-    typedef std::map<std::string, double> variable_set;
-
-    std::string to_string(const variable_set& variables) noexcept;
-
-    // Reduce the given source RPN into the new dest
-    RPNStatus reduce(std::vector<rpn_token>& result, const std::vector<rpn_token>& source) noexcept;
-
-    // Checks whether all variables in RPN are resolved with given variables.
-    bool resolved(const variable_set& variables, const std::vector<rpn_token>& rpn_stack) noexcept;
-
-    // Evaluate the given RPN and variables.
-    RPNStatus eval(double& result, const variable_set& variables, const std::vector<rpn_token>& rpn_stack) noexcept;
 
     class compiler {
         private:
@@ -99,16 +53,16 @@ namespace infix_calc {
             bool scan_begin(const char* bytes, int len);
             void scan_end();
 
-            void put_rpn(rpn_token_t ts);
-            void put_rpn(double value);
-            void put_rpn(const std::string& variable_name);
-            void put_rpn(std::string&& variable_name);
+            void put_rpn(rpn_calc::rpn_token_t ts) { rpn_expr.push_back(ts); }
+            void put_rpn(double value) { rpn_expr.push_back(value); }
+            void put_rpn(const std::string& variable_name) { rpn_expr.push_back(variable_name); }
+            void put_rpn(std::string&& variable_name) { rpn_expr.push_back(std::move(variable_name)); }
 
             void* backend;
 
         public:
-            variable_set variables;
-            std::vector<rpn_token> rpn_stack;
+            rpn_calc::variable_set variables;
+            rpn_calc::rpn_expression_t rpn_expr;
 
             compiler();
             ~compiler();
@@ -121,23 +75,14 @@ namespace infix_calc {
             bool parse (const char* bytes, int len);
 
             // Reduce the RPN, replacing this RPM stack if no error occurs
-            RPNStatus reduce() noexcept {
-                std::vector<rpn_token> dest;
-                RPNStatus s = infix_calc::reduce(dest, rpn_stack);
-                if( RPNStatus::No_Error == s ) {
-                    rpn_stack = dest;
-                }
-                return s;
-            }
+            rpn_calc::RPNStatus reduce() noexcept { return rpn_expr.reduce(); }
 
             // Checks whether all variables in RPN are resolved with given variables.
-            bool resolved() noexcept {
-                return infix_calc::resolved(variables, rpn_stack);
-            }
+            bool resolved() const noexcept { return rpn_expr.resolved(variables); }
 
             // Evaluate the parsed RPN w/ given variables.
-            RPNStatus eval(double& result) const noexcept {
-                return infix_calc::eval(result, variables, rpn_stack);
+            rpn_calc::RPNStatus eval(double& result) const noexcept {
+                return rpn_expr.eval(result, variables);
             }
             infix_calc_yy::location& location();
     };
@@ -146,8 +91,6 @@ namespace infix_calc {
 
 namespace std {
     ostream& operator<<(ostream& os, const infix_calc_yy::location& loc);
-    ostream& operator<<(ostream& os, const infix_calc::rpn_token_t rpn);
-    ostream& operator<<(ostream& os, const infix_calc::rpn_token& rpn);
 }
 #endif /* INFIX_CALC_HPP */
 

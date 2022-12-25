@@ -17,7 +17,7 @@ message(STATUS "${PROJECT_NAME} flex found, FLEX_INCLUDE_DIRS ${FLEX_INCLUDE_DIR
 FLEX_TARGET(InfixCalcScanner1 infix_calc_scanner1.ll  ${CMAKE_CURRENT_BINARY_DIR}/infix_calc_scanner1.cpp
       COMPILE_FLAGS "--header-file=${CMAKE_CURRENT_BINARY_DIR}/infix_calc_scanner1.hpp" )
 ADD_FLEX_BISON_DEPENDENCY(InfixCalcScanner1 InfixCalcParser)
-add_executable(funcdraw funcdraw.cpp ../../src/pixel.cpp ../../src/sdl_subsys.cpp infix_calc.cpp ${BISON_InfixCalcParser_OUTPUTS} ${FLEX_InfixCalcScanner1_OUTPUTS})
+add_executable(funcdraw funcdraw.cpp ../../src/pixel.cpp ../../src/sdl_subsys.cpp infix_calc.cpp rpn_calc.cpp ${BISON_InfixCalcParser_OUTPUTS} ${FLEX_InfixCalcScanner1_OUTPUTS})
 target_compile_options(funcdraw PRIVATE -DSCANNER_FLEX)
 target_link_libraries(funcdraw SDL2 SDL2_image SDL2_ttf ${CMAKE_THREAD_LIBS_INIT})
 

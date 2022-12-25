@@ -8,47 +8,46 @@
 #include <ostream>
 #include <thread>
 
+#include "rpn_calc.hpp"
 #include "infix_calc.hpp"
 
 #include <pixel/pixel2i.hpp>
 #include <pixel/pixel2f.hpp>
 #include "pixel/pixel.hpp"
 
-typedef std::vector<infix_calc::rpn_token> rpn_expr;
-std::vector<rpn_expr> rpn_funcs;
-infix_calc::variable_set variables;
+std::vector<rpn_calc::rpn_expression_t> rpn_funcs;
+rpn_calc::variable_set variables;
 std::atomic_bool rpn_funcs_dirty;
 
-void add_func(std::vector<infix_calc::rpn_token>& expr) {
+void add_func(rpn_calc::rpn_expression_t& expr) {
     variables["x"] = 0.0;
 
-    rpn_expr expr_opt;
-    printf("Adding RPN\n\tVanilla: %s\n", infix_calc::to_string(expr).c_str());
-    if( !infix_calc::resolved(variables, expr) ) {
+    printf("Adding RPN\n\tVanilla: %s\n", expr.toString().c_str());
+    if( !expr.resolved(variables) ) {
         printf("Skipping due to unresolved variables\n");
         return;
     }
-    infix_calc::RPNStatus estatus = infix_calc::reduce(expr_opt, expr);
-    if( infix_calc::RPNStatus::No_Error != estatus ) {
-        printf("Error occurred @ reduce: %s\n", infix_calc::to_string(estatus).c_str());
+    rpn_calc::RPNStatus estatus = expr.reduce();
+    if( rpn_calc::RPNStatus::No_Error != estatus ) {
+        printf("Error occurred @ reduce: %s\n", rpn_calc::to_string(estatus).c_str());
         return;
     }
-    printf("\tReduced: %s\n", infix_calc::to_string(expr_opt).c_str());
-    rpn_funcs.push_back(expr_opt);
+    printf("\tReduced: %s\n", expr.toString().c_str());
+    rpn_funcs.push_back(expr);
     rpn_funcs_dirty = true;
 }
 
 void draw_funcs() {
     const float x_ival = pixel::cart_coord.width() / pixel::fb_width;
-    for(rpn_expr e : rpn_funcs ) {
+    for(rpn_calc::rpn_expression_t& e : rpn_funcs ) {
         pixel::f2::vec_t p0;
         bool has_p0 = false;
         for(float x=pixel::cart_coord.min_x(); x<=pixel::cart_coord.max_x(); x+=x_ival) {
             variables["x"] = x;
             double res = 0.0;
-            infix_calc::RPNStatus estatus = infix_calc::eval(res, variables, e);
-            if( infix_calc::RPNStatus::No_Error != estatus ) {
-                // printf("Error occurred @ eval(%f): %s\n", x, infix_calc::to_string(estatus).c_str());
+            rpn_calc::RPNStatus estatus = e.eval(res, variables);
+            if( rpn_calc::RPNStatus::No_Error != estatus ) {
+                // printf("Error occurred @ eval(%f): %s\n", x, rpn_calc::to_string(estatus).c_str());
                 continue;
             }
             pixel::f2::vec_t p((float)x, (float)res);

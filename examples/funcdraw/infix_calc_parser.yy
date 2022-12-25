@@ -56,6 +56,7 @@
   // # define YYDEBUG 1
   # include <string>
   # include <functional>
+  # include "rpn_calc.hpp"
   # include "infix_calc.hpp"
   using namespace infix_calc;
 }
@@ -64,7 +65,7 @@
   // location: parser implementation file after the usual contents of the parser header file
   # include "infix_calc_parser.hpp"  
   
-  void add_func(std::vector<infix_calc::rpn_token>& expr);
+  void add_func(rpn_calc::rpn_expression_t& expr);
   void clear_funcs();
   void exit_app();
   void print_usage();
@@ -77,7 +78,7 @@
 %token <std::string> ERROR
 
 %nterm <double> real_number
-%nterm <rpn_token_t> unary_func
+%nterm <rpn_calc::rpn_token_t> unary_func
 
 %token LPAREN RPAREN EOL
 
@@ -92,46 +93,46 @@
 
 %%
 
-command       : DRAW { cc.rpn_stack.clear(); } expression { add_func(cc.rpn_stack); cc.rpn_stack.clear(); }
+command       : DRAW { cc.rpn_expr.clear(); } expression { add_func(cc.rpn_expr); cc.rpn_expr.clear(); }
               | CLEAR { clear_funcs(); }
               | HELP { print_usage(); }
               | EXIT { exit_app(); }              
               ;
               
 expression    : product
-              | expression ADD product { cc.put_rpn(rpn_token_t::ADD); }
-              | expression SUB product { cc.put_rpn(rpn_token_t::SUB); }
+              | expression ADD product { cc.put_rpn(rpn_calc::rpn_token_t::ADD); }
+              | expression SUB product { cc.put_rpn(rpn_calc::rpn_token_t::SUB); }
               ;
 
 product     : operand
-              | product MUL operand { cc.put_rpn(rpn_token_t::MUL); }
-              | product DIV operand { cc.put_rpn(rpn_token_t::DIV); }
-              | product MOD operand { cc.put_rpn(rpn_token_t::MOD); }
-              | product POW operand { cc.put_rpn(rpn_token_t::POW); }
+              | product MUL operand { cc.put_rpn(rpn_calc::rpn_token_t::MUL); }
+              | product DIV operand { cc.put_rpn(rpn_calc::rpn_token_t::DIV); }
+              | product MOD operand { cc.put_rpn(rpn_calc::rpn_token_t::MOD); }
+              | product POW operand { cc.put_rpn(rpn_calc::rpn_token_t::POW); }
               ;
 
 operand     : IDENTIFIER { cc.put_rpn(std::move($1)); }
               | ADD IDENTIFIER  { cc.put_rpn(std::move($2)); }
               | SUB IDENTIFIER  { cc.put_rpn(std::move($2));
-                                  cc.put_rpn(rpn_token_t::NEG);
+                                  cc.put_rpn(rpn_calc::rpn_token_t::NEG);
                                 }
               | LPAREN expression RPAREN
               | unary_func LPAREN expression RPAREN { cc.put_rpn($1); }
               | real_number { cc.put_rpn($1); }
               ;
 
-unary_func  : ABS { $$=rpn_token_t::ABS; } |
-              SIN { $$=rpn_token_t::SIN; } |
-              COS { $$=rpn_token_t::COS; } |
-              TAN { $$=rpn_token_t::TAN; } |
-              ARCSIN { $$=rpn_token_t::ARCSIN; } |
-              ARCCOS { $$=rpn_token_t::ARCCOS; } |
-              ARCTAN { $$=rpn_token_t::ARCTAN; } |
-              LOG { $$=rpn_token_t::LOG; } |
-              LOG10 { $$=rpn_token_t::LOG10; } |
-              EXP { $$=rpn_token_t::EXP; } |
-              SQRT { $$=rpn_token_t::SQRT; } |
-              NEG  { $$=rpn_token_t::NEG; } ;
+unary_func  : ABS { $$=rpn_calc::rpn_token_t::ABS; } |
+              SIN { $$=rpn_calc::rpn_token_t::SIN; } |
+              COS { $$=rpn_calc::rpn_token_t::COS; } |
+              TAN { $$=rpn_calc::rpn_token_t::TAN; } |
+              ARCSIN { $$=rpn_calc::rpn_token_t::ARCSIN; } |
+              ARCCOS { $$=rpn_calc::rpn_token_t::ARCCOS; } |
+              ARCTAN { $$=rpn_calc::rpn_token_t::ARCTAN; } |
+              LOG { $$=rpn_calc::rpn_token_t::LOG; } |
+              LOG10 { $$=rpn_calc::rpn_token_t::LOG10; } |
+              EXP { $$=rpn_calc::rpn_token_t::EXP; } |
+              SQRT { $$=rpn_calc::rpn_token_t::SQRT; } |
+              NEG  { $$=rpn_calc::rpn_token_t::NEG; } ;
 
 real_number : UREAL { $$=$1; } |
               ADD UREAL { $$=$2; } |
