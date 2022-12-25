@@ -56,7 +56,6 @@
   // # define YYDEBUG 1
   # include <string>
   # include <functional>
-  # include "rpn_calc.hpp"
   # include "infix_calc.hpp"
   using namespace infix_calc;
 }
@@ -69,6 +68,8 @@
   void clear_funcs();
   void exit_app();
   void print_usage();
+  void set_width(float x1, float x2);
+  void set_height(float y1, float y2);
 }
 
 %printer { yyo << $$; } <*>;
@@ -80,9 +81,9 @@
 %nterm <double> real_number
 %nterm <rpn_calc::rpn_token_t> unary_func
 
-%token LPAREN RPAREN EOL
+%token LPAREN RPAREN COMMA EOL
 
-%left DRAW CLEAR HELP EXIT
+%left DRAW CLEAR SET_WIDTH SET_HEIGHT HELP EXIT
 
 %left SUB ADD
 %left MUL DIV MOD
@@ -95,6 +96,8 @@
 
 command       : DRAW { cc.rpn_expr.clear(); } expression { add_func(cc.rpn_expr); cc.rpn_expr.clear(); }
               | CLEAR { clear_funcs(); }
+              | SET_WIDTH real_number COMMA real_number { set_width($2, $4); }
+              | SET_HEIGHT real_number COMMA real_number { set_height($2, $4); }
               | HELP { print_usage(); }
               | EXIT { exit_app(); }              
               ;

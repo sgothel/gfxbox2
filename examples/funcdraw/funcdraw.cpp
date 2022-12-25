@@ -18,6 +18,7 @@
 std::vector<rpn_calc::rpn_expression_t> rpn_funcs;
 rpn_calc::variable_set variables;
 std::atomic_bool rpn_funcs_dirty;
+std::atomic_bool resized_ext;
 
 void add_func(rpn_calc::rpn_expression_t& expr) {
     variables["x"] = 0.0;
@@ -68,6 +69,19 @@ void clear_funcs() {
     rpn_funcs_dirty = true;
 }
 
+std::function<void()> cart_coord_setup = []() { pixel::cart_coord.set_width(-10.0f, 10.0f); };
+
+void set_width(float x1, float x2) {
+    cart_coord_setup = [x1, x2]() { pixel::cart_coord.set_width(x1, x2); };
+    resized_ext = true;
+    rpn_funcs_dirty = true;
+}
+void set_height(float y1, float y2) {
+    cart_coord_setup = [y1, y2]() { pixel::cart_coord.set_height(y1, y2); };
+    resized_ext = true;
+    rpn_funcs_dirty = true;
+}
+
 std::atomic_bool exit_raised;
 
 void exit_app() {
@@ -92,11 +106,13 @@ void commandline_proc() {
 
 void print_usage() {
     printf("Usage:\n");
-    printf("\tdraw 200*sin(x/200)\n");
+    printf("\tdraw sin(x)\n");
     printf("\t\tunary functions: abs, sin, cos, tan, asin, acos, atan, sqrt, ln, log, exp\n");
     printf("\t\tbinary operations: +, -, *, /, %%, ^\n");
     printf("\t\tbraces: (, )\n");
     printf("\tclear\n");
+    printf("\tset_width x1, x2\n");
+    printf("\tset_height y1, y2\n");
     printf("\thelp\n");
     printf("\texit\n");
 }
@@ -128,10 +144,7 @@ int main(int argc, char *argv[])
     pixel::mouse_motion_t mouse_motion;
     pixel::texture_ref hud_text;
 
-    pixel::cart_coord.set_height(-1.0f, 1.0f);
-    // pixel::cart_coord.set_width(-10.0f, 10.0f);
-    // pixel::cart_coord.set_origin(0.1f, 0.1f);
-    // pixel::cart_coord.set_one(-100.0f, -100.0f);
+    cart_coord_setup();
 
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     pixel::f2::lineseg_t l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
@@ -146,8 +159,9 @@ int main(int argc, char *argv[])
 
     while(!close && !exit_raised) {
         handle_events(close, resized, set_dir, dir, mouse_motion);
-        if( resized ) {
-            // pixel::cart_coord.set_width(-10.0f, 9.0f);
+        if( resized || resized_ext ) {
+            resized_ext = false;
+            cart_coord_setup();
             l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
             l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
             printf("x-axis: %s\n", l_x.toString().c_str());

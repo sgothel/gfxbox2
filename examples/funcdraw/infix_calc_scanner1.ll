@@ -71,6 +71,8 @@ blank [ \t\r]
 
 "draw"      return infix_calc_yy::parser::make_DRAW(loc);
 "clear"     return infix_calc_yy::parser::make_CLEAR(loc);
+"set_width" return infix_calc_yy::parser::make_SET_WIDTH(loc);
+"set_height" return infix_calc_yy::parser::make_SET_HEIGHT(loc);
 "help"      return infix_calc_yy::parser::make_HELP(loc);
 "exit"      return infix_calc_yy::parser::make_EXIT(loc);
 
@@ -102,6 +104,8 @@ blank [ \t\r]
 \%          return infix_calc_yy::parser::make_MOD(loc);
 
 {id}        return infix_calc_yy::parser::make_IDENTIFIER(yytext, loc);
+
+\,          return infix_calc_yy::parser::make_COMMA(loc);
 
 .           return infix_calc_yy::parser::make_ERROR("Unrecognized characters '"+std::string(yytext)+"'", loc);
 
