@@ -106,20 +106,21 @@ void commandline_proc() {
 
 void print_usage() {
     printf("Usage:\n");
-    printf("\tdraw sin(x)\n");
+    printf("\tdraw sin(x);\n");
     printf("\t\tunary functions: abs, sin, cos, tan, asin, acos, atan, sqrt, ln, log, exp\n");
     printf("\t\tbinary operations: +, -, *, /, %%, ^\n");
     printf("\t\tbraces: (, )\n");
-    printf("\tclear\n");
-    printf("\tset_width x1, x2\n");
-    printf("\tset_height y1, y2\n");
-    printf("\thelp\n");
-    printf("\texit\n");
+    printf("\tclear;\n");
+    printf("\tset_width x1, x2;\n");
+    printf("\tset_height y1, y2;\n");
+    printf("\thelp;\n");
+    printf("\texit;\n");
 }
 
 int main(int argc, char *argv[])
 {
     int win_width = 1920, win_height = 1080;
+    std::string commandfile;
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
@@ -128,6 +129,8 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
                 win_height = atoi(argv[i+1]);
                 ++i;
+            } else {
+                commandfile = argv[i];
             }
         }
     }
@@ -153,6 +156,15 @@ int main(int argc, char *argv[])
     printf("y-axis: %s\n", l_y.toString().c_str());
     print_usage();
     pixel::clear_pixel_fb(255, 255, 255, 255);
+
+    if( !commandfile.empty() ) {
+        infix_calc::compiler cc;
+        std::cout << "Processing command input file: " << commandfile << std::endl;
+        const bool pok = cc.parse (commandfile);
+        if( !pok ) {
+            std::cerr << "Error occurred @ parsing: " << cc.location() << std::endl;
+        }
+    }
 
     std::thread commandline_thread(&commandline_proc);
     commandline_thread.detach();

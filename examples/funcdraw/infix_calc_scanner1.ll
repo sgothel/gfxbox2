@@ -106,6 +106,7 @@ blank [ \t\r]
 {id}        return infix_calc_yy::parser::make_IDENTIFIER(yytext, loc);
 
 \,          return infix_calc_yy::parser::make_COMMA(loc);
+\;          return infix_calc_yy::parser::make_SEMICOLON(loc);
 
 .           return infix_calc_yy::parser::make_ERROR("Unrecognized characters '"+std::string(yytext)+"'", loc);
 

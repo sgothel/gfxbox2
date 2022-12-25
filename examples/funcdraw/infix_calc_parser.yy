@@ -81,7 +81,7 @@
 %nterm <double> real_number
 %nterm <rpn_calc::rpn_token_t> unary_func
 
-%token LPAREN RPAREN COMMA EOL
+%token LPAREN RPAREN COMMA SEMICOLON EOL
 
 %left DRAW CLEAR SET_WIDTH SET_HEIGHT HELP EXIT
 
@@ -94,12 +94,17 @@
 
 %%
 
-command       : DRAW { cc.rpn_expr.clear(); } expression { add_func(cc.rpn_expr); cc.rpn_expr.clear(); }
-              | CLEAR { clear_funcs(); }
-              | SET_WIDTH real_number COMMA real_number { set_width($2, $4); }
-              | SET_HEIGHT real_number COMMA real_number { set_height($2, $4); }
-              | HELP { print_usage(); }
-              | EXIT { exit_app(); }              
+program       : command
+              | program command
+              ;
+              
+command       : DRAW { cc.rpn_expr.clear(); } expression SEMICOLON { add_func(cc.rpn_expr); cc.rpn_expr.clear(); }
+              | CLEAR SEMICOLON { clear_funcs(); }
+              | SET_WIDTH real_number COMMA real_number SEMICOLON { set_width($2, $4); }
+              | SET_HEIGHT real_number COMMA real_number SEMICOLON { set_height($2, $4); }
+              | HELP SEMICOLON { print_usage(); }
+              | EXIT SEMICOLON { exit_app(); }     
+              | error { print_usage(); }         
               ;
               
 expression    : product

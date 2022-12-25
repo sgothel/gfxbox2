@@ -1,0 +1,7 @@
+set_width -4,4;
+draw sin(x);
+draw cos(x);
+draw x^2;
+draw x^3;
+draw 1;
+draw -1;
