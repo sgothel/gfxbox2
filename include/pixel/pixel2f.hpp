@@ -688,12 +688,13 @@ namespace pixel::f2 {
             }
 
             void draw() const noexcept override {
+                const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
+                const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
+
                 const aabbox_t b = box();
-                const int b_tr_y = pixel::round_to_int(b.tr.y);
-                const int b_tr_x = pixel::round_to_int(b.tr.x);
-                for(int y=pixel::round_to_int(b.bl.y); y<=b_tr_y; ++y) {
-                    for(int x=pixel::round_to_int(b.bl.x); x<=b_tr_x; ++x) {
-                        const point_t p { (float)x, (float)y };
+                for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) {
+                    for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
+                        const point_t p { x, y };
                         if( center.dist(p) <= radius ) {
                             p.draw();
                         }
@@ -746,9 +747,9 @@ namespace pixel::f2 {
             rect_t(const point_t& tl_, const float width, const float height, const float radians) noexcept
             {
                 p_a = tl_;
-                p_b = { p_a.x + width - 1, p_a.y };
-                p_c = { p_a.x            , p_a.y + height - 1};
-                p_d = { p_a.x + width - 1, p_a.y + height - 1};
+                p_b = { p_a.x + width, p_a.y };
+                p_c = { p_a.x        , p_a.y + height};
+                p_d = { p_a.x + width, p_a.y + height};
                 p_center = { p_a.x + width/2  , p_a.y + height/2  };
                 angle = 0.0f;
                 rect_t::rotate(radians);
@@ -757,9 +758,9 @@ namespace pixel::f2 {
             rect_t(const point_t& tl_, const float width, const float height) noexcept 
             : p_a(tl_)
             {
-                p_b = { p_a.x + width - 1, p_a.y };
-                p_c = { p_a.x            , p_a.y + height - 1};
-                p_d = { p_a.x + width - 1, p_a.y + height - 1};
+                p_b = { p_a.x + width, p_a.y };
+                p_c = { p_a.x        , p_a.y + height};
+                p_d = { p_a.x + width, p_a.y + height};
                 p_center = { p_a.x + width/2  , p_a.y + height/2  };
                 angle = 0.0f;
             }
