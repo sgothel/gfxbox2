@@ -11,7 +11,7 @@ set( SDL_TARGETS_IDIOMATIC_EXAMPLES "" )
 foreach( name ${BASENAMES_IDIOMATIC_EXAMPLES} )
     set( SDL_TARGETS_IDIOMATIC_EXAMPLES "${SDL_TARGETS_IDIOMATIC_EXAMPLES};${name}_sdl" )
     add_executable(${name}_sdl ${name}.cpp ../src/pixel.cpp ../src/sdl_subsys.cpp)
-    target_link_libraries(${name}_sdl SDL2)
+    target_link_libraries(${name}_sdl SDL2 SDL2_image SDL2_ttf)
 endforeach()
 
 set( SFML_TARGETS_IDIOMATIC_EXAMPLES "" )

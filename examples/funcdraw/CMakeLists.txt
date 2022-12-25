@@ -19,7 +19,7 @@ FLEX_TARGET(InfixCalcScanner1 infix_calc_scanner1.ll  ${CMAKE_CURRENT_BINARY_DIR
 ADD_FLEX_BISON_DEPENDENCY(InfixCalcScanner1 InfixCalcParser)
 add_executable(funcdraw funcdraw.cpp ../../src/pixel.cpp ../../src/sdl_subsys.cpp infix_calc.cpp ${BISON_InfixCalcParser_OUTPUTS} ${FLEX_InfixCalcScanner1_OUTPUTS})
 target_compile_options(funcdraw PRIVATE -DSCANNER_FLEX)
-target_link_libraries(funcdraw SDL2 ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(funcdraw SDL2 SDL2_image SDL2_ttf ${CMAKE_THREAD_LIBS_INIT})
 
 install(TARGETS funcdraw RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
