@@ -309,10 +309,10 @@ namespace pixel::i2 {
         }
 
         bool on_screen() const {
-            const int x0 = pixel::cart_to_fb_x( tl.x );
-            const int y0 = pixel::cart_to_fb_y( tl.y );
-            const int x1 = pixel::cart_to_fb_x( br.x );
-            const int y1 = pixel::cart_to_fb_y( br.y );
+            const int x0 = pixel::cart_coord.to_fb_x( tl.x );
+            const int y0 = pixel::cart_coord.to_fb_y( tl.y );
+            const int x1 = pixel::cart_coord.to_fb_x( br.x );
+            const int y1 = pixel::cart_coord.to_fb_y( br.y );
 
             // x in [min_x .. max_x] ?
             return 0 <= x0 && x0 <= pixel::fb_max_x &&
@@ -419,8 +419,8 @@ namespace pixel::i2 {
         void scale(const int s) { size *= s; }
 
         bool on_screen() const {
-            const int x = pixel::cart_to_fb_x( position.x );
-            const int y = pixel::cart_to_fb_y( position.y );
+            const int x = pixel::cart_coord.to_fb_x( position.x );
+            const int y = pixel::cart_coord.to_fb_y( position.y );
             // x in [min_x .. max_x] ?
             return 0 <= x && x <= pixel::fb_max_x &&
                    0 <= y && y <= pixel::fb_max_y;

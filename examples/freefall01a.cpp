@@ -34,14 +34,14 @@ int main(int argc, char *argv[])
     const float ball_r = world_to_pixel(ball_height/2.0f); // [pixel]
 
     uint64_t t0_ball_1 = pixel::getElapsedMillisecond(); // [ms]
-    pixel::f2::point_t ball_1_top = { -ball_r-ball_r, (float)pixel::cart_max_y-ball_r };
+    pixel::f2::point_t ball_1_top = { -ball_r-ball_r, pixel::cart_coord.max_y()-ball_r };
     pixel::f2::disk_t ball_1( ball_1_top, ball_r);
     ball_1.rotate(pixel::adeg_to_rad(90)); // rotate upwards
     const float ball_1_a = -earth_accel; // gravity down
     float ball_1_v = 0.00; // [m/s]
 
     uint64_t t0_ball_2 = t0_ball_1; // [ms]
-    pixel::f2::point_t ball_2_top = { +ball_r+ball_r, (float)pixel::cart_max_y-ball_r };
+    pixel::f2::point_t ball_2_top = { +ball_r+ball_r, pixel::cart_coord.max_y()-ball_r };
     pixel::f2::disk_t ball_2( ball_2_top, ball_r);
     ball_2.rotate(pixel::adeg_to_rad(90)); // rotate upwards
     const float ball_2_a = -earth_accel; // gravity down
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
                 t0_ball_2 = t;
                 ball_2_vmax *= 0.75f; // rho
                 ball_2_v = ball_2_vmax;
-                ball_2.center.y = (float)pixel::cart_min_y+ball_2.radius;
+                ball_2.center.y = pixel::cart_coord.min_y()+ball_2.radius;
             }
         }
 

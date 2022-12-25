@@ -39,10 +39,11 @@ void add_func(std::vector<infix_calc::rpn_token>& expr) {
 }
 
 void draw_funcs() {
+    const float x_ival = pixel::cart_coord.width() / pixel::fb_width;
     for(rpn_expr e : rpn_funcs ) {
         pixel::f2::vec_t p0;
         bool has_p0 = false;
-        for(float x=pixel::cart_min_x; x<=pixel::cart_max_x; x+=1.0f) {
+        for(float x=pixel::cart_coord.min_x(); x<=pixel::cart_coord.max_x(); x+=x_ival) {
             variables["x"] = x;
             double res = 0.0;
             infix_calc::RPNStatus estatus = infix_calc::eval(res, variables, e);
@@ -125,10 +126,17 @@ int main(int argc, char *argv[])
     bool resized = false;
     bool set_dir = false;
     pixel::direction_t dir = pixel::direction_t::UP;
+    pixel::mouse_motion_t mouse_motion;
+    pixel::texture_ref hud_text;
+
+    pixel::cart_coord.set_height(-1.0f, 1.0f);
+    // pixel::cart_coord.set_width(-10.0f, 10.0f);
+    // pixel::cart_coord.set_origin(0.1f, 0.1f);
+    // pixel::cart_coord.set_one(-100.0f, -100.0f);
 
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
-    pixel::f2::lineseg_t l_x = { { (float)pixel::cart_min_x,  0.0f }, { (float)pixel::cart_max_x, 0.0f } };
-    pixel::f2::lineseg_t l_y = { { 0.0f, (float)pixel::cart_min_y }, {  0.0f, (float)pixel::cart_max_y } };
+    pixel::f2::lineseg_t l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
+    pixel::f2::lineseg_t l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
     printf("x-axis: %s\n", l_x.toString().c_str());
     printf("y-axis: %s\n", l_y.toString().c_str());
     print_usage();
@@ -138,12 +146,17 @@ int main(int argc, char *argv[])
     commandline_thread.detach();
 
     while(!close && !exit_raised) {
-        handle_events(close, resized, set_dir, dir);
+        handle_events(close, resized, set_dir, dir, mouse_motion);
         if( resized ) {
-            l_x = { { (float)pixel::cart_min_x,  0.0f }, { (float)pixel::cart_max_x, 0.0f } };
-            l_y = { { 0.0f, (float)pixel::cart_min_y }, {  0.0f, (float)pixel::cart_max_y } };
+            // pixel::cart_coord.set_width(-10.0f, 9.0f);
+            l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
+            l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
             printf("x-axis: %s\n", l_x.toString().c_str());
             printf("y-axis: %s\n", l_y.toString().c_str());
+        }
+        if( 0 <= mouse_motion.id ) {
+            const pixel::f2::vec_t p = pixel::f2::fb_to_cart(mouse_motion.x, mouse_motion.y);
+            hud_text = pixel::make_text_texture("fps "+std::to_string(pixel::get_gpu_fps())+", "+p.toString());
         }
 
         const uint64_t t = pixel::getElapsedMillisecond(); // [ms]
@@ -167,7 +180,11 @@ int main(int argc, char *argv[])
         if( dt_diff > 1.0f ) {
             pixel::milli_sleep( (uint64_t)dt_diff );
         }
-        pixel::swap_pixel_fb();
+        pixel::swap_pixel_fb(false);
+        if( nullptr != hud_text ) {
+            hud_text->draw(0, 0);
+        }
+        pixel::swap_gpu_buffer();
     }
     exit_raised = true;
     // commandline_thread.join();

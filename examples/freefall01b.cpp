@@ -72,8 +72,8 @@ class ball1_t : public pixel::f2::disk_t {
         }
 
         std::string toString() const noexcept override {
-            return "disk[c " + std::to_string(pixel_to_meter((float)pixel::cart_to_fb_x(center.x))) + "/"
-                             + std::to_string(pixel_to_meter((float)pixel::cart_to_fb_y(center.y))) +
+            return "disk[c " + std::to_string(pixel_to_meter((float)pixel::cart_coord.to_fb_x(center.x))) + "/"
+                             + std::to_string(pixel_to_meter((float)pixel::cart_coord.to_fb_y(center.y))) +
                    ", r " + std::to_string(pixel_to_meter(radius)) +
                    "]"; }
 
@@ -188,8 +188,8 @@ class ball2_t : public pixel::f2::disk_t {
         }
 
         std::string toString() const noexcept override {
-            return "disk[c " + std::to_string(pixel_to_meter((float)pixel::cart_to_fb_x(center.x))) + "/"
-                             + std::to_string(pixel_to_meter((float)pixel::cart_to_fb_y(center.y))) +
+            return "disk[c " + std::to_string(pixel_to_meter((float)pixel::cart_coord.to_fb_x(center.x))) + "/"
+                             + std::to_string(pixel_to_meter((float)pixel::cart_coord.to_fb_y(center.y))) +
                    ", r " + std::to_string(pixel_to_meter(radius)) +
                    "]"; }
 
@@ -279,18 +279,18 @@ int main(int argc, char *argv[])
     ball1_t ball_1( "one", -4.0f*ball_height, world_height/2.0f-ball_radius, ball_radius );
     ball2_t ball_2( "two", +2.0f*ball_height, world_height/2.0f-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-    ball2_t ball_3( "can",  pixel_to_meter((float)pixel::cart_min_x)+2*ball_height, pixel_to_meter((float)pixel::cart_min_y)+ball_height, ball_radius,
+    ball2_t ball_3( "can",  pixel_to_meter(pixel::cart_coord.min_x())+2*ball_height, pixel_to_meter(pixel::cart_coord.min_y())+ball_height, ball_radius,
                     6.2f /* [m/s] */, pixel::adeg_to_rad(78));
     {
         std::vector<pixel::f2::geom_t*>& list = pixel::f2::gobjects();
         float thickness = 2; // meter_to_pixel(ball_height/8.0f);
         if( false ) {
-            pixel::f2::point_t tl = { (float)pixel::cart_min_x+thickness, (float)pixel::cart_max_y-thickness };
+            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+thickness, pixel::cart_coord.max_y()-thickness };
             pixel::f2::rect_t* r = new pixel::f2::rect_t(tl, (float)pixel::fb_max_x-2*thickness, thickness);
             list.push_back(r);
         }
         {
-            pixel::f2::point_t bl = { (float)pixel::cart_min_x+10, (float)pixel::cart_min_y+10 };
+            pixel::f2::point_t bl = { pixel::cart_coord.min_x()+10, pixel::cart_coord.min_y()+10 };
             pixel::f2::rect_t* r = new pixel::f2::rect_t(bl, (float)pixel::fb_max_x-2*10, thickness);
             list.push_back(r);
         }

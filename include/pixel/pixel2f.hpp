@@ -81,7 +81,7 @@ namespace pixel::f2 {
                 x = tmp;
             }
 
-            std::string toString() const noexcept { return std::to_string(x)+"/"+std::to_string(y); }
+            std::string toString() const noexcept { return std::to_string(x)+" / "+std::to_string(y); }
 
             constexpr bool is_zero() const noexcept {
                 return pixel::is_zero(x) && pixel::is_zero(y);
@@ -186,10 +186,10 @@ namespace pixel::f2 {
 
             bool on_screen() const noexcept {
                 // x in [min_x .. max_x] ?
-                const int x_ = pixel::round_to_int(x);
-                const int y_ = pixel::round_to_int(y);
-                return 0 <= x_ && x_ <= pixel::fb_max_x &&
-                       0 <= y_ && y_ <= pixel::fb_max_y;
+                const int x_fb = cart_coord.to_fb_x( x );
+                const int y_fb = cart_coord.to_fb_y( y );
+                return 0 <= x_fb && x_fb <= pixel::fb_max_x &&
+                       0 <= y_fb && y_fb <= pixel::fb_max_y;
             }
 
             void draw() const noexcept {
@@ -198,6 +198,9 @@ namespace pixel::f2 {
     };
 
     typedef vec_t point_t;
+
+    /** Convert framebuffer coordinates in pixels to cartesian coordinates. */
+    vec_t fb_to_cart(const int x, const int y) noexcept { return vec_t(cart_coord.from_fb_x(x), cart_coord.from_fb_y(y)); }
 
     constexpr vec_t operator+(const vec_t& lhs, const vec_t& rhs ) noexcept {
         vec_t r(lhs);
@@ -279,25 +282,27 @@ namespace pixel::f2 {
         static void for_all_points(const point_t& p0, const point_t& p1,
                                    const point_action_t& point_action) noexcept
         {
+            const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
+            const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
             const float dx = p1.x - p0.x;
             const float dy = p1.y - p0.y;
             if( std::abs(dy) > std::abs(dx) ) {
-                const float step_y = ( dy >= 0 ) ? 1 : -1;
-                const float step_x = dx / std::abs( dy );
-                float sy=0;
+                const float step_y = ( dy >= 0 ) ? y_ival : -y_ival;
+                const float step_x = dx / std::abs( dy ) * y_ival;
+                float sy=0.0f;
                 float sx=0.0f;
-                for(; std::abs(sy - dy) > 0.5f; sy+=step_y, sx+=step_x) {
+                for(; std::abs(sy - dy) > y_ival/2.0f; sy+=step_y, sx+=step_x) {
                     const point_t p { p0.x + sx, p0.y + sy };
                     if( !point_action(p) ) {
                         return;
                     }
                 }
             } else {
-                const float step_x = ( dx >= 0 ) ? 1 : -1;
-                const float step_y = dy / std::abs( dx );
-                float sx=0;
+                const float step_x = ( dx >= 0 ) ? x_ival : -x_ival;
+                const float step_y = dy / std::abs( dx ) * x_ival;
+                float sx=0.0f;
                 float sy=0.0f;
-                for(; std::abs(sx - dx) > 0.5f; sx+=step_x, sy+=step_y) {
+                for(; std::abs(sx - dx) > x_ival/2.0f; sx+=step_x, sy+=step_y) {
                     point_t p { p0.x + sx, p0.y + sy };
                     if( !point_action(p) ) {
                         return;
@@ -582,10 +587,10 @@ namespace pixel::f2 {
             }
 
             bool on_screen() const noexcept {
-                const int x0 = pixel::cart_to_fb_x( bl.x );
-                const int y0 = pixel::cart_to_fb_y( tr.y );
-                const int x1 = pixel::cart_to_fb_x( tr.x );
-                const int y1 = pixel::cart_to_fb_y( bl.y );
+                const int x0 = pixel::cart_coord.to_fb_x( bl.x );
+                const int y0 = pixel::cart_coord.to_fb_y( tr.y );
+                const int x1 = pixel::cart_coord.to_fb_x( tr.x );
+                const int y1 = pixel::cart_coord.to_fb_y( bl.y );
 
                 // x in [min_x .. max_x] ?
                 return 0 <= x0 && x0 <= pixel::fb_max_x &&

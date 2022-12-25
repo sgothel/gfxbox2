@@ -44,19 +44,11 @@ static void on_window_resized(bool set_view) noexcept {
         window->setView(sf::View(visibleArea));
     }
 
-    cart_origin[0] = round_to_int((float)fb_width * fb_origin_norm[0]);
-    cart_origin[1] = round_to_int((float)fb_height * fb_origin_norm[1]);
-
-    cart_min_x = -cart_origin[0];
-    cart_min_y = -cart_origin[1];
-    cart_max_x =  cart_origin[0]-1;
-    cart_max_y =  cart_origin[1]-1;
+    cart_coord.set_origin(fb_origin_norm[0], fb_origin_norm[1]);
 
     printf("Screen size %d x %d, min 0 / 0, max %d / %d \n",
             fb_width, fb_height, fb_max_x, fb_max_y);
-
-    printf("Math origin %d / %d, min %d / %d, max %d / %d \n",
-            cart_origin[0], cart_origin[1], cart_min_x, cart_min_y, cart_max_x, cart_max_y);
+    printf("%s\n", cart_coord.toString().c_str());
 
     frames_per_sec = 60;
     window->setFramerateLimit(frames_per_sec);

@@ -9,15 +9,7 @@ int pixel::fb_max_y=0;
 pixel::pixel_buffer_t pixel::fb_pixels;
 int pixel::frames_per_sec=60;
 
-/**
- * Value in range {[0, screen_width-1], [0, screen_height-1] }
- */
-int pixel::cart_origin[2] { 0, 0 };
-
-int pixel::cart_min_x=0;
-int pixel::cart_min_y=0;
-int pixel::cart_max_x=0;
-int pixel::cart_max_y=0;
+pixel::cart_coord_t pixel::cart_coord;
 
 uint32_t pixel::draw_color = 0;
 
@@ -52,10 +44,8 @@ void pixel::milli_sleep(uint64_t td_ms) noexcept {
     ::nanosleep( &ts, nullptr );
 }
 
-namespace pixel {
-
-int from_screenx(const int x) {
-    return x - cart_origin[0];
+void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir) noexcept {
+    mouse_motion_t mouse_motion = mouse_motion_t();
+    pixel::handle_events(close, resized, set_dir, dir, mouse_motion);
 }
 
-}

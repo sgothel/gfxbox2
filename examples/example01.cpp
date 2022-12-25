@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     const pixel::i2::point_t p0_i = { 0, 0 };
     //pixel::i2::lineseg_t la = { p0, { max_x, max_y } };
     const pixel::f2::point_t p0_f = { 0, 0 };
-    pixel::f2::lineseg_t la = { p0_f, { (float)pixel::cart_max_x, (float)pixel::cart_max_y } };
+    pixel::f2::lineseg_t la = { p0_f, { pixel::cart_coord.max_x(), pixel::cart_coord.max_y() } };
 
     int anim_step = 1;
 
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     // std::vector<geom2df*>& gobjects()
     {
         std::vector<pixel::f2::geom_t*>& list = pixel::f2::gobjects();
-        pixel::f2::point_t bl = { (float)pixel::cart_min_x, (float)pixel::cart_min_y };
+        pixel::f2::point_t bl = { pixel::cart_coord.min_x(), pixel::cart_coord.min_y() };
         const float sz = 50;
         const float spacing = 10;
         for(int i=0; i<20; ++i) {
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 
     //pointi_t blob0_home { -max_x+100, -max_y+100 };
     //recti_t hero(blob0_home, 200, 100);
-    pixel::f2::point_t blob0_home { (float)(-pixel::cart_max_x+100), (float)(-pixel::cart_max_y+100) };
+    pixel::f2::point_t blob0_home { -pixel::cart_coord.max_x()+100.0f, -pixel::cart_coord.max_y()+100.0f };
     pixel::f2::rect_t hero(blob0_home, 200, 100);
     int blob0_speed = 2;
 
@@ -91,10 +91,10 @@ int main(int argc, char *argv[])
                 }
             }
         }
-        const pixel::i2::lineseg_t l0 = { p0_i, {  pixel::cart_max_x,  pixel::cart_max_y } };
-        const pixel::i2::lineseg_t l1 = { p0_i, { -pixel::cart_max_x,  pixel::cart_max_y } };
-        const pixel::i2::lineseg_t l2 = { p0_i, { -pixel::cart_max_x, -pixel::cart_max_y } };
-        const pixel::i2::lineseg_t l3 = { p0_i, {  pixel::cart_max_x, -pixel::cart_max_y } };
+        const pixel::i2::lineseg_t l0 = { p0_i, { (int) pixel::cart_coord.max_x(), (int) pixel::cart_coord.max_y() } };
+        const pixel::i2::lineseg_t l1 = { p0_i, { (int)-pixel::cart_coord.max_x(), (int) pixel::cart_coord.max_y() } };
+        const pixel::i2::lineseg_t l2 = { p0_i, { (int)-pixel::cart_coord.max_x(), (int)-pixel::cart_coord.max_y() } };
+        const pixel::i2::lineseg_t l3 = { p0_i, { (int) pixel::cart_coord.max_x(), (int)-pixel::cart_coord.max_y() } };
 
         pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
         l0.draw();
@@ -112,24 +112,24 @@ int main(int argc, char *argv[])
 
         anim_step = 10;
         int ph = 0;
-        if( la.p1.x > (float)-pixel::cart_max_x && la.p1.y == (float)pixel::cart_max_y) {
+        if( la.p1.x > -pixel::cart_coord.max_x() && la.p1.y == pixel::cart_coord.max_y()) {
             // ph 1
-            la.p1.x = std::max<float>( (float)-pixel::cart_max_x, la.p1.x - (float)anim_step );
+            la.p1.x = std::max<float>( -pixel::cart_coord.max_x(), la.p1.x - (float)anim_step );
             ++anim_step;
             ph = 1;
-        } else if( la.p1.x == (float)-pixel::cart_max_x && la.p1.y > (float)-pixel::cart_max_y ) {
+        } else if( la.p1.x == -pixel::cart_coord.max_x() && la.p1.y > -pixel::cart_coord.max_y() ) {
             // ph 2
-            la.p1.y = std::max<float>( (float)-pixel::cart_max_y, la.p1.y - (float)anim_step ) ;
+            la.p1.y = std::max<float>( -pixel::cart_coord.max_y(), la.p1.y - (float)anim_step ) ;
             ++anim_step;
             ph = 2;
-        } else if( la.p1.x < (float)pixel::cart_max_x && la.p1.y == (float)-pixel::cart_max_y ) {
+        } else if( la.p1.x < pixel::cart_coord.max_x() && la.p1.y == -pixel::cart_coord.max_y() ) {
             // ph 3
-            la.p1.x = std::min<float>( (float)pixel::cart_max_x, la.p1.x + (float)anim_step ) ;
+            la.p1.x = std::min<float>( pixel::cart_coord.max_x(), la.p1.x + (float)anim_step ) ;
             ++anim_step;
             ph = 3;
-        } else if( la.p1.x == (float)pixel::cart_max_x && la.p1.y < (float)pixel::cart_max_y ) {
+        } else if( la.p1.x == pixel::cart_coord.max_x() && la.p1.y < pixel::cart_coord.max_y() ) {
             // ph 4
-            la.p1.y = std::min<float>( (float)pixel::cart_max_y, la.p1.y + (float)anim_step ) ;
+            la.p1.y = std::min<float>( pixel::cart_coord.max_y(), la.p1.y + (float)anim_step ) ;
             ++anim_step;
             ph = 4;
         } else {
