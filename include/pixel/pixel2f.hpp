@@ -748,9 +748,9 @@ namespace pixel::f2 {
             {
                 p_a = tl_;
                 p_b = { p_a.x + width, p_a.y };
-                p_c = { p_a.x        , p_a.y + height};
-                p_d = { p_a.x + width, p_a.y + height};
-                p_center = { p_a.x + width/2  , p_a.y + height/2  };
+                p_c = { p_a.x        , p_a.y - height};
+                p_d = { p_a.x + width, p_a.y - height};
+                p_center = { p_a.x + width/2  , p_a.y - height/2  };
                 angle = 0.0f;
                 rect_t::rotate(radians);
             }
@@ -759,9 +759,9 @@ namespace pixel::f2 {
             : p_a(tl_)
             {
                 p_b = { p_a.x + width, p_a.y };
-                p_c = { p_a.x        , p_a.y + height};
-                p_d = { p_a.x + width, p_a.y + height};
-                p_center = { p_a.x + width/2  , p_a.y + height/2  };
+                p_c = { p_a.x        , p_a.y - height};
+                p_d = { p_a.x + width, p_a.y - height};
+                p_center = { p_a.x + width/2  , p_a.y - height/2  };
                 angle = 0.0f;
             }
 

@@ -176,9 +176,13 @@ namespace pixel {
             /** y-axis height of the cartesian coordinate system. */
             constexpr float height() const noexcept { return y2 - y1; }
 
+            /** Convert cartesian x-axis value to framebuffer pixel value. */
+            int to_fb_dx(const float dx) const noexcept { return round_to_int( dx / w_to_fbw ); }
+            /** Convert cartesian y-axis value to framebuffer pixel value. */
+            int to_fb_dy(const float dy) const noexcept { return round_to_int( dy / h_to_fbh ); }
+
             /** Convert cartesian x-axis coordinate to framebuffer coordinate in pixels. */
             int to_fb_x(const float x) const noexcept { return round_to_int( ( x - x1 ) / w_to_fbw ); }
-
             /** Convert cartesian y-axis coordinate in pixels to framebuffer coordinate in pixels. */
             int to_fb_y(const float y) const noexcept { return fb_height - round_to_int( ( y - y1 ) / h_to_fbh ); }
 
@@ -279,7 +283,7 @@ namespace pixel {
 
             void destroy() noexcept;
 
-            void draw(const int x_pos, const int y_pos, const float scale=1.0f) noexcept;
+            void draw(const int x_pos, const int y_pos, const float scale_x=1.0f, const float scale_y=1.0f) noexcept;
     };
     typedef std::shared_ptr<texture_t> texture_ref;
 

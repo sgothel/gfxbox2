@@ -39,17 +39,18 @@ int main(int argc, char *argv[])
         std::vector<pixel::f2::geom_t*>& list = pixel::f2::gobjects();
         pixel::f2::point_t bl = { pixel::cart_coord.min_x(), pixel::cart_coord.min_y() };
         const float sz = 50;
+        const float radius = sz/2.0f;
         const float spacing = 10;
         for(int i=0; i<20; ++i) {
             pixel::f2::point_t p = { bl.x + (float)i * ( sz + spacing ), bl.y + (float)i * ( sz + spacing ) };
             if( 0 == i % 2 ) { // modulo (divisionsrest) mit zwei, d.h. durch zwei teilbar?
-                pixel::f2::rect_t* r = new pixel::f2::rect_t(p, sz, sz);
-                r->rotate(pixel::adeg_to_rad(45.0f));
-                list.push_back(r);
+                const pixel::f2::vec_t c_diff(-sz/2.0f, sz/2.0f);
+                pixel::f2::rect_t* o = new pixel::f2::rect_t(p+c_diff, sz, sz);
+                o->rotate(pixel::adeg_to_rad(45.0f));
+                list.push_back(o);
             } else {
-                const float r = sz/2.0f;
-                pixel::f2::disk_t* d = new pixel::f2::disk_t( { p.x + r, p.y + r }, r);
-                list.push_back(d);
+                pixel::f2::disk_t* o = new pixel::f2::disk_t(p, radius);
+                list.push_back(o);
             }
             printf("[%d]: Added %s\n", i, list.back()->toString().c_str());
         }
@@ -60,7 +61,7 @@ int main(int argc, char *argv[])
 
     //pointi_t blob0_home { -max_x+100, -max_y+100 };
     //recti_t hero(blob0_home, 200, 100);
-    pixel::f2::point_t blob0_home { -pixel::cart_coord.max_x()+100.0f, -pixel::cart_coord.max_y()+100.0f };
+    pixel::f2::point_t blob0_home { pixel::cart_coord.min_x()+300.0f, pixel::cart_coord.min_y()+200.0f };
     pixel::f2::rect_t hero(blob0_home, 200, 100);
     int blob0_speed = 2;
 

@@ -3,7 +3,7 @@
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
 
-const float world_height = 2.0f; // [m]
+const float drop_height = 2.0f; // [m]
 const float earth_accel = 9.81f; // [m/s*s]
 
 /**
@@ -53,7 +53,7 @@ class ball_t : public pixel::f2::disk_t {
          */
         ball_t(std::string id_, float x_m, float y_m, const float r_m, const float velocity_, const float v_angle_rad)
         : pixel::f2::disk_t(x_m, y_m, r_m),
-          id(std::move(id_)), start_xpos(x_m), start_ypos(y_m), velocity_start(velocity_), total_fall(world_height),
+          id(std::move(id_)), start_xpos(x_m), start_ypos(y_m), velocity_start(velocity_), total_fall(drop_height),
           velocity_max(std::sqrt( 2 * earth_accel * total_fall )), velocity()
         {
             rotate(v_angle_rad); // direction of velocity
@@ -140,35 +140,55 @@ int main(int argc, char *argv[])
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("freefall01b", win_width, win_height, origin_norm);
+        pixel::init_gfx_subsystem("freefall01", win_width, win_height, origin_norm);
     }
 
     const float ball_height = 0.05f; // [m] .. diameter
     const float ball_radius = ball_height/2.0f; // [m]
+    const float thickness = 1.0f * ball_height;
+    const float small_gap = ball_radius;
 
-    pixel::cart_coord.set_height(0.0f, world_height+ball_radius);
+    pixel::cart_coord.set_height(0.0f, drop_height+2.0f*thickness);
 
-    ball_t ball_1( "one", -4.0f*ball_height, world_height-ball_radius, ball_radius,
+    const int thickness_pixel = pixel::cart_coord.to_fb_dy(thickness);
+    const int small_gap_pixel = pixel::cart_coord.to_fb_dy(small_gap);
+
+    ball_t ball_1( "one", -4.0f*ball_height, drop_height-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-    ball_t ball_2( "two", +2.0f*ball_height, world_height-ball_radius, ball_radius,
+    ball_t ball_2( "two", +2.0f*ball_height, drop_height-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
     ball_t ball_3( "can",  pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+ball_height, ball_radius,
                     6.1f /* [m/s] */, pixel::adeg_to_rad(78));
     {
+        printf("XX %s\n", pixel::cart_coord.toString().c_str());
         std::vector<pixel::f2::geom_t*>& list = pixel::f2::gobjects();
-        float thickness = 1.1f * ball_height;
-        float small_gap = ball_radius;
-        if( false ) {
-            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+thickness, pixel::cart_coord.max_y()-thickness };
-            pixel::f2::rect_t* r = new pixel::f2::rect_t(tl, (float)pixel::fb_max_x-2*thickness, thickness);
+        {
+            // top horizontal bounds
+            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-small_gap };
+            pixel::f2::rect_t* r = new pixel::f2::rect_t(tl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
             list.push_back(r);
+            printf("XX RT %s\n", r->toString().c_str());
         }
         {
-            pixel::f2::point_t bl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.min_y()+small_gap };
-            pixel::f2::rect_t* r = new pixel::f2::rect_t(bl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
+            // bottom horizontal bounds
+            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.min_y()+small_gap+thickness };
+            pixel::f2::rect_t* r = new pixel::f2::rect_t(tl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
             list.push_back(r);
-            printf("XX %s\n", pixel::cart_coord.toString().c_str());
-            printf("XX %s\n", r->toString().c_str());
+            printf("XX RB %s\n", r->toString().c_str());
+        }
+        if(false) {
+            // left vertical bounds
+            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
+            pixel::f2::rect_t* r = new pixel::f2::rect_t(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
+            list.push_back(r);
+            printf("XX RL %s\n", r->toString().c_str());
+        }
+        if(false) {
+            // right vertical bounds
+            pixel::f2::point_t tl = { pixel::cart_coord.max_x()-small_gap-thickness, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
+            pixel::f2::rect_t* r = new pixel::f2::rect_t(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
+            list.push_back(r);
+            printf("XX RR %s\n", r->toString().c_str());
         }
     }
 
@@ -227,10 +247,11 @@ int main(int argc, char *argv[])
         }
         pixel::swap_pixel_fb(false);
         if( nullptr != hud_text ) {
-            hud_text->draw(0, 0);
+            const int text_height = thickness_pixel - 2;
+            const float sy = (float)text_height / (float)hud_text->height;
+            hud_text->draw(small_gap_pixel*2.0f, small_gap_pixel+1, sy, sy);
         }
         pixel::swap_gpu_buffer();
     }
     exit(0);
 }
-

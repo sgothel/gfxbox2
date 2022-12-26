@@ -117,10 +117,11 @@ void pixel::texture_t::destroy() noexcept {
     // TODO
 }
 
-void pixel::texture_t::draw(const int x_pos, const int y_pos, const float scale) noexcept {
+void pixel::texture_t::draw(const int x_pos, const int y_pos, const float scale_x, const float scale_y) noexcept {
     (void)x_pos;
     (void)y_pos;
-    (void)scale;
+    (void)scale_x;
+    (void)scale_y;
     // TODO
 }
 

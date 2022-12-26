@@ -161,13 +161,13 @@ void pixel::texture_t::destroy() noexcept {
     data = nullptr;
 }
 
-void pixel::texture_t::draw(const int x_pos, const int y_pos, const float scale) noexcept {
+void pixel::texture_t::draw(const int x_pos, const int y_pos, const float scale_x, const float scale_y) noexcept {
     SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(data);
     if( nullptr != tex ) {
         SDL_Rect src = { .x=x, .y=y, .w=width, .h=height};
         SDL_Rect dest = { .x=x_pos,
                           .y=y_pos,
-                          .w=round_to_int(width*scale), .h=round_to_int(height*scale) };
+                          .w=round_to_int(width*scale_x), .h=round_to_int(height*scale_y) };
         SDL_RenderCopy(sdl_rend, tex, &src, &dest);
     }
 }
