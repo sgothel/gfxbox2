@@ -102,17 +102,11 @@ namespace pixel::f2 {
             }
 
             /**
-             * Return the tangent of this vectors
-             */
-            constexpr float tan_angle() const noexcept {
-                return y / x;
-            }
-
-            /**
-             * Return the angle of this vectors in radians
+             * Return the direction angle of this vector in radians
              */
             float angle() const noexcept {
-                return std::atan( tan_angle() );
+                // Utilize atan2 taking y=sin(a) and x=cos(a), resulting in proper direction angle for all quadrants.
+                return std::atan2( y, x );
             }
 
             /**
