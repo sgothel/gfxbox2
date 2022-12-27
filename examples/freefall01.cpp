@@ -186,6 +186,8 @@ int main(int argc, char *argv[])
 {
     int win_width = 1920, win_height = 1080;
     std::string record_bmpseq_basename;
+    bool enable_vsync = true;
+    int forced_fps = -1;
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
@@ -199,6 +201,10 @@ int main(int argc, char *argv[])
                 ++i;
             } else if( 0 == strcmp("-debug_gfx", argv[i]) ) {
                 debug_gfx = true;
+            } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
+                forced_fps = atoi(argv[i+1]);
+                enable_vsync = false;
+                ++i;
             }
         }
     }
@@ -208,11 +214,13 @@ int main(int argc, char *argv[])
         pixel::log_printf(elapsed_ms, "- win size %d x %d\n", win_width, win_height);
         pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
+        pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
+        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", forced_fps);
     }
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("freefall01", win_width, win_height, origin_norm);
+        pixel::init_gfx_subsystem("freefall01", win_width, win_height, origin_norm, enable_vsync);
     }
 
     const float ball_height = 0.05f; // [m] .. diameter
@@ -277,6 +285,7 @@ int main(int argc, char *argv[])
     uint64_t frame_count_total = 0;
 
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    uint64_t t_fps_last = pixel::getCurrentMilliseconds();
 
     while(!close) {
         handle_events(close, resized, set_dir, dir);
@@ -321,9 +330,6 @@ int main(int argc, char *argv[])
         }
 
         fflush(nullptr);
-        if( dt_diff > 1.0f ) {
-            pixel::milli_sleep( (uint64_t)dt_diff );
-        }
         pixel::swap_pixel_fb(false);
         if( nullptr != hud_text ) {
             const int text_height = thickness_pixel - 2;
@@ -338,6 +344,27 @@ int main(int argc, char *argv[])
             pixel::save_snapshot(snap_fname);
         }
         ++frame_count_total;
+        if( 0 < forced_fps ) {
+            const int64_t fudge_ns = pixel::NanoPerMilli / 4;
+            const uint64_t ms_per_frame = (uint64_t)std::round(1000.0 / forced_fps);
+            const uint64_t ms_last_frame = pixel::getCurrentMilliseconds() - t_fps_last;
+            int64_t td_ns = int64_t( ms_per_frame - ms_last_frame ) * pixel::NanoPerMilli;
+            if( td_ns > fudge_ns )
+            {
+                if( true ) {
+                    const int64_t td_ns_0 = td_ns%pixel::NanoPerOne;
+                    struct timespec ts { td_ns/pixel::NanoPerOne, td_ns_0 - fudge_ns };
+                    nanosleep( &ts, NULL );
+                    // pixel::log_printf("soft-sync [exp %zd > has %zd]ms, delay %" PRIi64 "ms (%lds, %ldns)\n", ms_per_frame, ms_last_frame, td_ns/pixel::NanoPerMilli, ts.tv_sec, ts.tv_nsec);
+                } else {
+                    pixel::milli_sleep( td_ns / pixel::NanoPerMilli );
+                    // pixel::log_printf("soft-sync [exp %zd > has %zd]ms, delay %" PRIi64 "ms\n", ms_per_frame, ms_last_frame, td_ns/pixel::NanoPerMilli);
+                }
+            }
+        } else if( dt_diff > 1.0f ) {
+            pixel::milli_sleep( (uint64_t)dt_diff );
+        }
+        t_fps_last = pixel::getCurrentMilliseconds();
     }
     exit(0);
 }
