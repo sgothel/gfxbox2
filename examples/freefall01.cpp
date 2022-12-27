@@ -62,7 +62,7 @@ class ball_t : public pixel::f2::disk_t {
             const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
             pixel::log_printf(elapsed_ms, "ball %s-i, %s\n", id.c_str(), toString().c_str());
             pixel::log_printf(elapsed_ms, "Ball %s-i: v %s, |%f| / %f m/s, %s\n",
-                    id.c_str(), velocity.toString().c_str(), velocity.norm(), velocity_max, box().toString().c_str());
+                    id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max, box().toString().c_str());
         }
 
         void reset() noexcept {
@@ -101,86 +101,81 @@ class ball_t : public pixel::f2::disk_t {
                 // l_move.p0 -= l_move_diff;
                 l_move.p1 += l_move_diff;
             }
-            // move box only for debugging purposes
-            pixel::f2::aabbox_t move_box(this->box());
             this->move( ds_m_dir );
-            move_box.resize(this->box());
 
             const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
 
-            pixel::f2::geom_ref_t coll_box = nullptr;
-            pixel::f2::geom_ref_t coll_line = nullptr;
-            float coll_angle = 0.0f;
-            pixel::f2::vec_t coll_point;
+            pixel::f2::geom_ref_t coll_obj = nullptr;
+            pixel::f2::point_t coll_point;
+            pixel::f2::vec_t coll_normal;
+            pixel::f2::vec_t coll_out;
             {
                 // detect a collision
                 pixel::f2::geom_list_t& list = pixel::f2::gobjects();
                 for(pixel::f2::geom_ref_t g : list) {
-                    if( debug_gfx && g->box().intersects(move_box) ) {
-                        coll_box = g;
-                    }
-                    if( g->intersection(coll_angle, coll_point, l_move) ) {
-                        coll_line = g;
-                        break;
+                    if( g.get() != this ) {
+                        if( g->intersection(coll_out, coll_normal, coll_point, l_move) ) {
+                            coll_obj = g;
+                            break;
+                        }
                     }
                 }
             }
             if( debug_gfx ) {
-                if( false ) {
-                    pixel::log_printf(elapsed_ms, "Ball %s-t-b: v %s, |%f| / %f m/s, , ds %s [m/s], move[angle %f, len %f]\n",
-                            id.c_str(), velocity.toString().c_str(), velocity.norm(), velocity_max, ds_m_dir.toString().c_str(),
-                            pixel::rad_to_adeg(a_move), l_move.length());
-                }
-                // this->draw();
-                if( nullptr != coll_line ) {
-                    pixel::f2::vec_t p_coll_angle = pixel::f2::vec_t::from_length_angle(2.0f*radius, coll_angle);
-                    pixel::f2::lineseg_t l_coll_angle(l_move.p1, l_move.p1+p_coll_angle);
-                    pixel::set_pixel_color(255 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-                    l_coll_angle.draw();
-
-                    pixel::f2::vec_t p_dir_angle = pixel::f2::vec_t::from_length_angle(2.0f*radius, a_move);
-                    pixel::f2::lineseg_t l_dir_angle(l_move.p1, l_move.p1+p_dir_angle);
-                    pixel::set_pixel_color(0 /* r */, 0 /* g */, 255 /* b */, 255 /* a */);
-                    l_dir_angle.draw();
-                }
                 pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+                this->draw(false);
                 l_move.draw();
-                move_box.draw();
+                if( nullptr != coll_obj ) {
+                    pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+                    this->draw(false);
+
+                    pixel::set_pixel_color(0 /* r */, 255 /* g */, 0 /* b */, 255 /* a */);
+                    pixel::f2::vec_t p_dir_angle = pixel::f2::vec_t::from_length_angle(2.0f*radius, a_move);
+                    pixel::f2::lineseg_t l_in(coll_point-p_dir_angle, coll_point);
+                    l_in.draw();
+
+                    pixel::set_pixel_color(255 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+                    pixel::f2::lineseg_t l_CN(coll_point, coll_point+coll_normal);
+                    l_CN.draw();
+
+                    pixel::set_pixel_color(0 /* r */, 0 /* g */, 255 /* b */, 255 /* a */);
+                    pixel::f2::lineseg_t l_out(coll_point, coll_point+coll_out);
+                    l_out.draw();
+                    pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+                }
             }
-            if( nullptr != coll_line ) {
+            if( nullptr != coll_obj ) {
                 pixel::log_printf(elapsed_ms, "\n");
-                pixel::log_printf(elapsed_ms, "Ball %s-e-a: v %s, |%f| / %f m/s, ds %s [m/s], move[angle %f, len %f], coll[line %d, box %d, angle %f, %s]\n",
-                        id.c_str(), velocity.toString().c_str(), velocity.norm(), velocity_max, ds_m_dir.toString().c_str(),
-                        pixel::rad_to_adeg(a_move), l_move.length(),
-                        nullptr != coll_line, nullptr != coll_box, pixel::rad_to_adeg(coll_angle), coll_point.toString().c_str());
-                pixel::log_printf(elapsed_ms, "Ball %s-e-a: %s, %s, %s\n",
-                        id.c_str(), toString().c_str(), l_move.toString().c_str(), box().toString().c_str());
-                pixel::log_printf(elapsed_ms, "Ball %s-e-a: %s\n",
-                        id.c_str(), coll_line->toString().c_str());
+                pixel::log_printf(elapsed_ms, "Ball %s-e-a: v %s, |%f| / %f m/s, ds %s [m/s], move[angle %f, len %f, %s]\n",
+                        id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max, ds_m_dir.toString().c_str(),
+                        pixel::rad_to_adeg(a_move), l_move.length(), l_move.toString().c_str());
+                pixel::log_printf(elapsed_ms, "Ball %s-e-a: coll[point %s, out[%s, angle %f]]]\n",
+                        id.c_str(),
+                        coll_point.toString().c_str(), coll_out.toString().c_str(), pixel::rad_to_adeg(coll_out.angle()));
+                pixel::log_printf(elapsed_ms, "Ball %s-e-a: %s\n", id.c_str(), coll_obj->toString().c_str());
 
                 // bounce velocity: current velocity * 0.75 (rho) in collision reflection angle
                 velocity_max *= 0.75f; // rho
-                velocity = pixel::f2::vec_t::from_length_angle(velocity.norm() * 0.75f, coll_angle); // cont using simulated velocity
+                velocity = pixel::f2::vec_t::from_length_angle(velocity.length() * 0.75f, coll_out.angle()); // cont using simulated velocity
                 // adjust position out of collision space
-                if( true ) {
-                    // simple and working
+                if( false ) {
+                    // simple, but not giving an accurate continuous animation
                     center = good_position;
-                } else if( false ) {
-                    // requires using ( coll_point - l_move ) 'retraction' move, radius just won't cut it.
-                    pixel::f2::vec_t l_move_diff = pixel::f2::vec_t::from_length_angle(radius, coll_angle);
-                    center += l_move_diff;
+                } else {
+                    // center = coll_point + coll_out;
+                    center = coll_point + pixel::f2::vec_t::from_length_angle((coll_point-good_position).length(), coll_out.angle());
                 }
                 // const bool do_reset = velocity.norm() <= min_velocity;
                 const bool do_reset = velocity_max <= min_velocity;
                 pixel::log_printf(elapsed_ms, "Ball %s-e-b: v %s, |%f| / %f m/s, reset %d, %s, %s\n",
-                        id.c_str(), velocity.toString().c_str(), velocity.norm(), velocity_max,
+                        id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max,
                         do_reset, toString().c_str(), box().toString().c_str());
                 if( do_reset ) {
                     reset();
                 }
             } else if( !this->on_screen() ) {
                 pixel::log_printf(elapsed_ms, "Ball %s-off: v %s, |%f| / %f m/s, %s, %s\n",
-                        id.c_str(), velocity.toString().c_str(), velocity.norm(), velocity_max, toString().c_str(), box().toString().c_str());
+                        id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max, toString().c_str(), box().toString().c_str());
                 reset();
             }
         }
@@ -229,17 +224,20 @@ int main(int argc, char *argv[])
     const int thickness_pixel = pixel::cart_coord.to_fb_dy(thickness);
     const int small_gap_pixel = pixel::cart_coord.to_fb_dy(small_gap);
 
-    ball_t ball_1( "one", -4.0f*ball_height, drop_height-ball_radius, ball_radius,
+    std::shared_ptr<ball_t> ball_1 = std::make_shared<ball_t>( "one", -4.0f*ball_height, drop_height-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-    ball_t ball_2( "two", +2.0f*ball_height, drop_height-ball_radius, ball_radius,
+    std::shared_ptr<ball_t> ball_2 = std::make_shared<ball_t>( "two", +2.0f*ball_height, drop_height-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-    ball_t ball_3( "can",  pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
-                    6.5f /* [m/s] */, pixel::adeg_to_rad(60));
+    std::shared_ptr<ball_t> ball_3 = std::make_shared<ball_t>( "can",  pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
+                    6.8f /* [m/s] */, pixel::adeg_to_rad(64));
                     // 6.1f /* [m/s] */, pixel::adeg_to_rad(78));
     {
         const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
         pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
         pixel::f2::geom_list_t& list = pixel::f2::gobjects();
+        list.push_back(ball_1);
+        list.push_back(ball_2);
+        list.push_back(ball_3);
         {
             // top horizontal bounds
             pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-small_gap };
@@ -294,25 +292,31 @@ int main(int argc, char *argv[])
         hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+", fps "+std::to_string(pixel::get_gpu_fps()));
 
         // move ball_1
-        ball_1.tick(dt);
+        ball_1->tick(dt);
 
         // move ball_2
-        ball_2.tick(dt);
+        ball_2->tick(dt);
 
         // move ball_3
-        ball_3.tick(dt);
+        ball_3->tick(dt);
 
         pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
         {
             pixel::f2::geom_list_t& list = pixel::f2::gobjects();
-            for(pixel::f2::geom_ref_t g : list) {
-                g->draw();
+            if( debug_gfx ) {
+                for(pixel::f2::geom_ref_t g : list) {
+                    if( g.get() != ball_1.get() &&
+                        g.get() != ball_2.get() &&
+                        g.get() != ball_3.get() )
+                    {
+                        g->draw();
+                    }
+                }
+            } else {
+                for(pixel::f2::geom_ref_t g : list) {
+                    g->draw();
+                }
             }
-        }
-        if( !debug_gfx ) {
-            ball_1.draw();
-            ball_2.draw();
-            ball_3.draw();
         }
 
         fflush(nullptr);

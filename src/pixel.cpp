@@ -83,30 +83,30 @@ bool pixel::f2::aabbox_t::intersects(const lineseg_t & o) const noexcept {
     return o.intersects(*this);
 }
 
-bool pixel::f2::aabbox_t::intersection(float& angle_res, point_t& cross_res, const lineseg_t& in) const noexcept {
+bool pixel::f2::aabbox_t::intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept {
     const point_t tl(bl.x, tr.y);
     const point_t br(tr.x, bl.y);
     {
         const lineseg_t l(tl, tr);
-        if( l.intersection(angle_res, cross_res, in) ) {
+        if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
             return true;
         }
     }
     {
         const lineseg_t l(bl, br);
-        if( l.intersection(angle_res, cross_res, in) ) {
+        if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
             return true;
         }
     }
     {
         const lineseg_t l(br, tr);
-        if( l.intersection(angle_res, cross_res, in) ) {
+        if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
             return true;
         }
     }
     {
         const lineseg_t l(bl, tl);
-        if( l.intersection(angle_res, cross_res, in) ) {
+        if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
             return true;
         }
     }

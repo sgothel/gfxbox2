@@ -260,9 +260,9 @@ namespace pixel::f2 {
 
             /**
              * Return whether this object intersects with the given line segment
-             * and if intersecting, the angle between this object and the given line segment in radians.
+             * and if intersecting, the crossing point (intersection), the normalized normal of the crossing surface and the reflection out vector.
              */
-            virtual bool intersection(float& angle_res, point_t& cross_res, const lineseg_t& in) const noexcept = 0;
+            virtual bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept = 0;
 
             virtual void draw() const noexcept = 0;
             virtual bool on_screen() const noexcept = 0;
@@ -417,7 +417,7 @@ namespace pixel::f2 {
                 return intersects(o.box());
             }
 
-            bool intersection(float& angle_res, point_t& cross_res, const lineseg_t& in) const noexcept override;
+            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override;
 
             bool on_screen() const noexcept {
                 const int x0 = pixel::cart_coord.to_fb_x( bl.x );
@@ -738,12 +738,13 @@ namespace pixel::f2 {
                 return intersects(o.box());
             }
 
-            bool intersection(float& angle_res, point_t& cross_res, const lineseg_t& in) const noexcept override {
-                if( intersects(cross_res, in) ) {
-                    angle_res = angle(in);
-                    pixel::log_printf("intersection: %s with %s -> angle %f, %s\n",
-                            toString().c_str(), in.toString().c_str(),
-                            pixel::rad_to_adeg(angle_res), cross_res.toString().c_str());
+            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
+                if( intersects(cross_point, in) ) {
+                    const float dx = p1.x - p0.x;
+                    const float dy = p1.y - p0.y;
+                    cross_normal = vec_t(-dy, dx).normalize();
+                    const vec_t v_in = in.p1 - in.p0;
+                    reflect_out = v_in - ( 2.0f * v_in.dot(cross_normal) * cross_normal );
                     return true;
                 }
                 return false;
@@ -844,24 +845,34 @@ namespace pixel::f2 {
                 return box().intersects(o.box());
             }
 
-            bool intersection(float& angle_res, point_t& cross_res, const lineseg_t& in) const noexcept override {
+            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
                 if( !in.intersects( box() ) ) {
                     return false;
                 }
-                angle_res = in.angle();
-                cross_res = center; // FIXME
+                cross_point = center; // use center
+                const float dx = in.p1.x - in.p0.x;
+                const float dy = in.p1.y - in.p0.y;
+                cross_normal = vec_t(-dy, dx).normalize();
+                const vec_t v_in = in.p1 - in.p0;
+                // reflect_out = v_in - ( 2.0f * v_in.dot(cross_normal) * cross_normal ); // TODO: check if cross_normal is OK for this case
+                reflect_out = -1.0f * v_in;
                 return true;
             }
 
             void draw() const noexcept override {
+                draw(true);
+            }
+            void draw(const bool filled) const noexcept {
                 const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
                 const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
-
+                const float ival2 = 1.0f*std::min(x_ival, y_ival);
                 const aabbox_t b = box();
                 for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) {
                     for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
                         const point_t p { x, y };
-                        if( center.dist(p) <= radius ) {
+                        const float cp = center.dist(p);
+                        if( (  filled && cp <= radius ) ||
+                            ( !filled && std::abs(cp - radius) <= ival2 ) ) {
                             p.draw();
                         }
                     }
@@ -1008,32 +1019,32 @@ namespace pixel::f2 {
                 return box().intersects(o.box());
             }
 
-            bool intersection(float& angle_res, point_t& cross_res, const lineseg_t& in) const noexcept override {
+            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
                 {
                     // tl .. tr
                     const lineseg_t l(p_a, p_b);
-                    if( l.intersection(angle_res, cross_res, in) ) {
+                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
                         return true;
                     }
                 }
                 {
                     // bl .. br
                     const lineseg_t l(p_c, p_d);
-                    if( l.intersection(angle_res, cross_res, in) ) {
+                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
                         return true;
                     }
                 }
                 {
                     // br .. tr
                     const lineseg_t l(p_d, p_b);
-                    if( l.intersection(angle_res, cross_res, in) ) {
+                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
                         return true;
                     }
                 }
                 {
                     // bl .. tl
                     const lineseg_t l(p_c, p_a);
-                    if( l.intersection(angle_res, cross_res, in) ) {
+                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
                         return true;
                     }
                 }
