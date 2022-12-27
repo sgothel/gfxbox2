@@ -81,6 +81,8 @@ class ball_t : public pixel::f2::disk_t {
             const float min_velocity = 0.00005f;
             // const float min_velocity = 0.02f;
 
+            const pixel::f2::vec_t good_position = center;
+
             // Leave horizontal velocity untouched, will be reduced at bounce
             velocity.y += -earth_accel * dt;
 
@@ -160,17 +162,13 @@ class ball_t : public pixel::f2::disk_t {
                 velocity_max *= 0.75f; // rho
                 velocity = pixel::f2::vec_t::from_length_angle(velocity.norm() * 0.75f, coll_angle); // cont using simulated velocity
                 // adjust position out of collision space
-                if( false ) {
-                    pixel::f2::vec_t l_move_diff = pixel::f2::vec_t::from_length_angle(1.0f*radius, coll_angle);
+                if( true ) {
+                    // simple and working
+                    center = good_position;
+                } else if( false ) {
+                    // requires using ( coll_point - l_move ) 'retraction' move, radius just won't cut it.
+                    pixel::f2::vec_t l_move_diff = pixel::f2::vec_t::from_length_angle(radius, coll_angle);
                     center += l_move_diff;
-                } else {
-                    if( 0 >= a_move ) {
-                        // down movement: move up
-                        center.y = coll_line->box().tr.y+1.0f*radius;
-                    } else {
-                        // up movement: move down
-                        center.y = coll_line->box().bl.y-1.0f*radius;
-                    }
                 }
                 // const bool do_reset = velocity.norm() <= min_velocity;
                 const bool do_reset = velocity_max <= min_velocity;
@@ -236,7 +234,8 @@ int main(int argc, char *argv[])
     ball_t ball_2( "two", +2.0f*ball_height, drop_height-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
     ball_t ball_3( "can",  pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
-                    6.1f /* [m/s] */, pixel::adeg_to_rad(78));
+                    6.5f /* [m/s] */, pixel::adeg_to_rad(60));
+                    // 6.1f /* [m/s] */, pixel::adeg_to_rad(78));
     {
         const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
         pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
@@ -255,14 +254,14 @@ int main(int argc, char *argv[])
             list.push_back(r);
             pixel::log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
         }
-        if(false) {
+        if(true) {
             // left vertical bounds
             pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
             list.push_back(r);
             pixel::log_printf(elapsed_ms, "XX RL %s\n", r->toString().c_str());
         }
-        if(false) {
+        if(true) {
             // right vertical bounds
             pixel::f2::point_t tl = { pixel::cart_coord.max_x()-small_gap-thickness, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
