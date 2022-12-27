@@ -59,10 +59,12 @@ class ball_t : public pixel::f2::disk_t {
         {
             rotate(v_angle_rad); // direction of velocity
             velocity = pixel::f2::vec_t::from_length_angle(velocity_start, this->dir_angle);
-            const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-            pixel::log_printf(elapsed_ms, "ball %s-i, %s\n", id.c_str(), toString().c_str());
-            pixel::log_printf(elapsed_ms, "Ball %s-i: v %s, |%f| / %f m/s, %s\n",
-                    id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max, box().toString().c_str());
+            if( debug_gfx ) {
+                const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
+                pixel::log_printf(elapsed_ms, "ball %s-i, %s\n", id.c_str(), toString().c_str());
+                pixel::log_printf(elapsed_ms, "Ball %s-i: v %s, |%f| / %f m/s, %s\n",
+                        id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max, box().toString().c_str());
+            }
         }
 
         void reset() noexcept {
@@ -145,14 +147,16 @@ class ball_t : public pixel::f2::disk_t {
                 }
             }
             if( nullptr != coll_obj ) {
-                pixel::log_printf(elapsed_ms, "\n");
-                pixel::log_printf(elapsed_ms, "Ball %s-e-a: v %s, |%f| / %f m/s, ds %s [m/s], move[angle %f, len %f, %s]\n",
-                        id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max, ds_m_dir.toString().c_str(),
-                        pixel::rad_to_adeg(a_move), l_move.length(), l_move.toString().c_str());
-                pixel::log_printf(elapsed_ms, "Ball %s-e-a: coll[point %s, out[%s, angle %f]]]\n",
-                        id.c_str(),
-                        coll_point.toString().c_str(), coll_out.toString().c_str(), pixel::rad_to_adeg(coll_out.angle()));
-                pixel::log_printf(elapsed_ms, "Ball %s-e-a: %s\n", id.c_str(), coll_obj->toString().c_str());
+                if( debug_gfx ) {
+                    pixel::log_printf(elapsed_ms, "\n");
+                    pixel::log_printf(elapsed_ms, "Ball %s-e-a: v %s, |%f| / %f m/s, ds %s [m/s], move[angle %f, len %f, %s]\n",
+                            id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max, ds_m_dir.toString().c_str(),
+                            pixel::rad_to_adeg(a_move), l_move.length(), l_move.toString().c_str());
+                    pixel::log_printf(elapsed_ms, "Ball %s-e-a: coll[point %s, out[%s, angle %f]]]\n",
+                            id.c_str(),
+                            coll_point.toString().c_str(), coll_out.toString().c_str(), pixel::rad_to_adeg(coll_out.angle()));
+                    pixel::log_printf(elapsed_ms, "Ball %s-e-a: %s\n", id.c_str(), coll_obj->toString().c_str());
+                }
 
                 // bounce velocity: current velocity * 0.75 (rho) in collision reflection angle
                 velocity_max *= 0.75f; // rho
@@ -168,15 +172,19 @@ class ball_t : public pixel::f2::disk_t {
                 }
                 // const bool do_reset = velocity.norm() <= min_velocity;
                 const bool do_reset = velocity_max <= min_velocity;
-                pixel::log_printf(elapsed_ms, "Ball %s-e-b: v %s, |%f| / %f m/s, reset %d, %s, %s\n",
-                        id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max,
-                        do_reset, toString().c_str(), box().toString().c_str());
+                if( debug_gfx ) {
+                    pixel::log_printf(elapsed_ms, "Ball %s-e-b: v %s, |%f| / %f m/s, reset %d, %s, %s\n",
+                            id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max,
+                            do_reset, toString().c_str(), box().toString().c_str());
+                }
                 if( do_reset ) {
                     reset();
                 }
             } else if( !this->on_screen() ) {
-                pixel::log_printf(elapsed_ms, "Ball %s-off: v %s, |%f| / %f m/s, %s, %s\n",
-                        id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max, toString().c_str(), box().toString().c_str());
+                if( debug_gfx ) {
+                    pixel::log_printf(elapsed_ms, "Ball %s-off: v %s, |%f| / %f m/s, %s, %s\n",
+                            id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max, toString().c_str(), box().toString().c_str());
+                }
                 reset();
             }
         }
@@ -210,7 +218,7 @@ int main(int argc, char *argv[])
     }
     {
         const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        pixel::log_printf(elapsed_ms, "\n%s\n\n", argv[0]);
+        pixel::log_printf(elapsed_ms, "Usage %s -width <int> -height <int> -record <bmp-files-basename> -debug_gfx -fps <int>\n", argv[0]);
         pixel::log_printf(elapsed_ms, "- win size %d x %d\n", win_width, win_height);
         pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
@@ -230,9 +238,6 @@ int main(int argc, char *argv[])
 
     pixel::cart_coord.set_height(0.0f, drop_height+2.0f*thickness);
 
-    const int thickness_pixel = pixel::cart_coord.to_fb_dy(thickness);
-    const int small_gap_pixel = pixel::cart_coord.to_fb_dy(small_gap);
-
     std::shared_ptr<ball_t> ball_1 = std::make_shared<ball_t>( "one", -4.0f*ball_height, drop_height-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
     std::shared_ptr<ball_t> ball_2 = std::make_shared<ball_t>( "two", +2.0f*ball_height, drop_height-ball_radius, ball_radius,
@@ -242,7 +247,9 @@ int main(int argc, char *argv[])
                     // 6.1f /* [m/s] */, pixel::adeg_to_rad(78));
     {
         const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
+        if( debug_gfx ) {
+            pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
+        }
         pixel::f2::geom_list_t& list = pixel::f2::gobjects();
         list.push_back(ball_1);
         list.push_back(ball_2);
@@ -252,28 +259,36 @@ int main(int argc, char *argv[])
             pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-small_gap };
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
             list.push_back(r);
-            pixel::log_printf(elapsed_ms, "XX RT %s\n", r->toString().c_str());
+            if( debug_gfx ) {
+                pixel::log_printf(elapsed_ms, "XX RT %s\n", r->toString().c_str());
+            }
         }
         {
             // bottom horizontal bounds
             pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.min_y()+small_gap+thickness };
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
             list.push_back(r);
-            pixel::log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
+            if( debug_gfx ) {
+                pixel::log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
+            }
         }
         if(true) {
             // left vertical bounds
             pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
             list.push_back(r);
-            pixel::log_printf(elapsed_ms, "XX RL %s\n", r->toString().c_str());
+            if( debug_gfx ) {
+                pixel::log_printf(elapsed_ms, "XX RL %s\n", r->toString().c_str());
+            }
         }
         if(true) {
             // right vertical bounds
             pixel::f2::point_t tl = { pixel::cart_coord.max_x()-small_gap-thickness, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
             list.push_back(r);
-            pixel::log_printf(elapsed_ms, "XX RR %s\n", r->toString().c_str());
+            if( debug_gfx ) {
+                pixel::log_printf(elapsed_ms, "XX RR %s\n", r->toString().c_str());
+            }
         }
     }
 
@@ -289,6 +304,10 @@ int main(int argc, char *argv[])
 
     while(!close) {
         handle_events(close, resized, set_dir, dir);
+
+        if( resized ) {
+            pixel::cart_coord.set_height(0.0f, drop_height+2.0f*thickness);
+        }
 
         // white background
         pixel::clear_pixel_fb(255, 255, 255, 255);
@@ -332,6 +351,8 @@ int main(int argc, char *argv[])
         fflush(nullptr);
         pixel::swap_pixel_fb(false);
         if( nullptr != hud_text ) {
+            const int thickness_pixel = pixel::cart_coord.to_fb_dy(thickness);
+            const int small_gap_pixel = pixel::cart_coord.to_fb_dy(small_gap);
             const int text_height = thickness_pixel - 2;
             const float sy = (float)text_height / (float)hud_text->height;
             hud_text->draw(small_gap_pixel*2.0f, small_gap_pixel+1, sy, sy);
