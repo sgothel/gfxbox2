@@ -153,18 +153,22 @@ namespace pixel::f2 {
             }
 
             /**
-             * Return the cosines of the angle between to vectors
-             * @param vec1 vector 1
-             * @param vec2 vector 2
+             * cross product this x o
+             * @return the resulting vector
+             */
+            constexpr float cross(const vec_t& o) const noexcept {
+                return x * o.y - y * o.x;
+            }
+
+            /**
+             * Return the cosines of the angle between two vectors
              */
             constexpr float cos_angle(const vec_t& o) const noexcept {
                 return dot(o) / ( norm() * o.norm() ) ;
             }
 
             /**
-             * Return the angle between to vectors in radians
-             * @param vec1 vector 1
-             * @param vec2 vector 2
+             * Return the angle between two vectors in radians
              */
             float angle(const vec_t& o) const noexcept {
                 return std::acos( cos_angle(o) );
