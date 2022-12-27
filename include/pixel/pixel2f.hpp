@@ -90,15 +90,15 @@ namespace pixel::f2 {
             /**
              * Return the squared length of this vector, a.k.a the squared <i>norm</i> or squared <i>magnitude</i>
              */
-            constexpr float norm_sq() const noexcept {
+            constexpr float length_sq() const noexcept {
                 return x*x + y*y;
             }
 
             /**
              * Return the length of this vector, a.k.a the <i>norm</i> or <i>magnitude</i>
              */
-            constexpr float norm() const noexcept {
-                return std::sqrt(norm_sq());
+            constexpr float length() const noexcept {
+                return std::sqrt(length_sq());
             }
 
             /**
@@ -112,16 +112,17 @@ namespace pixel::f2 {
             /**
              * Normalize this vector in place
              */
-            constexpr void normalize() noexcept {
-                const float lengthSq = norm_sq();
+            constexpr vec_t& normalize() noexcept {
+                const float lengthSq = length_sq();
                 if ( pixel::is_zero( lengthSq ) ) {
                     x = 0.0f;
                     y = 0.0f;
                 } else {
                     const float invSqr = 1.0f / std::sqrt(lengthSq);
                     x *= invSqr;
-                    x *= invSqr;
+                    y *= invSqr;
                 }
+                return *this;
             }
 
             /**
@@ -164,7 +165,7 @@ namespace pixel::f2 {
              * Return the cosines of the angle between two vectors
              */
             constexpr float cos_angle(const vec_t& o) const noexcept {
-                return dot(o) / ( norm() * o.norm() ) ;
+                return dot(o) / ( length() * o.length() ) ;
             }
 
             /**
