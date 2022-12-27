@@ -96,9 +96,9 @@ class ball_t : public pixel::f2::disk_t {
                 l_move.p0 = this->center;
                 l_move.p1 = l_move.p0 + ds_m_dir;
                 a_move = l_move.angle();
-                // Extend move size to cover radius in moving direction p1 only (avoid collision detection on reversal)
+                // Extend move size to cover radius in moving direction p1 and -p0
                 pixel::f2::vec_t l_move_diff = pixel::f2::vec_t::from_length_angle(radius, a_move);
-                // l_move.p0 -= l_move_diff;
+                l_move.p0 -= l_move_diff;
                 l_move.p1 += l_move_diff;
             }
             this->move( ds_m_dir );
@@ -158,10 +158,11 @@ class ball_t : public pixel::f2::disk_t {
                 velocity_max *= 0.75f; // rho
                 velocity = pixel::f2::vec_t::from_length_angle(velocity.length() * 0.75f, coll_out.angle()); // cont using simulated velocity
                 // adjust position out of collision space
-                if( false ) {
-                    // simple, but not giving an accurate continuous animation
+                if( true ) {
+                    // Simple & safe, but not giving an accurate continuous animation
                     center = good_position;
                 } else {
+                    // Could be off-screen already, literal corner cases on high speed and/or low-fps
                     // center = coll_point + coll_out;
                     center = coll_point + pixel::f2::vec_t::from_length_angle((coll_point-good_position).length(), coll_out.angle());
                 }
