@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 
     // std::vector<geom2df*>& gobjects()
     {
-        std::vector<pixel::f2::geom_t*>& list = pixel::f2::gobjects();
+        pixel::f2::ageom_list_t& list = pixel::f2::agobjects();
         pixel::f2::point_t bl = { pixel::cart_coord.min_x(), pixel::cart_coord.min_y() };
         const float sz = 50;
         const float radius = sz/2.0f;
@@ -45,11 +45,11 @@ int main(int argc, char *argv[])
             pixel::f2::point_t p = { bl.x + (float)i * ( sz + spacing ), bl.y + (float)i * ( sz + spacing ) };
             if( 0 == i % 2 ) { // modulo (divisionsrest) mit zwei, d.h. durch zwei teilbar?
                 const pixel::f2::vec_t c_diff(-sz/2.0f, sz/2.0f);
-                pixel::f2::rect_t* o = new pixel::f2::rect_t(p+c_diff, sz, sz);
+                std::shared_ptr<pixel::f2::rect_t> o = std::make_shared<pixel::f2::rect_t>(p+c_diff, sz, sz);
                 o->rotate(pixel::adeg_to_rad(45.0f));
                 list.push_back(o);
             } else {
-                pixel::f2::disk_t* o = new pixel::f2::disk_t(p, radius);
+                std::shared_ptr<pixel::f2::disk_t> o = std::make_shared<pixel::f2::disk_t>(p, radius);
                 list.push_back(o);
             }
             printf("[%d]: Added %s\n", i, list.back()->toString().c_str());
@@ -92,8 +92,8 @@ int main(int argc, char *argv[])
 
         {
             pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
-            std::vector<pixel::f2::geom_t*>& list = pixel::f2::gobjects();
-            for(pixel::f2::geom_t* g : list) {
+            pixel::f2::ageom_list_t& list = pixel::f2::agobjects();
+            for(pixel::f2::ageom_ref_t g : list) {
                 g->rotate(pixel::adeg_to_rad(1.0f));
                 g->draw();
 

@@ -1,4 +1,5 @@
 #include "pixel/pixel.hpp"
+#include "pixel/pixel2f.hpp"
 
 #include <ctime>
 
@@ -64,5 +65,59 @@ void pixel::log_printf(const char * format, ...) noexcept {
     va_end (args);
 }
 
+//
+// pixel::f2
+//
+
+pixel::f2::geom_list_t& pixel::f2::gobjects() {
+    static pixel::f2::geom_list_t _gobjects;
+    return _gobjects;
 }
 
+pixel::f2::ageom_list_t& pixel::f2::agobjects() {
+    static pixel::f2::ageom_list_t _gobjects;
+    return _gobjects;
+}
+
+bool pixel::f2::aabbox_t::intersects(const lineseg_t & o) const noexcept {
+    return o.intersects(*this);
+}
+
+bool pixel::f2::aabbox_t::intersection(float& angle_res, point_t& cross_res, const lineseg_t& in) const noexcept {
+    const point_t tl(bl.x, tr.y);
+    const point_t br(tr.x, bl.y);
+    {
+        const lineseg_t l(tl, tr);
+        if( l.intersection(angle_res, cross_res, in) ) {
+            return true;
+        }
+    }
+    {
+        const lineseg_t l(bl, br);
+        if( l.intersection(angle_res, cross_res, in) ) {
+            return true;
+        }
+    }
+    {
+        const lineseg_t l(br, tr);
+        if( l.intersection(angle_res, cross_res, in) ) {
+            return true;
+        }
+    }
+    {
+        const lineseg_t l(bl, tl);
+        if( l.intersection(angle_res, cross_res, in) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void pixel::f2::aabbox_t::draw() const noexcept {
+    const point_t tl(bl.x, tr.y);
+    const point_t br(tr.x, bl.y);
+    lineseg_t::draw(tl, tr);
+    lineseg_t::draw(tr, br);
+    lineseg_t::draw(br, bl);
+    lineseg_t::draw(bl, tl);
+}
