@@ -25,6 +25,20 @@ namespace pixel {
         return std::abs(v) < std::numeric_limits<float>::epsilon();
     }
 
+    /**
+     * Return zero if both values are equal, i.e. their absolute delta is less than float epsilon,
+     * -1 if a < b and 1 otherwise.
+     */
+    inline constexpr int compare(const float a, const float b) noexcept {
+        if( std::abs(a - b) < std::numeric_limits<float>::epsilon() ) {
+            return 0;
+        } else if (a < b) {
+            return -1;
+        } else {
+            return 1;
+        }
+    }
+
     /** Returns the rounded float value cast to int. */
     inline constexpr int round_to_int(const float v) noexcept {
         return (int)std::round(v);
@@ -43,6 +57,15 @@ namespace pixel {
     inline constexpr float rad_to_adeg(const float rad) noexcept {
         return rad * 180.0f / (float)M_PI;
     }
+
+    enum class orientation_t {
+        /** Collinear **/
+        COL,
+        /** Clockwise **/
+        CLW,
+        /** Counter-Clockwise **/
+        CCW
+    };
 
     /**
      * Width of the framebuffer coordinate in pixels.
