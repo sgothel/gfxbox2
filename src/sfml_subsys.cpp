@@ -192,3 +192,8 @@ void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t
         }
     }
 }
+
+void pixel::save_snapshot(const std::string& fname) noexcept {
+    // TODO
+    (void)fname;
+}

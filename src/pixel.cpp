@@ -13,6 +13,11 @@ pixel::cart_coord_t pixel::cart_coord;
 
 uint32_t pixel::draw_color = 0;
 
+void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir) noexcept {
+    mouse_motion_t mouse_motion = mouse_motion_t();
+    pixel::handle_events(close, resized, set_dir, dir, mouse_motion);
+}
+
 static constexpr const uint64_t NanoPerMilli = 1000000UL;
 static constexpr const uint64_t MilliPerOne = 1000UL;
 static constexpr const uint64_t NanoPerOne = NanoPerMilli*MilliPerOne;
@@ -44,8 +49,20 @@ void pixel::milli_sleep(uint64_t td_ms) noexcept {
     ::nanosleep( &ts, nullptr );
 }
 
-void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir) noexcept {
-    mouse_motion_t mouse_motion = mouse_motion_t();
-    pixel::handle_events(close, resized, set_dir, dir, mouse_motion);
+void pixel::log_printf(const uint64_t elapsed_ms, const char * format, ...) noexcept {
+    fprintf(stderr, "[%s] ", to_decstring(elapsed_ms, ',', 9).c_str());
+    va_list args;
+    va_start (args, format);
+    vfprintf(stderr, format, args);
+    va_end (args);
+}
+void pixel::log_printf(const char * format, ...) noexcept {
+    fprintf(stderr, "[%s] ", to_decstring(getElapsedMillisecond(), ',', 9).c_str());
+    va_list args;
+    va_start (args, format);
+    vfprintf(stderr, format, args);
+    va_end (args);
+}
+
 }
 

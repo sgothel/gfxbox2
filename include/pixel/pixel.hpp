@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cmath>
 #include <cstdint>
+#include <cinttypes>
 #include <cstring>
 #include <cstdint>
 #include <cstdarg>
@@ -13,6 +14,7 @@
 #include <memory>
 #include <functional>
 #include <vector>
+#include <type_traits>
 
 /**
  * Basic computer graphics math and utilities helping with the framebuffer and I/O tooling.
@@ -193,6 +195,18 @@ namespace pixel {
     };
     extern cart_coord_t cart_coord;
 
+    /** Direction enumerator, useful to denote e.g. input cursor keys. */
+    enum class direction_t {
+        UP,
+        DOWN,
+        RIGHT,
+        LEFT
+    };
+
+    //
+    // Pixel color
+    //
+
     /** The current 32-bit draw color. */
     extern uint32_t draw_color; // 32-bit pixel
 
@@ -210,10 +224,7 @@ namespace pixel {
         const int x = cart_coord.to_fb_x( (float)x_ );
         const int y = cart_coord.to_fb_y( (float)y_ );
         if( 0 <= x && x <= fb_max_x && 0 <= y && y <= fb_max_y ) {
-            // printf("set_pixel_2i.1: %d/%d -> %d/%d := 0x%X\n", x_, y_, x, y, draw_color);
             fb_pixels[ y * fb_width + x ] = draw_color;
-        // } else {
-        //    printf("set_pixel_2i.0: %d/%d -> %d/%d\n", x_, y_, x, y);
         }
     }
 
@@ -226,27 +237,9 @@ namespace pixel {
         const int x = cart_coord.to_fb_x( x_ );
         const int y = cart_coord.to_fb_y( y_ );
         if( 0 <= x && x <= fb_max_x && 0 <= y && y <= fb_max_y ) {
-            // printf("set_pixel_2f.1: %f/%f -> %d/%d := 0x%X\n", x_, y_, x, y, draw_color);
             fb_pixels[ y * fb_width + x ] = draw_color;
-        // } else {
-        //    printf("set_pixel_2f.0: %f/%f -> %d/%d\n", x_, y_, x, y);
         }
     }
-
-    /** Return current milliseconds, since Unix epoch. */
-    uint64_t getCurrentMilliseconds() noexcept;
-    /** Return current milliseconds, since program launch. */
-    uint64_t getElapsedMillisecond() noexcept;
-    /** Sleep for the givn milliseconds. */
-    void milli_sleep(uint64_t td) noexcept;
-
-    /** Direction enumerator, useful to denote e.g. input cursor keys. */
-    enum class direction_t {
-        UP,
-        DOWN,
-        RIGHT,
-        LEFT
-    };
 
     /** Convert 32-bit RGBA components to the gfx-toolkit specific RGBA 32-bit integer presentation. */
     uint32_t rgba_to_uint32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
@@ -258,6 +251,10 @@ namespace pixel {
     inline void set_pixel_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
         draw_color = pixel::rgba_to_uint32(r, g, b, a);
     }
+
+    //
+    // Texture
+    //
 
     class texture_t {
         private:
@@ -313,6 +310,8 @@ namespace pixel {
     void handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir) noexcept;
     void handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir, mouse_motion_t& mouse_motion) noexcept;
 
+    void save_snapshot(const std::string& fname) noexcept;
+
     //
     // data packing macros
     //
@@ -344,6 +343,78 @@ namespace pixel {
         #endif
     #endif
 
+    //
+    // Misc
+    //
+
+    /** Return current milliseconds, since Unix epoch. */
+    uint64_t getCurrentMilliseconds() noexcept;
+    /** Return current milliseconds, since program launch. */
+    uint64_t getElapsedMillisecond() noexcept;
+    /** Sleep for the givn milliseconds. */
+    void milli_sleep(uint64_t td) noexcept;
+
+    void log_printf(const uint64_t elapsed_ms, const char * format, ...) noexcept;
+    void log_printf(const char * format, ...) noexcept;
+
+    //
+    // Cut from jaulib
+    //
+
+    template <typename T>
+    constexpr ssize_t sign(const T x) noexcept
+    {
+        return (T(0) < x) - (x < T(0));
+    }
+
+    template <typename T>
+    constexpr T invert_sign(const T x) noexcept
+    {
+        return std::numeric_limits<T>::min() == x ? std::numeric_limits<T>::max() : -x;
+    }
+
+    template<typename T>
+    constexpr size_t digits10(const T x, const ssize_t x_sign, const bool sign_is_digit=true) noexcept
+    {
+        if( x_sign == 0 ) {
+            return 1;
+        }
+        if( x_sign < 0 ) {
+            return 1 + static_cast<size_t>( std::log10<T>( invert_sign<T>( x ) ) ) + ( sign_is_digit ? 1 : 0 );
+        } else {
+            return 1 + static_cast<size_t>( std::log10<T>(                 x   ) );
+        }
+    }
+
+    template< class value_type,
+              std::enable_if_t< std::is_integral_v<value_type>,
+                                bool> = true>
+    std::string to_decstring(const value_type& v, const char separator=',', const size_t width=0) noexcept {
+        const ssize_t v_sign = sign<value_type>(v);
+        const size_t digit10_count1 = digits10<value_type>(v, v_sign, true /* sign_is_digit */);
+        const size_t digit10_count2 = v_sign < 0 ? digit10_count1 - 1 : digit10_count1; // less sign
+
+        const size_t comma_count = 0 == separator ? 0 : ( digit10_count1 - 1 ) / 3;
+        const size_t net_chars = digit10_count1 + comma_count;
+        const size_t total_chars = std::max<size_t>(width, net_chars);
+        std::string res(total_chars, ' ');
+
+        value_type n = v;
+        size_t char_iter = 0;
+
+        for(size_t digit10_iter = 0; digit10_iter < digit10_count2 /* && char_iter < total_chars */; digit10_iter++ ) {
+            const int digit = v_sign < 0 ? invert_sign( n % 10 ) : n % 10;
+            n /= 10;
+            if( 0 < digit10_iter && 0 == digit10_iter % 3 ) {
+                res[total_chars-1-(char_iter++)] = separator;
+            }
+            res[total_chars-1-(char_iter++)] = '0' + digit;
+        }
+        if( v_sign < 0 /* && char_iter < total_chars */ ) {
+            res[total_chars-1-(char_iter++)] = '-';
+        }
+        return res;
+    }
 }
 
 #endif /*  PIXEL_HPP_ */
