@@ -65,7 +65,9 @@ static void on_window_resized(bool set_view) noexcept {
     fb_sbuffer = std::make_shared<sf::Sprite>(fb_tbuffer);
 }
 
-void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2]) {
+void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2], bool enable_vsync) {
+    (void)enable_vsync;
+
     fb_origin_norm[0] = origin_norm[0];
     fb_origin_norm[1] = origin_norm[1];
 

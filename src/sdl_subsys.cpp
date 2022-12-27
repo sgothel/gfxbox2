@@ -87,7 +87,7 @@ static void on_window_resized() noexcept {
     }
 }
 
-void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2]) {
+void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2], bool enable_vsync) {
     if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         printf("SDL: Error initializing: %s\n", SDL_GetError());
         exit(1);
@@ -100,6 +100,11 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
         printf("SDL_TTF: Error initializing: %s\n", SDL_GetError());
         exit(1);
     }
+
+    if( enable_vsync ) {
+        SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+    }
+    // SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, std::to_string(pixel_filter_quality).c_str());
 
     fb_origin_norm[0] = origin_norm[0];
     fb_origin_norm[1] = origin_norm[1];

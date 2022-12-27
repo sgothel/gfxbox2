@@ -312,7 +312,7 @@ namespace pixel {
     //
 
     /** GFX Toolkit: Initialize a window of given size with a usable framebuffer. */
-    void init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2]);
+    void init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2], bool enable_vsync=true);
     /** GFX Toolkit: Clear the soft-framebuffer. */
     void clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
     /** GFX Toolkit: Copy the soft-framebuffer to the GPU back-buffer, if swap_buffer is true (default) also swap_gpu_buffer(). */
@@ -369,6 +369,10 @@ namespace pixel {
     //
     // Misc
     //
+
+    inline constexpr const int64_t NanoPerMilli = 1000000L;
+    inline constexpr const int64_t MilliPerOne = 1000L;
+    inline constexpr const int64_t NanoPerOne = NanoPerMilli*MilliPerOne;
 
     /** Return current milliseconds, since Unix epoch. */
     uint64_t getCurrentMilliseconds() noexcept;

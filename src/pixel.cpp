@@ -19,10 +19,6 @@ void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t
     pixel::handle_events(close, resized, set_dir, dir, mouse_motion);
 }
 
-static constexpr const uint64_t NanoPerMilli = 1000000UL;
-static constexpr const uint64_t MilliPerOne = 1000UL;
-static constexpr const uint64_t NanoPerOne = NanoPerMilli*MilliPerOne;
-
 /**
  * See <http://man7.org/linux/man-pages/man2/clock_gettime.2.html>
  * <p>
@@ -34,8 +30,8 @@ static constexpr const uint64_t NanoPerOne = NanoPerMilli*MilliPerOne;
 uint64_t pixel::getCurrentMilliseconds() noexcept {
     struct timespec t;
     ::clock_gettime(CLOCK_MONOTONIC, &t);
-    return static_cast<uint64_t>( t.tv_sec ) * MilliPerOne +
-           static_cast<uint64_t>( t.tv_nsec ) / NanoPerMilli;
+    return static_cast<uint64_t>( t.tv_sec ) * (uint64_t)MilliPerOne +
+           static_cast<uint64_t>( t.tv_nsec ) / (uint64_t)NanoPerMilli;
 }
 
 static uint64_t _exe_start_time = pixel::getCurrentMilliseconds();
@@ -45,8 +41,8 @@ uint64_t pixel::getElapsedMillisecond() noexcept {
 }
 
 void pixel::milli_sleep(uint64_t td_ms) noexcept {
-    const int64_t td_ns_0 = (int64_t)( (td_ms * NanoPerMilli) % NanoPerOne );
-    struct timespec ts { (int64_t)(td_ms/MilliPerOne), td_ns_0 };
+    const int64_t td_ns_0 = (int64_t)( (td_ms * (uint64_t)NanoPerMilli) % (uint64_t)NanoPerOne );
+    struct timespec ts { (int64_t)(td_ms/(uint64_t)MilliPerOne), td_ns_0 };
     ::nanosleep( &ts, nullptr );
 }
 

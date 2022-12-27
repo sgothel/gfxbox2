@@ -1,5 +1,8 @@
 #!/bin/bash
 
+#fps=30
+fps=60
+
 bname=$1
 
 if [ -z "${bname}" ] ; then
@@ -15,4 +18,4 @@ rm -f ${ofname}
 # http://hamelot.io/visualization/using-ffmpeg-to-convert-a-set-of-images-into-a-video/
 #
 
-ffmpeg -f image2 -pattern_type glob -r 60 -i ${bname}'*.bmp' -shortest -c:v libx264 -vf "fps=60,format=yuv420p" ${ofname}
+ffmpeg -f image2 -pattern_type glob -r ${fps} -i ${bname}'*.bmp' -shortest -c:v libx264 -vf "fps=${fps},format=yuv420p" ${ofname}
