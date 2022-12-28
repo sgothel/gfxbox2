@@ -605,7 +605,7 @@ namespace pixel::f2 {
                 {
                     // 1. If either  0 <= (q - p) * r <= r * r or 0 <= (p - q) * s <= * s
                     // then the two lines are overlapping,
-                    if (false /* considerCollinearOverlapAsIntersect */) {
+                    if (true /* considerCollinearOverlapAsIntersect */) {
                         const point_t p_q = p - q;
                         if ( ( 0 <= q_p.dot(r) && q_p.dot(r) <= r.dot(r) ) || ( 0 <= p_q.dot(s) && p_q.dot(s) <= s.dot(s) ) ) {
                             return true;
@@ -900,6 +900,7 @@ namespace pixel::f2 {
                 center.add(dx, dy);
             }
     };
+    typedef std::shared_ptr<disk_t> disk_ref_t;
 
     class rect_t : public ageom_t {
         public:
@@ -1064,7 +1065,8 @@ namespace pixel::f2 {
                        ", c " + p_c.toString() +
                        ", d " + p_d.toString() +
                        "]"; }
-        };
+    };
+    typedef std::shared_ptr<rect_t> rect_ref_t;
 
 } // namespace pixel_2f
 
