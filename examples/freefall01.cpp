@@ -69,7 +69,7 @@ class ball_t : public pixel::f2::disk_t {
 
         void reset() noexcept {
             velocity_max = std::sqrt( 2 * earth_accel * total_fall );
-            if( velocity_start > 0.0f ) {
+            if( velocity_start > 0.0f && this->on_screen() ) {
                 // shoot back ;-)
                 this->dir_angle = M_PI - this->dir_angle; // 180 - adeg
             } else {
@@ -162,13 +162,10 @@ class ball_t : public pixel::f2::disk_t {
                 velocity_max *= 0.75f; // rho
                 velocity = pixel::f2::vec_t::from_length_angle(velocity.length() * 0.75f, coll_out.angle()); // cont using simulated velocity
                 // adjust position out of collision space
-                if( true ) {
-                    // Simple & safe, but not giving an accurate continuous animation
+                // center = coll_point + pixel::f2::vec_t::from_length_angle(l_move.length()/2.0f, coll_out.angle());
+                center = coll_point + coll_out/2.0f;
+                if( !this->on_screen() ) {
                     center = good_position;
-                } else {
-                    // Could be off-screen already, literal corner cases on high speed and/or low-fps
-                    // center = coll_point + coll_out;
-                    center = coll_point + pixel::f2::vec_t::from_length_angle((coll_point-good_position).length(), coll_out.angle());
                 }
                 // const bool do_reset = velocity.norm() <= min_velocity;
                 const bool do_reset = velocity_max <= min_velocity;
