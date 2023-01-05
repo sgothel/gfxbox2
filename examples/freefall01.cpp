@@ -121,9 +121,9 @@ class ball_t : public pixel::f2::disk_t {
                 l_move.p0 = this->center;
                 l_move.p1 = l_move.p0 + ds_m_dir;
                 a_move = l_move.angle();
-                // Extend move size to cover radius in moving direction p1 and -p0
+                // Extend move size to cover radius in moving direction p1 // and -p0
                 pixel::f2::vec_t l_move_diff = pixel::f2::vec_t::from_length_angle(radius, a_move);
-                l_move.p0 -= l_move_diff;
+                // l_move.p0 -= l_move_diff;
                 l_move.p1 += l_move_diff;
             }
             this->move( ds_m_dir );
@@ -148,11 +148,10 @@ class ball_t : public pixel::f2::disk_t {
             }
             if( debug_gfx ) {
                 pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-                this->draw(false);
                 l_move.draw();
                 if( nullptr != coll_obj ) {
                     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-                    this->draw(false);
+                    // this->draw(false);
 
                     pixel::set_pixel_color(0 /* r */, 255 /* g */, 0 /* b */, 255 /* a */);
                     pixel::f2::vec_t p_dir_angle = pixel::f2::vec_t::from_length_angle(2.0f*radius, a_move);
@@ -166,7 +165,19 @@ class ball_t : public pixel::f2::disk_t {
                     pixel::set_pixel_color(0 /* r */, 0 /* g */, 255 /* b */, 255 /* a */);
                     pixel::f2::lineseg_t l_out(coll_point, coll_point+coll_out);
                     l_out.draw();
+
+                    pixel::set_pixel_color(255 /* r */, 255 /* g */, 0 /* b */, 255 /* a */);
+                    // reconstruct distance post collision, minimum to surface
+                    pixel::f2::vec_t vec_post_coll = l_move.p1 - coll_point;
+                    const float s_post_coll = std::max( radius, vec_post_coll.length() * 0.75f );
+                    // reconstruct position post collision from collision point
+                    pixel::f2::vec_t new_center = coll_point + ( coll_out.normalize() * s_post_coll );
+                    pixel::f2::lineseg_t l_new_center(coll_point, new_center);
+                    l_new_center.draw();
+
                     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+                } else {
+                    this->draw(false);
                 }
             }
             if( nullptr != coll_obj ) {
@@ -180,13 +191,24 @@ class ball_t : public pixel::f2::disk_t {
                             coll_point.toString().c_str(), coll_out.toString().c_str(), pixel::rad_to_adeg(coll_out.angle()));
                     pixel::log_printf(elapsed_ms, "Ball %s-e-a: %s\n", id.c_str(), coll_obj->toString().c_str());
                 }
+                // reconstruct distance post collision, minimum to surface
+                pixel::f2::vec_t vec_post_coll = l_move.p1 - coll_point;
+                const float s_post_coll = std::max( radius, vec_post_coll.length() * 0.75f );
+
+                // pixel::f2::vec_t v_move = l_move.p1 - l_move.p0;
+                // adjust position out of collision space
+                // center = coll_point + pixel::f2::vec_t::from_length_angle(l_move.length()/2.0f, coll_out.angle());
+                // center = coll_point + coll_out/2.0f;
+
+                // reconstruct position post collision from collision point
+                center = coll_point + ( coll_out.normalize() * s_post_coll );
+                if( debug_gfx ) {
+                    this->draw(false);
+                }
 
                 // bounce velocity: current velocity * 0.75 (rho) in collision reflection angle
                 velocity_max *= 0.75f; // rho
                 velocity = pixel::f2::vec_t::from_length_angle(velocity.length() * 0.75f, coll_out.angle()); // cont using simulated velocity
-                // adjust position out of collision space
-                // center = coll_point + pixel::f2::vec_t::from_length_angle(l_move.length()/2.0f, coll_out.angle());
-                center = coll_point + coll_out/2.0f;
                 if( !this->on_screen() ) {
                     center = good_position;
                 }
