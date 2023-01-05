@@ -260,13 +260,14 @@ int main(int argc, char *argv[])
         pad_l = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, pixel::cart_coord.max_y()-2.0f*pad_thickness),
                                                     pad_thickness, pixel::cart_coord.height()-4.0f*pad_thickness);
     } else {
-        pad_l = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, 0.0f-pad_height),
+        pad_l = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, 0.0f+pad_height/2.0f),
                                                     pad_thickness, pad_height);
     }
     player_pads.push_back(pad_l);
 
-    pixel::f2::rect_ref_t pad_r = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(br.x, 0.0f-pad_height),
+    pixel::f2::rect_ref_t pad_r = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(br.x, 0.0f+pad_height/2.0f),
                                                                       pad_thickness, pad_height);
+    // pad_r->rotate(pixel::adeg_to_rad(-45.0f));
     player_pads.push_back(pad_r);
 
     {
@@ -323,7 +324,16 @@ int main(int argc, char *argv[])
         const float dt_diff = (float)( dt_exp - dt ) * 1000.0f; // [ms]
         t_last = t1;
 
-        hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+", v "+std::to_string(ball_1->velocity.length())+" m/s, fps "+std::to_string(pixel::get_gpu_fps()));
+        {
+            std::string hud_s = "td "+pixel::to_decstring(t1, ',', 9)+
+                                ", v "+std::to_string(ball_1->velocity.length())+" m/s";
+            if( one_player ) {
+                hud_s.append(", angle "+std::to_string(pixel::rad_to_adeg(pad_r->dir_angle))+" deg");
+            }
+            hud_s.append(", fps "+std::to_string(pixel::get_gpu_fps()));
+
+            hud_text = pixel::make_text_texture(hud_s);
+        }
 
         if( set_dir ) {
             switch( dir ) {
