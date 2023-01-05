@@ -1094,6 +1094,50 @@ namespace pixel::f2 {
                 return false;
             }
 
+            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in, const float in_radius) const noexcept {
+                {
+                    // tl .. tr
+                    lineseg_t l(p_a, p_b);
+                    const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                    l.p0 += added_size;
+                    l.p1 += added_size;
+                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                }
+                {
+                    // bl .. br
+                    lineseg_t l(p_c, p_d);
+                    const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                    l.p0 += added_size;
+                    l.p1 += added_size;
+                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                }
+                {
+                    // br .. tr
+                    lineseg_t l(p_d, p_b);
+                    const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                    l.p0 += added_size;
+                    l.p1 += added_size;
+                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                }
+                {
+                    // bl .. tl
+                    lineseg_t l(p_c, p_a);
+                    const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                    l.p0 += added_size;
+                    l.p1 += added_size;
+                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
             void draw() const noexcept override {
                 lineseg_t::draw(p_a, p_b);
                 lineseg_t::draw(p_b, p_d);
