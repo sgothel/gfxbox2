@@ -1154,6 +1154,167 @@ namespace pixel::f2 {
     };
     typedef std::shared_ptr<rect_t> rect_ref_t;
 
+    /**
+     * A clockwise (CW) polyline
+     */
+    class linestrip_t : public ageom_t {
+        public:
+            std::vector<point_t> p_list;
+            point_t p_center;
+            /** direction angle in radians */
+            float dir_angle;
+
+        private:
+            int lala = 0;
+
+        public:
+            linestrip_t() noexcept
+            : p_list(), p_center(), dir_angle(0.0f) {
+            }
+
+            linestrip_t(const point_t& center, const float angle) noexcept
+            : p_list(), p_center(center), dir_angle(angle) {
+            }
+
+
+            aabbox_t box() const noexcept override {
+                aabbox_t box;
+                for(const point_t& p : p_list) {
+                    box.resize(p);
+                }
+                return box;
+            }
+
+            void move_dir(const float d) noexcept override {
+                point_t dir { d, 0 };
+                dir.rotate(dir_angle, { 0, 0 });
+                for(point_t& p : p_list) {
+                    p += dir;
+                }
+                p_center += dir;
+            }
+
+            void move(const point_t& d) noexcept override {
+                for(point_t& p : p_list) {
+                    p += d;
+                }
+                p_center += d;
+            }
+            void move(const float dx, const float dy) noexcept override {
+                for(point_t& p : p_list) {
+                    p.add(dx, dy);
+                }
+                p_center.add(dx, dy);
+            }
+
+            void rotate(const float radians) noexcept override {
+                const float cos = std::cos(radians);
+                const float sin = std::sin(radians);
+#if 0
+                // pre-ranged loop
+                for(size_t i=0; i<p_list.size(); ++i) {
+                    point_t& p = p_list[i];
+                    p.rotate(sin, cos, p_center);
+                }
+#endif
+                for(point_t& p : p_list) {
+                    p.rotate(sin, cos, p_center);
+                }
+                dir_angle += radians;
+            }
+
+            void set_center(const point_t& p) {
+                const float dx = p.x - p_center.x;
+                const float dy = p.y - p_center.y;
+                move( dx, dy );
+            }
+
+            bool on_screen() const noexcept override {
+                return box().on_screen();
+            }
+
+            bool contains(const point_t& o) const noexcept override {
+                return box().contains(o);
+            }
+
+            bool intersects(const lineseg_t & o) const noexcept override {
+                return o.intersects(box());
+            }
+
+            bool intersects(const aabbox_t& o) const noexcept override {
+                return box().intersects(o);
+            }
+
+            bool intersects(const geom_t& o) const noexcept override {
+                return box().intersects(o.box());
+            }
+
+            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point,
+                              const lineseg_t& in) const noexcept override {
+                if( p_list.size() < 2 ) {
+                    return false;
+                }
+                point_t p0 = p_list[0];
+                for(size_t i=1; i<p_list.size(); ++i) {
+                    const point_t& p1 = p_list[i];
+                    const lineseg_t l(p0, p1);
+                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                    p0 = p1;
+                }
+                return false;
+            }
+
+            void draw() const noexcept override {
+                if( p_list.size() < 2 ) {
+                    return;
+                }
+                point_t p0 = p_list[0];
+                for(size_t i=1; i<p_list.size(); ++i) {
+                    const point_t& p1 = p_list[i];
+                    lineseg_t::draw(p0, p1);
+                    p0 = p1;
+                }
+            }
+
+            std::string toString() const noexcept override {
+                return "linestrip[center " + p_center.toString() +
+                       ", points " + std::to_string(p_list.size())+"]"; }
+    };
+    typedef std::shared_ptr<linestrip_t> linestrip_ref_t;
+
+    /**
+     * Unrotated:
+     *
+     *       (a)
+     *      /   \
+     *     /     \
+     *    /       \
+     *   (c)------(b)
+     */
+    inline linestrip_ref_t make_triangle( const point_t& m, const float h) noexcept
+    {
+        linestrip_ref_t lf = std::make_shared<linestrip_t>(m, 0.0f);
+
+        // a
+        point_t p = m;
+        p.y += h/2.0f;
+        lf->p_list.push_back(p);
+
+        // b
+        p.y -= h;
+        const float width = 4.0f/5.0f * h;;
+        p.x += width/2.0f;
+        lf->p_list.push_back(p);
+
+        // c
+        p.x -= width;
+        lf->p_list.push_back(p);
+
+        return lf;
+    }
+
 } // namespace pixel_2f
 
 #endif /*  PIXEL2F_HPP_ */
