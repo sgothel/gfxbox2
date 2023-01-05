@@ -177,8 +177,11 @@ namespace pixel::f2 {
             }
 
             /**
-             * cross product this x o
-             * @return the resulting vector
+             * Returns cross product of this vectors and the given one, i.e. *this x o.
+             *
+             * The 2D cross product is identical with the 2D perp dot product.
+             *
+             * @return the resulting scalar
              */
             constexpr float cross(const vec_t& o) const noexcept {
                 return x * o.y - y * o.x;
@@ -196,6 +199,13 @@ namespace pixel::f2 {
              */
             float angle(const vec_t& o) const noexcept {
                 return std::acos( cos_angle(o) );
+            }
+
+            /**
+             * Return the counter-clock-wise (CCW) normal of this vector, i.e. perp(endicular) vector
+             */
+            vec_t normal_ccw() const noexcept {
+                return vec_t(-y, x);
             }
 
             bool intersects(const vec_t& o) const noexcept {
@@ -617,51 +627,62 @@ namespace pixel::f2 {
                                    const point_t& p, const point_t& p2,
                                    const point_t& q, const point_t& q2)
             {
-                const point_t q_p = q - p;
-                const point_t r = p2 - p;
-                const point_t s = q2 - q;
+                const vec_t r = p2 - p;
+                const vec_t s = q2 - q;
                 const float rxs = r.cross(s);
-                const float qpxr = q_p.cross(r);
 
-                // If r x s = 0 and (q - p) x r = 0, then the two lines are collinear.
-                if ( pixel::is_zero(rxs) && pixel::is_zero(qpxr) )
-                {
-                    // 1. If either  0 <= (q - p) * r <= r * r or 0 <= (p - q) * s <= * s
-                    // then the two lines are overlapping,
-                    if (true /* considerCollinearOverlapAsIntersect */) {
-                        const point_t p_q = p - q;
-                        if ( ( 0 <= q_p.dot(r) && q_p.dot(r) <= r.dot(r) ) || ( 0 <= p_q.dot(s) && p_q.dot(s) <= s.dot(s) ) ) {
-                            return true;
+                if ( pixel::is_zero(rxs) ) {
+                    if constexpr ( false ) {
+                        const vec_t q_p = q - p;
+                        const float qpxr = q_p.cross(r);
+                        if ( pixel::is_zero(qpxr) ) // disabled collinear case
+                        {
+                            // 1) r x s = 0 and (q - p) x r = 0, the two lines are collinear.
+
+                            const point_t p_q = p - q;
+                            const float qp_dot_r = q_p.dot(r);
+                            const float pq_dot_s = p_q.dot(s);
+                            if ( ( 0 <= qp_dot_r && qp_dot_r <= r.dot(r) ) ||
+                                 ( 0 <= pq_dot_s && pq_dot_s <= s.dot(s) ) )
+                            {
+                                // 1.1) 0 <= (q - p) · r <= r · r or 0 <= (p - q) · s <= s · s, the two lines are overlapping
+                                // FIXME: result set to q2 endpoint, OK?
+                                result = q2;
+                                return true;
+                            }
+
+                            // 1.2 the two lines are collinear but disjoint.
+                            return false;
+                        } else {
+                            // 2) r × s = 0 and (q − p) × r ≠ 0, the two lines are parallel and non-intersecting.
+                            return false;
                         }
+                    } else {
+                        // Not considering collinear case as an intersection
+                        return false;
                     }
+                } else {
+                    // r x s != 0
+                    const vec_t q_p = q - p;
+                    const float qpxr = q_p.cross(r);
 
-                    // 2. If neither 0 <= (q - p) * r = r * r nor 0 <= (p - q) * s <= s * s
-                    // then the two lines are collinear but disjoint.
-                    // No need to implement this expression, as it follows from the expression above.
-                    return false;
+                    // p + t r = q + u s
+                    // (p + t r) × s = (q + u s) × s
+                    // t (r × s) = (q − p) × s, with s x s = 0
+                    // t = (q - p) x s / (r x s)
+                    const float t = q_p.cross(s) / rxs;
+
+                    // u = (p − q) × r / (s × r) = (q - p) x r / (r x s), with s × r = − r × s
+                    const float u = qpxr / rxs;
+
+                    if ( (0 <= t && t <= 1) && (0 <= u && u <= 1) )
+                    {
+                        // 3) r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t * r = q + u * s.
+                        result = p + (t * r); // == q + (u * s)
+                        return true;
+                    }
                 }
 
-                // 3. If r x s = 0 and (q - p) x r != 0, then the two lines are parallel and non-intersecting.
-                if ( pixel::is_zero(rxs) /** && !pixel::is_zero(qpxr) **/ ) {
-                    return false;
-                }
-
-                // t = (q - p) x s / (r x s)
-                const float t = q_p.cross(s) / rxs;
-
-                // u = (q - p) x r / (r x s)
-                const float u = qpxr / rxs;
-
-                // 4. If r x s != 0 and 0 <= t <= 1 and 0 <= u <= 1
-                // the two line segments meet at the point p + t r = q + u s.
-                if (!pixel::is_zero(rxs) && (0 <= t && t <= 1) && (0 <= u && u <= 1))
-                {
-                    // We can calculate the intersection point using either t or u.
-                    result = p + (t * r);
-                    return true;
-                }
-
-                // 5. Otherwise, the two line segments are not parallel but do not intersect.
                 return false;
             }
 
@@ -763,10 +784,8 @@ namespace pixel::f2 {
 
             bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
                 if( intersects(cross_point, in) ) {
-                    const float dx = p1.x - p0.x;
-                    const float dy = p1.y - p0.y;
-                    cross_normal = vec_t(-dy, dx).normalize();
-                    const vec_t v_in = in.p1 - in.p0;
+                    cross_normal = (p1 - p0).normal_ccw().normalize();
+                    const vec_t v_in = cross_point - in.p0;
                     reflect_out = v_in - ( 2.0f * v_in.dot(cross_normal) * cross_normal );
                     return true;
                 }
@@ -928,7 +947,7 @@ namespace pixel::f2 {
     class rect_t : public ageom_t {
         public:
             /**
-             * Unrotated:
+             * Unrotated, clockwise (CW):
              *
              *   (a)-----(b)
              *    |       |
