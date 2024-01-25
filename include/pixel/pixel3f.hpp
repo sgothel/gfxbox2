@@ -107,7 +107,7 @@ namespace pixel::f3 {
                 x = tmp;
             }
 
-            std::string toString() const noexcept { return std::to_string(x)+"/"+std::to_string(y); }
+            std::string toString() const noexcept { return std::to_string(x)+"/"+std::to_string(y)+"/"+std::to_string(z); }
 
             constexpr bool is_zero() const noexcept {
                 return pixel::is_zero(x) && pixel::is_zero(y) && pixel::is_zero(z);

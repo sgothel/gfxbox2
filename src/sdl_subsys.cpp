@@ -100,7 +100,7 @@ static void on_window_resized() noexcept {
             sdl_font = nullptr;
         }
         const std::string fontfilename = "fonts/freefont/FreeSansBold.ttf";
-        const int font_height = std::max(24, fb_height / 40);
+        const int font_height = std::max(24, fb_height / 35);
         sdl_font = TTF_OpenFont(fontfilename.c_str(), font_height);
         if( nullptr == sdl_font ) {
             fprintf(stderr, "font: Null font for '%s': %s\n", fontfilename.c_str(), SDL_GetError());
@@ -195,8 +195,8 @@ void pixel::texture_t::draw(const int x_pos, const int y_pos, const float scale_
     SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(data);
     if( nullptr != tex ) {
         SDL_Rect src = { .x=x, .y=y, .w=width, .h=height};
-        SDL_Rect dest = { .x=x_pos,
-                          .y=y_pos,
+        SDL_Rect dest = { .x=x_pos + dest_x,
+                          .y=y_pos + dest_y,
                           .w=round_to_int(width*scale_x), .h=round_to_int(height*scale_y) };
         SDL_RenderCopy(sdl_rend, tex, &src, &dest);
     }
@@ -209,7 +209,7 @@ pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
     }
     uint8_t r, g, b, a;
     pixel::uint32_to_rgba(draw_color, r, g, b, a);
-    SDL_Color foregroundColor = { r, g, b, 255 };
+    SDL_Color foregroundColor = { r, g, b, a };
 
     SDL_Surface* textSurface = TTF_RenderText_Solid(sdl_font, text.c_str(), foregroundColor);
     if( nullptr == textSurface ) {
@@ -226,8 +226,11 @@ pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
 void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir, mouse_motion_t& mouse_motion) noexcept {
     mouse_motion.id = -1;
     static SDL_Scancode scancode = SDL_SCANCODE_STOP;
+    static bool paused = false;
     close = false;
     resized = false;
+    // set_dir = false;
+    // dir = pixel::direction_t::NONE;
 
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
@@ -285,20 +288,38 @@ void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t
                         close = true;
                         break;
                     case SDL_SCANCODE_UP:
-                        dir = direction_t::UP;
-                        set_dir = true;
+                        if( !paused ) {
+                            dir = direction_t::UP;
+                            set_dir = true;
+                        }
                         break;
                     case SDL_SCANCODE_LEFT:
-                        dir = direction_t::LEFT;
-                        set_dir = true;
+                        if( !paused ) {
+                            dir = direction_t::LEFT;
+                            set_dir = true;
+                        }
                         break;
                     case SDL_SCANCODE_DOWN:
-                        dir = direction_t::DOWN;
-                        set_dir = true;
+                        if( !paused ) {
+                            dir = direction_t::DOWN;
+                            set_dir = true;
+                        }
                         break;
                     case SDL_SCANCODE_RIGHT:
-                        dir = direction_t::RIGHT;
-                        set_dir = true;
+                        if( !paused ) {
+                            dir = direction_t::RIGHT;
+                            set_dir = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_P:
+                        if( paused ) {
+                            dir = direction_t::NONE;
+                            paused = false;
+                        } else {
+                            dir = direction_t::PAUSE;
+                            paused = true;
+                        }
+                        set_dir = false;
                         break;
                     default:
                         break;

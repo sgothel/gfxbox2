@@ -208,6 +208,9 @@ void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t
                     dir = direction_t::RIGHT;
                     set_dir = true;
                     break;
+                case sf::Keyboard::Key::P:
+                    dir = direction_t::PAUSE;
+                    break;
                 default:
                     break;
             }

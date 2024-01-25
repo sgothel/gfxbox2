@@ -24,28 +24,44 @@
 #ifndef PIXEL_HPP_
 #define PIXEL_HPP_
 
-#include <cstdio>
-#include <cmath>
-#include <cstdint>
 #include <cinttypes>
-#include <cstring>
-#include <cstdint>
-#include <cstdarg>
 #include <cmath>
-#include <limits>
-#include <string>
-#include <memory>
+#include <cstdarg>
+#include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <functional>
-#include <vector>
+#include <limits>
+#include <memory>
+#include <string>
 #include <type_traits>
+#include <vector>
 
 /**
  * Basic computer graphics math and utilities helping with the framebuffer and I/O tooling.
  */
 namespace pixel {
+    inline constexpr float epsilon() noexcept {
+        float a = 1.0f;
+        float b;
+        do {
+            b = a;
+            a = a / 2.0f;
+        } while(1.0f + a != 1.0f);
+        return b;
+    }
+
     /** Returns true of the given float is less than float epsilon. */
     inline constexpr bool is_zero(const float v) noexcept {
         return std::abs(v) < std::numeric_limits<float>::epsilon();
+    }
+
+    /**
+     * Return true if both values are equal, i.e. their absolute delta is less than float epsilon,
+     * false otherwise.
+     */
+    inline constexpr bool equals(const float a, const float b) noexcept {
+        return std::abs(a - b) < std::numeric_limits<float>::epsilon();
     }
 
     /**
@@ -229,6 +245,11 @@ namespace pixel {
             /** Convert cartesian y-axis value to framebuffer pixel value. */
             int to_fb_dy(const float dy) const noexcept { return round_to_int( dy / h_to_fbh ); }
 
+            /** Convert framebuffer x-axis value in pixels to cartesian pixel value. */
+            int from_fb_dx(const int dx) const noexcept { return (float)dx * w_to_fbw; }
+            /** Convert framebuffer y-axis value in pixels to cartesian pixel value. */
+            int from_fb_dy(const int dy) const noexcept { return (float)dy * h_to_fbh; }
+
             /** Convert cartesian x-axis coordinate to framebuffer coordinate in pixels. */
             int to_fb_x(const float x) const noexcept { return round_to_int( ( x - x1 ) / w_to_fbw ); }
             /** Convert cartesian y-axis coordinate in pixels to framebuffer coordinate in pixels. */
@@ -243,10 +264,12 @@ namespace pixel {
 
     /** Direction enumerator, useful to denote e.g. input cursor keys. */
     enum class direction_t {
+        NONE,
         UP,
         DOWN,
         RIGHT,
-        LEFT
+        LEFT,
+        PAUSE
     };
 
     //
@@ -260,6 +283,17 @@ namespace pixel {
     inline unsigned int clip_fb_x(const int x) noexcept { return std::min<int>(fb_max_x, std::max<int>(0, x)); }
     /** Return clipped y-axis framebuffer coordinate. */
     inline unsigned int clip_fb_y(const int y) noexcept { return std::min<int>(fb_max_y, std::max<int>(0, y)); }
+
+    /**
+     * Set a pixel using the given draw_color and given fb coordinates.
+     *
+     * In case the coordinates are out of bounds, the pixel is discarded, i.e. not set.
+     */
+    inline void set_pixel_fbcoord(int x, int y) noexcept {
+        if( 0 <= x && x <= fb_max_x && 0 <= y && y <= fb_max_y ) {
+            fb_pixels[ y * fb_width + x ] = draw_color;
+        }
+    }
 
     /**
      * Set a pixel using the given draw_color and given cartesian coordinates.
@@ -297,6 +331,18 @@ namespace pixel {
     inline void set_pixel_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
         draw_color = pixel::rgba_to_uint32(r, g, b, a);
     }
+    /** Set current pixel draw color */
+    inline void set_pixel_color(uint8_t rgba[/*4*/]) noexcept {
+        draw_color = pixel::rgba_to_uint32(rgba[0], rgba[1], rgba[2], rgba[3]);
+    }
+    inline float clip_byte(float v) { return std::max<float>(0.0f, std::min(255.0f, v)); }
+    inline void set_pixel_color4f(float r, float g, float b, float a) noexcept {
+        set_pixel_color(clip_byte(r*255.0f), clip_byte(g*255.0f), clip_byte(b*255), clip_byte(a*255));
+    }
+
+    void draw_grid(float raster_sz,
+                   uint8_t gr, uint8_t gg, uint8_t gb, uint8_t ga,
+                   uint8_t cr, uint8_t cg, uint8_t cb, uint8_t ca);
 
     //
     // Texture
@@ -306,16 +352,24 @@ namespace pixel {
         private:
             void* data;
         public:
+            /** source texture pos-x */
             int x;
+            /** source texture pos-y */
             int y;
+            /** source texture width */
             int width;
+            /** source texture width */
             int height;
+            /** dest texture pos-x */
+            int dest_x;
+            /** dest texture pos-y */
+            int dest_y;
 
             texture_t(void* data_, const int x_, const int y_, const int width_, const int height_) noexcept
-            : data(data_), x(x_), y(y_), width(width_), height(height_) {}
+            : data(data_), x(x_), y(y_), width(width_), height(height_), dest_x(0), dest_y(0) {}
 
             texture_t() noexcept
-            : data(nullptr), x(0), y(0), width(0), height(0) {}
+            : data(nullptr), x(0), y(0), width(0), height(0), dest_x(0), dest_y(0) {}
 
             texture_t(const texture_t&) = delete;
             void operator=(const texture_t&) = delete;

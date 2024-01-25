@@ -24,6 +24,7 @@
 #include "pixel/pixel.hpp"
 #include "pixel/pixel2f.hpp"
 
+#include <cstdint>
 #include <ctime>
 
 int pixel::fb_width=0;
@@ -82,6 +83,43 @@ void pixel::log_printf(const char * format, ...) noexcept {
     va_start (args, format);
     vfprintf(stderr, format, args);
     va_end (args);
+}
+
+//
+//
+//
+
+void pixel::draw_grid(float raster_sz,
+                      uint8_t gr, uint8_t gg, uint8_t gb, uint8_t ga,
+                      uint8_t cr, uint8_t cg, uint8_t cb, uint8_t ca){
+    float wl = pixel::cart_coord.min_x();
+    float hb = pixel::cart_coord.min_y();
+    float l = (int)(wl / raster_sz) * raster_sz;
+    float b = (int)(hb / raster_sz) * raster_sz;
+
+    pixel::set_pixel_color(gr, gg, gb, ga);
+    pixel::f2::point_t bl(pixel::cart_coord.min_x(), pixel::cart_coord.min_y());
+    for(float y=b; y<pixel::cart_coord.max_y(); y+=raster_sz) {
+        pixel::f2::point_t p0(pixel::cart_coord.min_x(), y);
+        pixel::f2::point_t p1(pixel::cart_coord.max_x(), y);
+        pixel::f2::lineseg_t::draw(p0, p1);
+    }
+    for(float x=l; x<pixel::cart_coord.max_x(); x+=raster_sz) {
+        pixel::f2::point_t p0(x, pixel::cart_coord.min_y());
+        pixel::f2::point_t p1(x, pixel::cart_coord.max_y());
+        pixel::f2::lineseg_t::draw(p0, p1);
+    }
+    pixel::set_pixel_color(cr, cg, cb, ca);
+    {
+        pixel::f2::point_t p0(-raster_sz, 0);
+        pixel::f2::point_t p1(+raster_sz, 0);
+        pixel::f2::lineseg_t::draw(p0, p1);
+    }
+    {
+        pixel::f2::point_t p0(0, -raster_sz);
+        pixel::f2::point_t p1(0, +raster_sz);
+        pixel::f2::lineseg_t::draw(p0, p1);
+    }
 }
 
 //

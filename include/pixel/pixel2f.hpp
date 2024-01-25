@@ -31,202 +31,206 @@
  */
 namespace pixel::f2 {
 
+
     class vec_t {
-        public:
-            float x;
-            float y;
+    public:
+        float x;
+        float y;
 
-            static constexpr vec_t from_length_angle(const float magnitude, const float radians) noexcept {
-                return vec_t(magnitude * std::cos(radians), magnitude * std::sin(radians));
+        static constexpr vec_t from_length_angle(const float magnitude, const float radians) noexcept {
+            return vec_t(magnitude * std::cos(radians), magnitude * std::sin(radians));
+        }
+
+        constexpr vec_t() noexcept
+        : x(0), y(0) {}
+
+        constexpr vec_t(const float x_, const float y_) noexcept
+        : x(x_), y(y_) {}
+
+        constexpr vec_t(const vec_t& o) noexcept = default;
+        constexpr vec_t(vec_t&& o) noexcept = default;
+        constexpr vec_t& operator=(const vec_t&) noexcept = default;
+        constexpr vec_t& operator=(vec_t&&) noexcept = default;
+
+        /**
+         * Returns component value, this reinterpreted as `float*` w/o boundary check
+         */
+        float operator[](size_t i) const noexcept {
+            const float* p = reinterpret_cast<const float*>(this);
+            return p[i];
+        }
+
+        constexpr vec_t& set(const float dx, const float dy) noexcept
+        { x=dx; y=dy; return *this; }
+
+        constexpr vec_t& add(const float dx, const float dy) noexcept
+        { x+=dx; y+=dy; return *this; }
+
+        constexpr vec_t& operator+=(const vec_t& rhs ) noexcept {
+            x+=rhs.x; y+=rhs.y;
+            return *this;
+        }
+
+        constexpr vec_t& operator-=(const vec_t& rhs ) noexcept {
+            x-=rhs.x; y-=rhs.y;
+            return *this;
+        }
+
+        /**
+         * Scale this vector with given scale factor
+         * @param s scale factor
+         * @return this instance
+         */
+        constexpr vec_t& operator*=(const float s ) noexcept {
+            x*=s; y*=s;
+            return *this;
+        }
+
+        /**
+         * Divide this vector with given scale factor
+         * @param s scale factor
+         * @return this instance
+         */
+        constexpr vec_t& operator/=(const float s ) noexcept {
+            x/=s; y/=s;
+            return *this;
+        }
+
+        void rotate(const float radians, const vec_t& ctr) noexcept {
+            const float cos = std::cos(radians);
+            const float sin = std::sin(radians);
+            rotate(sin, cos, ctr);
+        }
+        constexpr void rotate(const float sin, const float cos, const vec_t& ctr) noexcept {
+            const float x0 = x - ctr.x;
+            const float y0 = y - ctr.y;
+            x = x0 * cos - y0 * sin + ctr.x;
+            y = x0 * sin + y0 * cos + ctr.y;
+        }
+
+        std::string toString() const noexcept { return std::to_string(x)+" / "+std::to_string(y); }
+
+        constexpr bool is_zero() const noexcept {
+            return pixel::is_zero(x) && pixel::is_zero(y);
+        }
+
+        /**
+         * Return the squared length of this vector, a.k.a the squared <i>norm</i> or squared <i>magnitude</i>
+         */
+        constexpr float length_sq() const noexcept {
+            return x*x + y*y;
+        }
+
+        /**
+         * Return the length of this vector, a.k.a the <i>norm</i> or <i>magnitude</i>
+         */
+        constexpr float length() const noexcept {
+            return std::sqrt(length_sq());
+        }
+
+        /**
+         * Return the direction angle of this vector in radians
+         */
+        float angle() const noexcept {
+            // Utilize atan2 taking y=sin(a) and x=cos(a), resulting in proper direction angle for all quadrants.
+            return std::atan2( y, x );
+        }
+
+        /**
+         * Normalize this vector in place
+         */
+        constexpr vec_t& normalize() noexcept {
+            const float lengthSq = length_sq();
+            if ( pixel::is_zero( lengthSq ) ) {
+                x = 0.0f;
+                y = 0.0f;
+            } else {
+                const float invSqr = 1.0f / std::sqrt(lengthSq);
+                x *= invSqr;
+                y *= invSqr;
             }
+            return *this;
+        }
 
-            constexpr vec_t() noexcept
-            : x(0), y(0) {}
+        /**
+         * Return the squared distance between this vector and the given one.
+         * <p>
+         * When comparing the relative distance between two points it is usually sufficient to compare the squared
+         * distances, thus avoiding an expensive square root operation.
+         * </p>
+         */
+        constexpr float dist_sq(const vec_t& o) const noexcept {
+            const float dx = x - o.x;
+            const float dy = y - o.y;
+            return dx*dx + dy*dy;
+        }
 
-            constexpr vec_t(const float x_, const float y_) noexcept
-            : x(x_), y(y_) {}
+        /**
+         * Return the distance between this vector and the given one.
+         */
+        constexpr float dist(const vec_t& o) const noexcept {
+            return std::sqrt(dist_sq(o));
+        }
 
-            constexpr vec_t(const vec_t& o) noexcept = default;
-            constexpr vec_t(vec_t&& o) noexcept = default;
-            constexpr vec_t& operator=(const vec_t&) noexcept = default;
-            constexpr vec_t& operator=(vec_t&&) noexcept = default;
+        /**
+         * Return the dot product of this vector and the given one
+         * @return the dot product as float
+         */
+        constexpr float dot(const vec_t& o) const noexcept {
+            return x*o.x + y*o.y;
+        }
 
-            /**
-             * Returns component value, this reinterpreted as `float*` w/o boundary check
-             */
-            float operator[](size_t i) const noexcept {
-                const float* p = reinterpret_cast<const float*>(this);
-                return p[i];
+        /**
+         * Returns cross product of this vectors and the given one, i.e. *this x o.
+         *
+         * The 2D cross product is identical with the 2D perp dot product.
+         *
+         * @return the resulting scalar
+         */
+        constexpr float cross(const vec_t& o) const noexcept {
+            return x * o.y - y * o.x;
+        }
+
+        /**
+         * Return the cosines of the angle between two vectors
+         */
+        constexpr float cos_angle(const vec_t& o) const noexcept {
+            return dot(o) / ( length() * o.length() ) ;
+        }
+
+        /**
+         * Return the angle between two vectors in radians
+         */
+        float angle(const vec_t& o) const noexcept {
+            return std::acos( cos_angle(o) );
+        }
+
+        /**
+         * Return the counter-clock-wise (CCW) normal of this vector, i.e. perp(endicular) vector
+         */
+        vec_t normal_ccw() const noexcept {
+            return vec_t(-y, x);
+        }
+
+        bool intersects(const vec_t& o) const noexcept {
+            const float eps = std::numeric_limits<float>::epsilon();
+            if( std::abs(x-o.x) >= eps || std::abs(y-o.y) >= eps ) {
+                return false;
             }
+            return true;
+        }
 
-            constexpr void add(const float dx, const float dy) noexcept { x+=dx; y+=dy; }
+        bool on_screen() const noexcept {
+            // x in [min_x .. max_x] ?
+            const int x_fb = cart_coord.to_fb_x( x );
+            const int y_fb = cart_coord.to_fb_y( y );
+            return 0 <= x_fb && x_fb <= pixel::fb_max_x &&
+                    0 <= y_fb && y_fb <= pixel::fb_max_y;
+        }
 
-            constexpr vec_t& operator+=(const vec_t& rhs ) noexcept {
-                x+=rhs.x; y+=rhs.y;
-                return *this;
-            }
-
-            constexpr vec_t& operator-=(const vec_t& rhs ) noexcept {
-                x-=rhs.x; y-=rhs.y;
-                return *this;
-            }
-
-            /**
-             * Scale this vector with given scale factor
-             * @param s scale factor
-             * @return this instance
-             */
-            constexpr vec_t& operator*=(const float s ) noexcept {
-                x*=s; y*=s;
-                return *this;
-            }
-
-            /**
-             * Divide this vector with given scale factor
-             * @param s scale factor
-             * @return this instance
-             */
-            constexpr vec_t& operator/=(const float s ) noexcept {
-                x/=s; y/=s;
-                return *this;
-            }
-
-            void rotate(const float radians, const vec_t& ctr) noexcept {
-                const float cos = std::cos(radians);
-                const float sin = std::sin(radians);
-                rotate(sin, cos, ctr);
-            }
-            constexpr void rotate(const float sin, const float cos, const vec_t& ctr) noexcept {
-                const float x0 = x - ctr.x;
-                const float y0 = y - ctr.y;
-                const float tmp = x0 * cos - y0 * sin + ctr.x;
-                              y = x0 * sin + y0 * cos + ctr.y;
-                x = tmp;
-            }
-
-            std::string toString() const noexcept { return std::to_string(x)+" / "+std::to_string(y); }
-
-            constexpr bool is_zero() const noexcept {
-                return pixel::is_zero(x) && pixel::is_zero(y);
-            }
-
-            /**
-             * Return the squared length of this vector, a.k.a the squared <i>norm</i> or squared <i>magnitude</i>
-             */
-            constexpr float length_sq() const noexcept {
-                return x*x + y*y;
-            }
-
-            /**
-             * Return the length of this vector, a.k.a the <i>norm</i> or <i>magnitude</i>
-             */
-            constexpr float length() const noexcept {
-                return std::sqrt(length_sq());
-            }
-
-            /**
-             * Return the direction angle of this vector in radians
-             */
-            float angle() const noexcept {
-                // Utilize atan2 taking y=sin(a) and x=cos(a), resulting in proper direction angle for all quadrants.
-                return std::atan2( y, x );
-            }
-
-            /**
-             * Normalize this vector in place
-             */
-            constexpr vec_t& normalize() noexcept {
-                const float lengthSq = length_sq();
-                if ( pixel::is_zero( lengthSq ) ) {
-                    x = 0.0f;
-                    y = 0.0f;
-                } else {
-                    const float invSqr = 1.0f / std::sqrt(lengthSq);
-                    x *= invSqr;
-                    y *= invSqr;
-                }
-                return *this;
-            }
-
-            /**
-             * Return the squared distance between this vector and the given one.
-             * <p>
-             * When comparing the relative distance between two points it is usually sufficient to compare the squared
-             * distances, thus avoiding an expensive square root operation.
-             * </p>
-             */
-            constexpr float dist_sq(const vec_t& o) const noexcept {
-                const float dx = x - o.x;
-                const float dy = y - o.y;
-                return dx*dx + dy*dy;
-            }
-
-            /**
-             * Return the distance between this vector and the given one.
-             */
-            constexpr float dist(const vec_t& o) const noexcept {
-                return std::sqrt(dist_sq(o));
-            }
-
-            /**
-             * Return the dot product of this vector and the given one
-             * @return the dot product as float
-             */
-            constexpr float dot(const vec_t& o) const noexcept {
-                return x*o.x + y*o.y;
-            }
-
-            /**
-             * Returns cross product of this vectors and the given one, i.e. *this x o.
-             *
-             * The 2D cross product is identical with the 2D perp dot product.
-             *
-             * @return the resulting scalar
-             */
-            constexpr float cross(const vec_t& o) const noexcept {
-                return x * o.y - y * o.x;
-            }
-
-            /**
-             * Return the cosines of the angle between two vectors
-             */
-            constexpr float cos_angle(const vec_t& o) const noexcept {
-                return dot(o) / ( length() * o.length() ) ;
-            }
-
-            /**
-             * Return the angle between two vectors in radians
-             */
-            float angle(const vec_t& o) const noexcept {
-                return std::acos( cos_angle(o) );
-            }
-
-            /**
-             * Return the counter-clock-wise (CCW) normal of this vector, i.e. perp(endicular) vector
-             */
-            vec_t normal_ccw() const noexcept {
-                return vec_t(-y, x);
-            }
-
-            bool intersects(const vec_t& o) const noexcept {
-                const float eps = std::numeric_limits<float>::epsilon();
-                if( std::abs(x-o.x) >= eps || std::abs(y-o.y) >= eps ) {
-                    return false;
-                }
-                return true;
-            }
-
-            bool on_screen() const noexcept {
-                // x in [min_x .. max_x] ?
-                const int x_fb = cart_coord.to_fb_x( x );
-                const int y_fb = cart_coord.to_fb_y( y );
-                return 0 <= x_fb && x_fb <= pixel::fb_max_x &&
-                       0 <= y_fb && y_fb <= pixel::fb_max_y;
-            }
-
-            void draw() const noexcept {
-                pixel::set_pixel(x, y);
-            }
+        void draw() const noexcept {
+            pixel::set_pixel(x, y);
+        }
     };
 
     typedef vec_t point_t;
@@ -264,6 +268,14 @@ namespace pixel::f2 {
         return r;
     }
 
+    constexpr bool operator==(const vec_t& lhs, const vec_t& rhs ) noexcept {
+        return pixel::is_zero(lhs.x - rhs.x) && pixel::is_zero(lhs.x - rhs.x);
+    }
+    /** TODO
+    constexpr bool operator<(const vec_t& lhs, const vec_t& rhs ) noexcept {
+        return pixel::is_zero(lhs.x - rhs.x) && pixel::is_zero(lhs.x - rhs.x);
+    } */
+
     /**
      * Return the orientation of the given point triplet p0, p1 and p2.
      */
@@ -282,25 +294,25 @@ namespace pixel::f2 {
      * Geometric object
      */
     class geom_t {
-        public:
-            virtual ~geom_t() = default;
+    public:
+        virtual ~geom_t() = default;
 
-            virtual aabbox_t box() const noexcept = 0;
-            virtual bool contains(const point_t& o) const noexcept = 0;
-            virtual bool intersects(const lineseg_t & o) const noexcept = 0;
-            virtual bool intersects(const aabbox_t& box) const noexcept = 0;
-            virtual bool intersects(const geom_t& o) const noexcept = 0;
+        virtual aabbox_t box() const noexcept = 0;
+        virtual bool contains(const point_t& o) const noexcept = 0;
+        virtual bool intersects(const lineseg_t & o) const noexcept = 0;
+        virtual bool intersects(const aabbox_t& box) const noexcept = 0;
+        virtual bool intersects(const geom_t& o) const noexcept = 0;
 
-            /**
-             * Return whether this object intersects with the given line segment
-             * and if intersecting, the crossing point (intersection), the normalized normal of the crossing surface and the reflection out vector.
-             */
-            virtual bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept = 0;
+        /**
+         * Return whether this object intersects with the given line segment
+         * and if intersecting, the crossing point (intersection), the normalized normal of the crossing surface and the reflection out vector.
+         */
+        virtual bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept = 0;
 
-            virtual void draw() const noexcept = 0;
-            virtual bool on_screen() const noexcept = 0;
+        virtual void draw() const noexcept = 0;
+        virtual bool on_screen() const noexcept = 0;
 
-            virtual std::string toString() const noexcept = 0;
+        virtual std::string toString() const noexcept = 0;
     };
     typedef std::shared_ptr<geom_t> geom_ref_t;
     typedef std::vector<geom_ref_t> geom_list_t;
@@ -319,478 +331,504 @@ namespace pixel::f2 {
      * - http://realtimecollisiondetection.net/files/levine_swept_sat.txt
      */
     class aabbox_t : public geom_t {
-        public:
-            /** bottom left (low) */
-            point_t bl;
-            /** top right (high) */
-            point_t tr;
+    public:
+        /** bottom left (low) */
+        point_t bl;
+        /** top right (high) */
+        point_t tr;
 
-            /**
-             * Create an Axis Aligned bounding box (AABBox)
-             * where the low and and high MAX float Values.
-             */
-            aabbox_t() noexcept {
-                reset();
+        /**
+         * Create an Axis Aligned bounding box (AABBox)
+         * where the low and and high MAX float Values.
+         */
+        aabbox_t() noexcept {
+            reset();
+        }
+
+        /**
+         * Create an AABBox with given bl (low) and tr (high)
+         */
+        aabbox_t(const point_t& bl_, const point_t& tr_) noexcept
+        : bl( bl_ ), tr( tr_ ) {
+        }
+
+        aabbox_t(const aabbox_t& o) noexcept = default;
+        aabbox_t(aabbox_t&& o) noexcept = default;
+
+        /**
+         * Reset this box to the inverse low/high, allowing the next {@link #resize(float, float, float)} command to hit.
+         * @return this AABBox for chaining
+         */
+        aabbox_t& reset() noexcept {
+            bl.x = std::numeric_limits<float>::max();
+            bl.y = std::numeric_limits<float>::max();
+            tr.x = -std::numeric_limits<float>::max();
+            tr.y = -std::numeric_limits<float>::max();
+            return *this;
+        }
+
+        /**
+         * Resize the AABBox to encapsulate another AABox
+         * @param newBox AABBox to be encapsulated in
+         * @return this AABBox for chaining
+         */
+        aabbox_t& resize(const aabbox_t& o) noexcept {
+            /** test bl (low) */
+            if (o.bl.x < bl.x) {
+                bl.x = o.bl.x;
+            }
+            if (o.bl.y < bl.y) {
+                bl.y = o.bl.y;
             }
 
-            /**
-             * Create an AABBox with given bl (low) and tr (high)
-             */
-            aabbox_t(const point_t& bl_, const point_t& tr_) noexcept
-            : bl( bl_ ), tr( tr_ ) {
+            /** test tr (high) */
+            if (o.tr.x > tr.x) {
+                tr.x = o.tr.x;
+            }
+            if (o.tr.y > tr.y) {
+                tr.y = o.tr.y;
             }
 
-            aabbox_t(const aabbox_t& o) noexcept = default;
-            aabbox_t(aabbox_t&& o) noexcept = default;
+            return *this;
+        }
 
-            /**
-             * Reset this box to the inverse low/high, allowing the next {@link #resize(float, float, float)} command to hit.
-             * @return this AABBox for chaining
-             */
-            aabbox_t& reset() noexcept {
-                bl.x = std::numeric_limits<float>::max();
-                bl.y = std::numeric_limits<float>::max();
-                tr.x = -std::numeric_limits<float>::max();
-                tr.y = -std::numeric_limits<float>::max();
-                return *this;
+        /**
+         * Resize the AABBox to encapsulate the passed coordinates.
+         * @param x x-axis coordinate value
+         * @param y y-axis coordinate value
+         * @return this AABBox for chaining
+         */
+        aabbox_t& resize(float x, float y) noexcept {
+            /** test bl (low) */
+            if (x < bl.x) {
+                bl.x = x;
+            }
+            if (y < bl.y) {
+                bl.y = y;
             }
 
-            /**
-             * Resize the AABBox to encapsulate another AABox
-             * @param newBox AABBox to be encapsulated in
-             * @return this AABBox for chaining
-             */
-            aabbox_t& resize(const aabbox_t& o) noexcept {
-                /** test bl (low) */
-                if (o.bl.x < bl.x) {
-                    bl.x = o.bl.x;
-                }
-                if (o.bl.y < bl.y) {
-                    bl.y = o.bl.y;
-                }
-
-                /** test tr (high) */
-                if (o.tr.x > tr.x) {
-                    tr.x = o.tr.x;
-                }
-                if (o.tr.y > tr.y) {
-                    tr.y = o.tr.y;
-                }
-
-                return *this;
+            /** test tr (high) */
+            if (x > tr.x) {
+                tr.x = x;
+            }
+            if (y > tr.y) {
+                tr.y = y;
             }
 
-            /**
-             * Resize the AABBox to encapsulate the passed coordinates.
-             * @param x x-axis coordinate value
-             * @param y y-axis coordinate value
-             * @return this AABBox for chaining
-             */
-            aabbox_t& resize(float x, float y) noexcept {
-                /** test bl (low) */
-                if (x < bl.x) {
-                    bl.x = x;
-                }
-                if (y < bl.y) {
-                    bl.y = y;
-                }
+            return *this;
+        }
 
-                /** test tr (high) */
-                if (x > tr.x) {
-                    tr.x = x;
-                }
-                if (y > tr.y) {
-                    tr.y = y;
-                }
+        /**
+         * Resize the AABBox to encapsulate the passed point.
+         * @param x x-axis coordinate value
+         * @param y y-axis coordinate value
+         * @return this AABBox for chaining
+         */
+        aabbox_t& resize(const point_t& p) noexcept {
+            return resize(p.x, p.y);
+        }
 
-                return *this;
+        aabbox_t box() const noexcept override { return *this; }
+
+        /**
+         * Check if the point is bounded/contained by this AABBox
+         * @return true if  x belong to (low.x, high.x) and y belong to (low.y, high.y)
+         */
+        bool contains(const point_t& p) const noexcept override {
+            return !( p.x<bl.x || p.x>tr.x ||
+                      p.y<bl.y || p.y>tr.y );
+        }
+
+        bool intersects(const lineseg_t & o) const noexcept override;
+
+        bool intersects(const aabbox_t& o) const noexcept override {
+            return !( tr.x < o.bl.x ||
+                      tr.y < o.bl.y ||
+                      bl.x > o.tr.x ||
+                      bl.y > o.tr.y );
+        }
+
+#if 0
+        bool intersection(aabbox_t a, aabbox_t b){
+            if(aabbox_t::intersects(a)){
+                return false;
             }
 
-            /**
-             * Resize the AABBox to encapsulate the passed point.
-             * @param x x-axis coordinate value
-             * @param y y-axis coordinate value
-             * @return this AABBox for chaining
-             */
-            aabbox_t& resize(const point_t& p) noexcept {
-                return resize(p.x, p.y);
-            }
+        }
+#endif
 
-            aabbox_t box() const noexcept override { return *this; }
+        bool intersects(const geom_t& o) const noexcept override {
+            return intersects(o.box());
+        }
 
-            /**
-             * Check if the point is bounded/contained by this AABBox
-             * @return true if  x belong to (low.x, high.x) and y belong to (low.y, high.y)
-             */
-            bool contains(const point_t& p) const noexcept override {
-                if( p.x<bl.x || p.x>tr.x ) {
-                    return false;
-                }
-                if( p.y<bl.y || p.y>tr.y ) {
-                    return false;
-                }
-                return true;
-            }
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override;
 
-            bool intersects(const lineseg_t & o) const noexcept override;
+        bool on_screen() const noexcept {
+            const int x0 = pixel::cart_coord.to_fb_x( bl.x );
+            const int y0 = pixel::cart_coord.to_fb_y( tr.y );
+            const int x1 = pixel::cart_coord.to_fb_x( tr.x );
+            const int y1 = pixel::cart_coord.to_fb_y( bl.y );
 
-            bool intersects(const aabbox_t& o) const noexcept override {
-                if( tr.x < o.bl.x ||
-                    tr.y < o.bl.y ||
-                    bl.x > o.tr.x ||
-                    bl.y > o.tr.y )
-                {
-                    return false;
-                } else {
-                    return true;
-                }
-            }
+            // x in [min_x .. max_x] ?
+            return 0 <= x0 && x0 <= pixel::fb_max_x &&
+                   0 <= y0 && y0 <= pixel::fb_max_y &&
+                   0 <= x1 && x1 <= pixel::fb_max_x &&
+                   0 <= y1 && y1 <= pixel::fb_max_y;
+        }
 
-            bool intersects(const geom_t& o) const noexcept override {
-                return intersects(o.box());
-            }
+        void draw() const noexcept;
 
-            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override;
-
-            bool on_screen() const noexcept {
-                const int x0 = pixel::cart_coord.to_fb_x( bl.x );
-                const int y0 = pixel::cart_coord.to_fb_y( tr.y );
-                const int x1 = pixel::cart_coord.to_fb_x( tr.x );
-                const int y1 = pixel::cart_coord.to_fb_y( bl.y );
-
-                // x in [min_x .. max_x] ?
-                return 0 <= x0 && x0 <= pixel::fb_max_x &&
-                       0 <= y0 && y0 <= pixel::fb_max_y &&
-                       0 <= x1 && x1 <= pixel::fb_max_x &&
-                       0 <= y1 && y1 <= pixel::fb_max_y;
-            }
-
-            void draw() const noexcept;
-
-            std::string toString() const noexcept {
-                return "aabb[bl " + bl.toString() +
-                       ", tr " + tr.toString() +
-                       "]"; }
+        std::string toString() const noexcept {
+            return "aabb[bl " + bl.toString() +
+                    ", tr " + tr.toString() +
+                    "]"; }
     };
 
     class lineseg_t : public geom_t {
-        public:
-            typedef std::function<bool(const point_t& p)> point_action_t;
+    public:
+        typedef std::function<bool(const point_t& p)> point_action_t;
 
-            point_t p0;
-            point_t p1;
+        point_t p0;
+        point_t p1;
 
-            constexpr lineseg_t() noexcept
-            : p0(), p1() {}
+        constexpr lineseg_t() noexcept
+        : p0(), p1() {}
 
-            constexpr lineseg_t(const point_t& p0_, const point_t& p1_) noexcept
-            : p0( p0_ ), p1( p1_ ) {}
+        constexpr lineseg_t(const point_t& p0_, const point_t& p1_) noexcept
+        : p0( p0_ ), p1( p1_ ) {}
 
-            /**
-             * Scale this line segment with given scale factor
-             * @param s scale factor
-             * @return this instance
-             */
-            constexpr lineseg_t& operator*=(const float s ) noexcept {
-                p0 *= s;
-                p1 *= s;
-                return *this;
-            }
+        /**
+         * Scale this line segment with given scale factor
+         * @param s scale factor
+         * @return this instance
+         */
+        constexpr lineseg_t& operator*=(const float s ) noexcept {
+            p0 *= s;
+            p1 *= s;
+            return *this;
+        }
 
-            /**
-             * Return the length of this line segment, i.e. distance between both points.
-             */
-            constexpr float length() const noexcept {
-                return p1.dist(p0);
-            }
+        /**
+         * Return the length of this line segment, i.e. distance between both points.
+         */
+        constexpr float length() const noexcept {
+            return p1.dist(p0);
+        }
 
-            /**
-             * Return the angle of this line segment in radians
-             */
-            float angle() const noexcept {
-                return (p1 - p0).angle();
-            }
+        /**
+         * Return the angle of this line segment in radians
+         */
+        float angle() const noexcept {
+            return (p1 - p0).angle();
+        }
 
-            /**
-             * Return the angle between two line segments in radians
-             */
-            float angle(const lineseg_t & o) const noexcept {
-                const vec_t a = p1 - p0;
-                const vec_t b = o.p1 - o.p0;
-                return a.angle(b);
-            }
+        /**
+         * Return the angle between two line segments in radians
+         */
+        float angle(const lineseg_t & o) const noexcept {
+            const vec_t a = p1 - p0;
+            const vec_t b = o.p1 - o.p0;
+            return a.angle(b);
+        }
 
-            void add(float length) {
-                // extend center points p0, p1 with radius in moving direction
-                const float a_move = angle();
-                vec_t l_move_diff = pixel::f2::vec_t::from_length_angle(length, a_move);
-                p0 -= l_move_diff;
-                p1 += l_move_diff;
-            }
+        void add(float length) {
+            // extend center points p0, p1 with radius in moving direction
+            const float a_move = angle();
+            vec_t l_move_diff = pixel::f2::vec_t::from_length_angle(length, a_move);
+            p0 -= l_move_diff;
+            p1 += l_move_diff;
+        }
 
-            std::string toString() const noexcept { return "L[" + p0.toString() + ", " + p1.toString() + "]"; }
+        std::string toString() const noexcept { return "L[" + p0.toString() + ", " + p1.toString() + "]"; }
 
-            bool on_screen() const noexcept {
-                return p0.on_screen() && p1.on_screen();
-            }
+        bool on_screen() const noexcept {
+            return p0.on_screen() && p1.on_screen();
+        }
 
-            static void for_all_points(const point_t& p0, const point_t& p1,
-                                       const point_action_t& point_action) noexcept
-            {
-                const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
+        static void for_all_points(const point_t& p0, const point_t& p1,
+                const point_action_t& point_action) noexcept
+        {
+            const float dx = p1.x - p0.x;
+            const float dy = p1.y - p0.y;
+            const float dx_abs = std::abs(dx);
+            const float dy_abs = std::abs(dy);
+            if( dy_abs > dx_abs ) {
                 const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
-                const float dx = p1.x - p0.x;
-                const float dy = p1.y - p0.y;
-                if( std::abs(dy) > std::abs(dx) ) {
-                    const float step_y = ( dy >= 0 ) ? y_ival : -y_ival;
-                    const float step_x = dx / std::abs( dy ) * y_ival;
-                    float sy=0.0f;
-                    float sx=0.0f;
-                    for(; std::abs(sy - dy) > y_ival/2.0f; sy+=step_y, sx+=step_x) {
-                        const point_t p { p0.x + sx, p0.y + sy };
-                        if( !point_action(p) ) {
-                            return;
-                        }
+                const float step_y = ( dy >= 0 ) ? y_ival : -y_ival;
+                const float step_x = dx / dy_abs * y_ival;
+                float sy=0.0f;
+                float sx=0.0f;
+                for(; std::abs(dy - sy) > y_ival/2.0f; sy+=step_y, sx+=step_x) {
+                    const point_t p { p0.x + sx, p0.y + sy };
+                    if( !point_action(p) ) {
+                        return;
+                    }
+                }
+            } else {
+                const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
+                const float step_x = ( dx >= 0 ) ? x_ival : -x_ival;
+                const float step_y = dy / dx_abs * x_ival;
+                float sx=0.0f;
+                float sy=0.0f;
+                for(; std::abs(dx - sx) > x_ival/2.0f; sx+=step_x, sy+=step_y) {
+                    point_t p { p0.x + sx, p0.y + sy };
+                    if( !point_action(p) ) {
+                        return;
+                    }
+                }
+            }
+        }
+        static void draw(const point_t& p0, const point_t& p1) noexcept {
+            if( false ) {
+                for_all_points(p0, p1, [](const point_t& p) -> bool { p.draw(); return true; });
+            } else {
+                const int p0_x = cart_coord.to_fb_x( p0.x );
+                const int p0_y = fb_height - cart_coord.to_fb_y( p0.y );
+                const int p1_x = cart_coord.to_fb_x( p1.x );
+                const int p1_y = fb_height - cart_coord.to_fb_y( p1.y );
+                const int dx = p1_x - p0_x;
+                const int dy = p1_y - p0_y;
+                const int dx_abs = std::abs(dx);
+                const int dy_abs = std::abs(dy);
+                float p_x = p0_x, p_y = p0_y;
+                if( dy_abs > dx_abs ) {
+                    const float a = (float)dx / (float)dy_abs; // [0..1)
+                    const int step_h = dy / dy_abs; // +1 or -1
+                    for(int i = 0; i <= dy_abs; ++i) {
+                        pixel::set_pixel_fbcoord( p_x, (int)(fb_height - p_y) );
+                        p_y += step_h; // = p0.y + i * step_h
+                        p_x += a;
                     }
                 } else {
-                    const float step_x = ( dx >= 0 ) ? x_ival : -x_ival;
-                    const float step_y = dy / std::abs( dx ) * x_ival;
-                    float sx=0.0f;
-                    float sy=0.0f;
-                    for(; std::abs(sx - dx) > x_ival/2.0f; sx+=step_x, sy+=step_y) {
-                        point_t p { p0.x + sx, p0.y + sy };
-                        if( !point_action(p) ) {
-                            return;
-                        }
+                    const float a = (float)dy / (float)dx_abs; // [0..1]
+                    const int step_w = dx / dx_abs; // +1 or -1
+                    for(int i = 0; i <= dx_abs; ++i) {
+                        pixel::set_pixel_fbcoord( p_x, (int)(fb_height - p_y) );
+                        p_x += step_w; // = p0.x + i * step_w
+                        p_y += a;
                     }
                 }
             }
-            static void draw(const point_t& p0, const point_t& p1) noexcept {
-                point_action_t point_draw = [&](const point_t& p) -> bool {
-                    p.draw();
-                    return true;
-                };
-                for_all_points( p0, p1, point_draw );
-            }
-            void draw() const noexcept {
-                draw(p0, p1);
-            }
+        }
+        void draw() const noexcept {
+            draw(p0, p1);
+        }
 
-            /**
-             * Create an AABBox with given lineseg
-             */
-            aabbox_t box() const noexcept override {
-                return aabbox_t().resize(p0).resize(p1);
-            }
+        /**
+         * Create an AABBox with given lineseg
+         */
+        aabbox_t box() const noexcept override {
+            return aabbox_t().resize(p0).resize(p1);
+        }
 
-        private:
-            bool is_on_line(const point_t& p2) const noexcept {
-                // Using the perp dot product (PDP),
-                // which is the area of the parallelogram of the three points,
-                // same as the area of the triangle defined by the three points, multiplied by 2.
-                const float perpDotProduct = (p0.x - p2.x) * (p1.y - p2.y) - (p0.y - p2.y) * (p1.x - p2.x);
-                return pixel::is_zero( perpDotProduct );
+    private:
+        bool is_on_line(const point_t& p2) const noexcept {
+            // Using the perp dot product (PDP),
+            // which is the area of the parallelogram of the three points,
+            // same as the area of the triangle defined by the three points, multiplied by 2.
+            const float perpDotProduct = (p0.x - p2.x) * (p1.y - p2.y) - (p0.y - p2.y) * (p1.x - p2.x);
+            return pixel::is_zero( perpDotProduct );
 
+        }
+        bool is_on_line2(const point_t& p2) const noexcept {
+            if ( p2.x <= std::max(p0.x, p1.x) && p2.x >= std::min (p0.x, p1.x) &&
+                    p2.y <= std::max(p0.y, p2.y) && p2.y >= std::min (p0.y, p1.y) )
+            {
+                return true;
             }
-            bool is_on_line2(const point_t& p2) const noexcept {
-                if ( p2.x <= std::max(p0.x, p1.x) && p2.x >= std::min (p0.x, p1.x) &&
-                     p2.y <= std::max(p0.y, p2.y) && p2.y >= std::min (p0.y, p1.y) )
-                {
-                     return true;
-                }
+            return false;
+        }
+
+    public:
+        /**
+         * Test intersection between this line segment and the give point
+         * @return true if the line segment contains the point, otherwise false
+         */
+        bool contains(const point_t& p2) const noexcept override {
+            if ( !( ( p0.x <= p2.x && p2.x <= p1.x ) || ( p1.x <= p2.x && p2.x <= p0.x ) ) ) {
+                // not in x-range
                 return false;
             }
-
-        public:
-            /**
-             * Test intersection between this line segment and the give point
-             * @return true if the line segment contains the point, otherwise false
-             */
-            bool contains(const point_t& p2) const noexcept override {
-                if ( !( ( p0.x <= p2.x && p2.x <= p1.x ) || ( p1.x <= p2.x && p2.x <= p0.x ) ) ) {
-                    // not in x-range
-                    return false;
-                }
-                if ( !( ( p0.y <= p2.y && p2.y <= p1.y ) || ( p1.y <= p2.y && p2.y <= p0.y ) ) ) {
-                    // not in y-range
-                    return false;
-                }
-                return is_on_line(p2);
+            if ( !( ( p0.y <= p2.y && p2.y <= p1.y ) || ( p1.y <= p2.y && p2.y <= p0.y ) ) ) {
+                // not in y-range
+                return false;
             }
+            return is_on_line(p2);
+        }
 
-        private:
-            /**
-             * See [p + t r = q + u s](https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/565282#565282)
-             * and [its terse C# implementation](https://www.codeproject.com/tips/862988/find-the-intersection-point-of-two-line-segments)
-             */
-            static bool intersects(point_t& result,
-                                   const point_t& p, const point_t& p2,
-                                   const point_t& q, const point_t& q2)
-            {
-                const vec_t r = p2 - p;
-                const vec_t s = q2 - q;
-                const float rxs = r.cross(s);
+    private:
+        /**
+         * See [p + t r = q + u s](https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect/565282#565282)
+         * and [its terse C# implementation](https://www.codeproject.com/tips/862988/find-the-intersection-point-of-two-line-segments)
+         */
+        static bool intersects(point_t& result,
+                const point_t& p, const point_t& p2,
+                const point_t& q, const point_t& q2)
+        {
+            const vec_t r = p2 - p;
+            const vec_t s = q2 - q;
+            const float rxs = r.cross(s);
 
-                if ( pixel::is_zero(rxs) ) {
-                    if constexpr ( false ) {
-                        const vec_t q_p = q - p;
-                        const float qpxr = q_p.cross(r);
-                        if ( pixel::is_zero(qpxr) ) // disabled collinear case
+            if ( pixel::is_zero(rxs) ) {
+                if constexpr ( false ) {
+                    const vec_t q_p = q - p;
+                    const float qpxr = q_p.cross(r);
+                    if ( pixel::is_zero(qpxr) ) // disabled collinear case
+                    {
+                        // 1) r x s = 0 and (q - p) x r = 0, the two lines are collinear.
+
+                        const point_t p_q = p - q;
+                        const float qp_dot_r = q_p.dot(r);
+                        const float pq_dot_s = p_q.dot(s);
+                        if ( ( 0 <= qp_dot_r && qp_dot_r <= r.dot(r) ) ||
+                                ( 0 <= pq_dot_s && pq_dot_s <= s.dot(s) ) )
                         {
-                            // 1) r x s = 0 and (q - p) x r = 0, the two lines are collinear.
-
-                            const point_t p_q = p - q;
-                            const float qp_dot_r = q_p.dot(r);
-                            const float pq_dot_s = p_q.dot(s);
-                            if ( ( 0 <= qp_dot_r && qp_dot_r <= r.dot(r) ) ||
-                                 ( 0 <= pq_dot_s && pq_dot_s <= s.dot(s) ) )
-                            {
-                                // 1.1) 0 <= (q - p) · r <= r · r or 0 <= (p - q) · s <= s · s, the two lines are overlapping
-                                // FIXME: result set to q2 endpoint, OK?
-                                result = q2;
-                                return true;
-                            }
-
-                            // 1.2 the two lines are collinear but disjoint.
-                            return false;
-                        } else {
-                            // 2) r × s = 0 and (q − p) × r ≠ 0, the two lines are parallel and non-intersecting.
-                            return false;
+                            // 1.1) 0 <= (q - p) ������ r <= r ������ r or 0 <= (p - q) ������ s <= s ������ s, the two lines are overlapping
+                            // FIXME: result set to q2 endpoint, OK?
+                            result = q2;
+                            return true;
                         }
+
+                        // 1.2 the two lines are collinear but disjoint.
+                        return false;
                     } else {
-                        // Not considering collinear case as an intersection
+                        // 2) r ������ s = 0 and (q ��������� p) ������ r ��������� 0, the two lines are parallel and non-intersecting.
                         return false;
                     }
                 } else {
-                    // r x s != 0
-                    const vec_t q_p = q - p;
-                    const float qpxr = q_p.cross(r);
-
-                    // p + t r = q + u s
-                    // (p + t r) × s = (q + u s) × s
-                    // t (r × s) = (q − p) × s, with s x s = 0
-                    // t = (q - p) x s / (r x s)
-                    const float t = q_p.cross(s) / rxs;
-
-                    // u = (p − q) × r / (s × r) = (q - p) x r / (r x s), with s × r = − r × s
-                    const float u = qpxr / rxs;
-
-                    if ( (0 <= t && t <= 1) && (0 <= u && u <= 1) )
-                    {
-                        // 3) r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t * r = q + u * s.
-                        result = p + (t * r); // == q + (u * s)
-                        return true;
-                    }
-                }
-
-                return false;
-            }
-
-        public:
-
-            /**
-             * Compute intersection between two lines segments
-             * @param result storage for the intersection coordinates if the lines intersect, otherwise unchanged
-             * @param o the other line segment.
-             * @return true if the line segments intersect, otherwise false
-             */
-            bool intersects(point_t& result, const lineseg_t & o) const noexcept {
-                return intersects(result, p0, p1, o.p0, o.p1);
-            }
-
-            /**
-             * Return true if this line segment intersect with the given line segment
-             * @param o the other line segment.
-             * @return true if both intersect, otherwise false
-             */
-            bool intersects(const lineseg_t & o) const noexcept override {
-                point_t result;
-                return intersects(result, p0, p1, o.p0, o.p1);
-#if 0
-                const pixel::orientation_t or_1 = orientation (p0, p1, o.p0);
-                const pixel::orientation_t or_2 = orientation (p0, p1, o.p1);
-                const pixel::orientation_t or_3 = orientation(o.p0, o.p1, p0);
-                const pixel::orientation_t or_4 = orientation(o.p0, o.p1, p1);
-
-                // General case : Points are non-collinear.
-                if (or_1 != or_2 && or_3 != or_4) {
-                    pixel::log_printf("i-g-0: %s with %s\n", toString().c_str(), o.toString().c_str());
-                    return true;
-                }
-
-#if 0
-                // Special case : Points are collinear.
-
-                // If points p0, p1 and o.p0 are collinear, check if point o.p0 lies on this segment p0-p1
-                if (or_1 == pixel::orientation_t::COL && is_on_line (o.p0)) {
-                    pixel::log_printf("i-s-1: %s with %s\n", toString().c_str(), o.toString().c_str());
-                    return true;
-                }
-
-                // If points p0, p1 and o.p1 are collinear, check if point o.p1 lies on this segment p0-p1
-                if (or_2 == pixel::orientation_t::COL && is_on_line (o.p1)) {
-                    pixel::log_printf("i-s-2: %s with %s\n", toString().c_str(), o.toString().c_str());
-                    return true;
-                }
-
-                // If points o.p0, o.p1 and p0 are collinear, check if point p0 lies on given segment o.p0-o.p1
-                if (or_3 == pixel::orientation_t::COL && o.is_on_line (p0)) {
-                    pixel::log_printf("i-s-3: %s with %s\n", toString().c_str(), o.toString().c_str());
-                    return true;
-                }
-
-                // If points o.p0, o.p1 and p1 are collinear, check if point p1 lies on given segment o.p0-o.p1
-                if (or_4 == pixel::orientation_t::COL && o.is_on_line (p1)) {
-                    pixel::log_printf("i-s-4: %s with %s\n", toString().c_str(), o.toString().c_str());
-                    return true;
-                }
-#endif
-
-                return false;
-#endif
-            }
-
-            bool intersects(const aabbox_t& box) const noexcept override {
-                // separating axis theorem.
-                const vec_t d = (p1 - p0) * 0.5f; // half lineseg direction
-                const vec_t e = (box.tr - box.bl) * 0.5f;
-                const vec_t aabb_center = (box.bl + box.tr) * 0.5f;
-                const vec_t lseg_center = p0 + d;
-                const vec_t c = lseg_center - aabb_center;
-                const vec_t ad(std::abs(d.x), std::abs(d.y));
-                if (std::abs(c.x) > e.x + ad.x) {
+                    // Not considering collinear case as an intersection
                     return false;
                 }
-                if (std::abs(c.y) > e.y + ad.y) {
-                    return false;
+            } else {
+                // r x s != 0
+                const vec_t q_p = q - p;
+                const float qpxr = q_p.cross(r);
+
+                // p + t r = q + u s
+                // (p + t r) ������ s = (q + u s) ������ s
+                // t (r ������ s) = (q ��������� p) ������ s, with s x s = 0
+                // t = (q - p) x s / (r x s)
+                const float t = q_p.cross(s) / rxs;
+
+                // u = (p ��������� q) ������ r / (s ������ r) = (q - p) x r / (r x s), with s ������ r = ��������� r ������ s
+                const float u = qpxr / rxs;
+
+                if ( (0 <= t && t <= 1) && (0 <= u && u <= 1) )
+                {
+                    // 3) r ������ s ��������� 0 and 0 ��������� t ��������� 1 and 0 ��������� u ��������� 1, the two line segments meet at the point p + t * r = q + u * s.
+                    result = p + (t * r); // == q + (u * s)
+                    return true;
                 }
-                /**
+            }
+
+            return false;
+        }
+
+    public:
+
+        /**
+         * Compute intersection between two lines segments
+         * @param result storage for the intersection coordinates if the lines intersect, otherwise unchanged
+         * @param o the other line segment.
+         * @return true if the line segments intersect, otherwise false
+         */
+        bool intersects(point_t& result, const lineseg_t & o) const noexcept {
+            return intersects(result, p0, p1, o.p0, o.p1);
+        }
+
+        /**
+         * Return true if this line segment intersect with the given line segment
+         * @param o the other line segment.
+         * @return true if both intersect, otherwise false
+         */
+        bool intersects(const lineseg_t & o) const noexcept override {
+            point_t result;
+            return intersects(result, p0, p1, o.p0, o.p1);
+#if 0
+            const pixel::orientation_t or_1 = orientation (p0, p1, o.p0);
+            const pixel::orientation_t or_2 = orientation (p0, p1, o.p1);
+            const pixel::orientation_t or_3 = orientation(o.p0, o.p1, p0);
+            const pixel::orientation_t or_4 = orientation(o.p0, o.p1, p1);
+
+            // General case : Points are non-collinear.
+            if (or_1 != or_2 && or_3 != or_4) {
+                pixel::log_printf("i-g-0: %s with %s\n", toString().c_str(), o.toString().c_str());
+                return true;
+            }
+
+#if 0
+            // Special case : Points are collinear.
+
+            // If points p0, p1 and o.p0 are collinear, check if point o.p0 lies on this segment p0-p1
+            if (or_1 == pixel::orientation_t::COL && is_on_line (o.p0)) {
+                pixel::log_printf("i-s-1: %s with %s\n", toString().c_str(), o.toString().c_str());
+                return true;
+            }
+
+            // If points p0, p1 and o.p1 are collinear, check if point o.p1 lies on this segment p0-p1
+            if (or_2 == pixel::orientation_t::COL && is_on_line (o.p1)) {
+                pixel::log_printf("i-s-2: %s with %s\n", toString().c_str(), o.toString().c_str());
+                return true;
+            }
+
+            // If points o.p0, o.p1 and p0 are collinear, check if point p0 lies on given segment o.p0-o.p1
+            if (or_3 == pixel::orientation_t::COL && o.is_on_line (p0)) {
+                pixel::log_printf("i-s-3: %s with %s\n", toString().c_str(), o.toString().c_str());
+                return true;
+            }
+
+            // If points o.p0, o.p1 and p1 are collinear, check if point p1 lies on given segment o.p0-o.p1
+            if (or_4 == pixel::orientation_t::COL && o.is_on_line (p1)) {
+                pixel::log_printf("i-s-4: %s with %s\n", toString().c_str(), o.toString().c_str());
+                return true;
+            }
+#endif
+
+            return false;
+#endif
+        }
+
+        bool intersects(const aabbox_t& box) const noexcept override {
+            // separating axis theorem.
+            const vec_t d = (p1 - p0) * 0.5f; // half lineseg direction
+            const vec_t e = (box.tr - box.bl) * 0.5f;
+            const vec_t aabb_center = (box.bl + box.tr) * 0.5f;
+            const vec_t lseg_center = p0 + d;
+            const vec_t c = lseg_center - aabb_center;
+            const vec_t ad(std::abs(d.x), std::abs(d.y));
+            if (std::abs(c.x) > e.x + ad.x) {
+                return false;
+            }
+            if (std::abs(c.y) > e.y + ad.y) {
+                return false;
+            }
+            /**
                     if (std::abs(d.y * c.z - d.z * c.y) > e.y * ad.z + e.z * ad.y + std::numeric_limits<float>::epsilon()) {
                         return false;
                     }
                     if (std::abs(d.z * c.x - d.x * c.z) > e.z * ad.x + e.x * ad.z + std::numeric_limits<float>::epsilon()) {
                         return false;
                     }
-                */
-                if (std::abs(d.x * c.y - d.y * c.x) > e.x * ad.y + e.y * ad.x + std::numeric_limits<float>::epsilon()) {
-                    return false;
-                }
-                return true;
-            }
-
-            bool intersects(const geom_t& o) const noexcept override {
-                return intersects(o.box());
-            }
-
-            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
-                if( intersects(cross_point, in) ) {
-                    cross_normal = (p1 - p0).normal_ccw().normalize();
-                    const vec_t v_in = cross_point - in.p0;
-                    reflect_out = v_in - ( 2.0f * v_in.dot(cross_normal) * cross_normal );
-                    return true;
-                }
+             */
+            if (std::abs(d.x * c.y - d.y * c.x) > e.x * ad.y + e.y * ad.x + std::numeric_limits<float>::epsilon()) {
                 return false;
             }
+            return true;
+        }
+
+        bool intersects(const geom_t& o) const noexcept override {
+            return intersects(o.box());
+        }
+
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
+            if( intersects(cross_point, in) ) {
+                cross_normal = (p1 - p0).normal_ccw().normalize();
+                const vec_t v_in = cross_point - in.p0;
+                reflect_out = v_in - ( 2.0f * v_in.dot(cross_normal) * cross_normal );
+                return true;
+            }
+            return false;
+        }
     };
 
     /**
@@ -805,27 +843,27 @@ namespace pixel::f2 {
      * </p>
      */
     class ray_t /** TODO : public geom_t **/ {
-        public:
-            /** Origin of Ray. */
-            point_t orig;
+    public:
+        /** Origin of Ray. */
+        point_t orig;
 
-            /** Normalized direction vector of ray. */
-            vec_t dir;
+        /** Normalized direction vector of ray. */
+        vec_t dir;
 
-            std::string toString() const noexcept { return "Ray[orig "+orig.toString()+", dir "+dir.toString() +"]"; }
+        std::string toString() const noexcept { return "Ray[orig "+orig.toString()+", dir "+dir.toString() +"]"; }
     };
 
     /**
      * Animated geometric object
      */
     class ageom_t : public geom_t {
-        public:
-            virtual ~ageom_t() = default;
+    public:
+        virtual ~ageom_t() = default;
 
-            virtual void rotate(const float rad) noexcept = 0;
-            virtual void move_dir(const float d) noexcept = 0;
-            virtual void move(const point_t& d) noexcept = 0;
-            virtual void move(const float dx, const float dy) noexcept = 0;
+        virtual void rotate(const float rad) noexcept = 0;
+        virtual void move_dir(const float d) noexcept = 0;
+        virtual void move(const point_t& d) noexcept = 0;
+        virtual void move(const float dx, const float dy) noexcept = 0;
     };
     typedef std::shared_ptr<ageom_t> ageom_ref_t;
     typedef std::vector<ageom_ref_t> ageom_list_t;
@@ -833,461 +871,708 @@ namespace pixel::f2 {
     ageom_list_t& agobjects();
 
     class disk_t : public ageom_t {
-        public:
-            /**
-             * Imagine a circle ;-)
-             *
-             *     ---------
-             *    |    |r   |
-             *    |    |    |
-             *    |    c    |
-             *    |         |
-             *     ---------
-             */
-            /** m_center */
-            point_t center;
-            float radius;
-            /** direction angle in radians */
-            float dir_angle;
+    public:
+        /**
+         * Imagine a circle ;-)
+         *
+         *     ---------
+         *    |    |r   |
+         *    |    |    |
+         *    |    c    |
+         *    |         |
+         *     ---------
+         */
+        /** m_center */
+        point_t center;
+        float radius;
+        /** direction angle in radians */
+        float dir_angle;
 
-            disk_t(const point_t& c_, const float r_)
-            : center( c_), radius(r_), dir_angle(0.0f) {}
+        disk_t(const point_t& c_, const float r_)
+        : center( c_), radius(r_), dir_angle(0.0f) {}
 
-            disk_t(float x, float y, const float r_)
-            : center(x, y), radius(r_), dir_angle(0.0f) {}
+        disk_t(float x, float y, const float r_)
+        : center(x, y), radius(r_), dir_angle(0.0f) {}
 
-            std::string toString() const noexcept override {
-                return "disk[c " + center.toString() +
-                       ", r " + std::to_string(radius) +
-                       "]"; }
+        std::string toString() const noexcept override {
+            return "disk[c " + center.toString() +
+                    ", r " + std::to_string(radius) +
+                    "]"; }
 
-            void set_center(const point_t& p) {
-                center = p;
+        void set_center(const point_t& p) {
+            center = p;
+        }
+
+        aabbox_t box() const noexcept override {
+            point_t bl = { center.x - radius, center.y - radius};
+            point_t tr = { center.x + radius, center.y + radius};
+            return aabbox_t(bl, tr);
+        }
+
+        bool contains(const point_t& o) const noexcept override {
+            return center.dist(o) <= radius;
+            // return box().contains(o);
+        }
+
+        bool intersects(const lineseg_t & o) const noexcept override {
+            return o.intersects(box());
+        }
+
+        bool intersects(const aabbox_t& o) const noexcept override {
+            return box().intersects(o);
+        }
+
+        bool intersects(const geom_t& o) const noexcept override {
+            return box().intersects(o.box());
+        }
+
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
+            if( !in.intersects( box() ) ) {
+                return false;
             }
+            cross_point = center; // use center
+            const float dx = in.p1.x - in.p0.x;
+            const float dy = in.p1.y - in.p0.y;
+            cross_normal = vec_t(-dy, dx).normalize();
+            const vec_t v_in = in.p1 - in.p0;
+            // reflect_out = v_in - ( 2.0f * v_in.dot(cross_normal) * cross_normal ); // TODO: check if cross_normal is OK for this case
+            reflect_out = -1.0f * v_in;
+            return true;
+        }
 
-            aabbox_t box() const noexcept override {
-                point_t bl = { center.x - radius, center.y - radius};
-                point_t tr = { center.x + radius, center.y + radius};
-                return aabbox_t(bl, tr);
-            }
-
-            bool contains(const point_t& o) const noexcept override {
-                return box().contains(o);
-            }
-
-            bool intersects(const lineseg_t & o) const noexcept override {
-                return o.intersects(box());
-            }
-
-            bool intersects(const aabbox_t& o) const noexcept override {
-                return box().intersects(o);
-            }
-
-            bool intersects(const geom_t& o) const noexcept override {
-                return box().intersects(o.box());
-            }
-
-            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
-                if( !in.intersects( box() ) ) {
-                    return false;
-                }
-                cross_point = center; // use center
-                const float dx = in.p1.x - in.p0.x;
-                const float dy = in.p1.y - in.p0.y;
-                cross_normal = vec_t(-dy, dx).normalize();
-                const vec_t v_in = in.p1 - in.p0;
-                // reflect_out = v_in - ( 2.0f * v_in.dot(cross_normal) * cross_normal ); // TODO: check if cross_normal is OK for this case
-                reflect_out = -1.0f * v_in;
-                return true;
-            }
-
-            void draw() const noexcept override {
-                draw(true);
-            }
-            void draw(const bool filled) const noexcept {
-                const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
-                const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
-                const float ival2 = 1.0f*std::min(x_ival, y_ival);
-                const aabbox_t b = box();
-                for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) {
-                    for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
-                        const point_t p { x, y };
-                        const float cp = center.dist(p);
-                        if( (  filled && cp <= radius ) ||
+        void draw() const noexcept override {
+            draw(true);
+        }
+        void draw(const bool filled) const noexcept {
+            const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
+            const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
+            const float ival2 = 1.0f*std::min(x_ival, y_ival);
+            const aabbox_t b = box();
+            for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) {
+                for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
+                    const point_t p { x, y };
+                    const float cp = center.dist(p);
+                    if( (  filled && cp <= radius ) ||
                             ( !filled && std::abs(cp - radius) <= ival2 ) ) {
-                            p.draw();
-                        }
+                        p.draw();
                     }
                 }
             }
+        }
 
-            bool on_screen() const noexcept override {
-                return box().on_screen();
-            }
+        bool on_screen() const noexcept override {
+            return box().on_screen();
+        }
 
-            void rotate(const float rad) noexcept override {
-                dir_angle += rad;
-            }
+        void rotate(const float rad) noexcept override {
+            dir_angle += rad;
+        }
 
-            void move_dir(const float d) noexcept override {
-                point_t dir { d, 0 };
-                dir.rotate(dir_angle, { 0, 0 });
-                center += dir;
-            }
+        void move_dir(const float d) noexcept override {
+            point_t dir { d, 0 };
+            dir.rotate(dir_angle, { 0, 0 });
+            center += dir;
+        }
 
-            void move(const point_t& d) noexcept override {
-                center += d;
-            }
-            void move(const float dx, const float dy) noexcept override {
-                center.add(dx, dy);
-            }
+        void move(const point_t& d) noexcept override {
+            center += d;
+        }
+        void move(const float dx, const float dy) noexcept override {
+            center.add(dx, dy);
+        }
     };
     typedef std::shared_ptr<disk_t> disk_ref_t;
 
     class rect_t : public ageom_t {
-        public:
-            /**
-             * Unrotated, clockwise (CW):
-             *
-             *   (a)-----(b)
-             *    |       |
-             *    |       |
-             *    |       |
-             *   (c)-----(d)
-             */
-            /** Unrotated top-left */
-            point_t p_a;
-            /** Unrotated top-right */
-            point_t p_b;
-            /** Unrotated bottom-left */
-            point_t p_c;
-            /** Unrotated bottom_right */
-            point_t p_d;
-            point_t p_center;
-            /** direction angle in radians */
-            float dir_angle;
+    public:
+        /**
+         * Unrotated, clockwise (CW):
+         *
+         *   (a)-----(b)
+         *    |       |
+         *    |       |
+         *    |       |
+         *   (c)-----(d)
+         */
+        /** Unrotated top-left */
+        point_t p_a;
+        /** Unrotated top-right */
+        point_t p_b;
+        /** Unrotated bottom-left */
+        point_t p_c;
+        /** Unrotated bottom_right */
+        point_t p_d;
+        point_t p_center;
+        /** direction angle in radians */
+        float dir_angle;
 
-        public:
-            rect_t(const point_t& tl_, const float width, const float height, const float radians) noexcept
+    public:
+        rect_t(const point_t& tl_, const float width, const float height, const float radians) noexcept
+        {
+            p_a = tl_;
+            p_b = { p_a.x + width, p_a.y };
+            p_c = { p_a.x        , p_a.y - height};
+            p_d = { p_a.x + width, p_a.y - height};
+            p_center = { p_a.x + width/2  , p_a.y - height/2  };
+            dir_angle = 0.0f;
+            rotate(radians);
+        }
+
+        rect_t(const point_t& tl_, const float width, const float height) noexcept{
+            p_a = tl_;
+            p_b = { p_a.x + width, p_a.y };
+            p_c = { p_a.x        , p_a.y - height};
+            p_d = { p_a.x + width, p_a.y - height};
+            p_center = { p_a.x + width/2  , p_a.y - height/2  };
+            dir_angle = 0.0f;
+        }
+
+
+        rect_t(const point_t& tl_, const point_t& tr_, const point_t& bl_, const point_t& br_) noexcept
+        : p_a(tl_), p_b(tr_), p_c(bl_), p_d(br_)
+        {
+            p_center = { ( p_a.x + p_b.x ) / 2.0f  , ( p_a.y + p_c.y ) / 2.0f  };
+            dir_angle = 0.0f;
+        }
+
+        aabbox_t box() const noexcept override {
+            return aabbox_t().resize(p_a).resize(p_b).resize(p_c).resize(p_d);
+        }
+
+        void move_dir(const float d) noexcept override {
+            point_t dir { d, 0 };
+            dir.rotate(dir_angle, { 0, 0 });
+            p_a += dir;
+            p_b += dir;
+            p_c += dir;
+            p_d += dir;
+            p_center += dir;
+        }
+
+        void move(const point_t& d) noexcept override {
+            p_a += d;
+            p_b += d;
+            p_c += d;
+            p_d += d;
+            p_center += d;
+        }
+        void move(const float dx, const float dy) noexcept override {
+            p_a.add(dx, dy);
+            p_b.add(dx, dy);
+            p_c.add(dx, dy);
+            p_d.add(dx, dy);
+            p_center.add(dx, dy);
+        }
+
+        void rotate(const float radians) noexcept override {
+            const float cos = std::cos(radians);
+            const float sin = std::sin(radians);
+            p_a.rotate(sin, cos, p_center);
+            p_b.rotate(sin, cos, p_center);
+            p_c.rotate(sin, cos, p_center);
+            p_d.rotate(sin, cos, p_center);
+            dir_angle += radians;
+        }
+
+        void set_top_left(const point_t& p) {
+            // FIXME: Since m_p_a is unknown to be top-left ...
+            const float dx = p.x - p_a.x;
+            const float dy = p.y - p_a.y;
+            move( dx, dy );
+        }
+
+        bool on_screen() const noexcept override {
+            return box().on_screen();
+        }
+
+        bool contains(const point_t& o) const noexcept override {
+            return box().contains(o);
+        }
+
+        bool intersects(const lineseg_t & o) const noexcept override {
+            return o.intersects(box());
+        }
+
+        bool intersects(const aabbox_t& o) const noexcept override {
+            return box().intersects(o);
+        }
+
+        bool intersects(const geom_t& o) const noexcept override {
+            return box().intersects(o.box());
+        }
+
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
             {
-                p_a = tl_;
-                p_b = { p_a.x + width, p_a.y };
-                p_c = { p_a.x        , p_a.y - height};
-                p_d = { p_a.x + width, p_a.y - height};
-                p_center = { p_a.x + width/2  , p_a.y - height/2  };
-                dir_angle = 0.0f;
-                rect_t::rotate(radians);
+                // tl .. tr
+                const lineseg_t l(p_a, p_b);
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
             }
-
-            rect_t(const point_t& tl_, const float width, const float height) noexcept 
-            : p_a(tl_)
             {
-                p_b = { p_a.x + width, p_a.y };
-                p_c = { p_a.x        , p_a.y - height};
-                p_d = { p_a.x + width, p_a.y - height};
-                p_center = { p_a.x + width/2  , p_a.y - height/2  };
-                dir_angle = 0.0f;
+                // bl .. br
+                const lineseg_t l(p_c, p_d);
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
             }
-
-            rect_t(const point_t& tl_, const point_t& tr_, const point_t& bl_, const point_t& br_) noexcept 
-            : p_a(tl_), p_b(tr_), p_c(bl_), p_d(br_)
             {
-                p_center = { ( p_a.x + p_b.x ) / 2.0f  , ( p_a.y + p_c.y ) / 2.0f  };
-                dir_angle = 0.0f;
+                // br .. tr
+                const lineseg_t l(p_d, p_b);
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
             }
+            {
+                // bl .. tl
+                const lineseg_t l(p_c, p_a);
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
-            aabbox_t box() const noexcept override {
-                return aabbox_t().resize(p_a).resize(p_b).resize(p_c).resize(p_d);
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in, const float in_radius) const noexcept {
+            {
+                // tl .. tr
+                lineseg_t l(p_a, p_b);
+                const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                l.p0 += added_size;
+                l.p1 += added_size;
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
             }
+            {
+                // bl .. br
+                lineseg_t l(p_c, p_d);
+                const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                l.p0 += added_size;
+                l.p1 += added_size;
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
+            }
+            {
+                // br .. tr
+                lineseg_t l(p_d, p_b);
+                const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                l.p0 += added_size;
+                l.p1 += added_size;
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
+            }
+            {
+                // bl .. tl
+                lineseg_t l(p_c, p_a);
+                const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                l.p0 += added_size;
+                l.p1 += added_size;
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
+            }
+            return false;
+        }
 
-            void move_dir(const float d) noexcept override {
-                point_t dir { d, 0 };
-                dir.rotate(dir_angle, { 0, 0 });
-                p_a += dir;
-                p_b += dir;
-                p_c += dir;
-                p_d += dir;
-                p_center += dir;
-            }
-
-            void move(const point_t& d) noexcept override {
-                p_a += d;
-                p_b += d;
-                p_c += d;
-                p_d += d;
-                p_center += d;
-            }
-            void move(const float dx, const float dy) noexcept override {
-                p_a.add(dx, dy);
-                p_b.add(dx, dy);
-                p_c.add(dx, dy);
-                p_d.add(dx, dy);
-                p_center.add(dx, dy);
-            }
-
-            void rotate(const float radians) noexcept override {
-                const float cos = std::cos(radians);
-                const float sin = std::sin(radians);
-                p_a.rotate(sin, cos, p_center);
-                p_b.rotate(sin, cos, p_center);
-                p_c.rotate(sin, cos, p_center);
-                p_d.rotate(sin, cos, p_center);
-                dir_angle += radians;
-            }
-
-            void set_top_left(const point_t& p) {
-                // FIXME: Since m_p_a is unknown to be top-left ...
-                const float dx = p.x - p_a.x;
-                const float dy = p.y - p_a.y;
-                move( dx, dy );
-            }
-
-            bool on_screen() const noexcept override {
-                return box().on_screen();
-            }
-
-            bool contains(const point_t& o) const noexcept override {
-                return box().contains(o);
-            }
-
-            bool intersects(const lineseg_t & o) const noexcept override {
-                return o.intersects(box());
-            }
-
-            bool intersects(const aabbox_t& o) const noexcept override {
-                return box().intersects(o);
-            }
-
-            bool intersects(const geom_t& o) const noexcept override {
-                return box().intersects(o.box());
-            }
-
-            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
-                {
-                    // tl .. tr
-                    const lineseg_t l(p_a, p_b);
-                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                        return true;
+        void draw() const noexcept override {
+            draw(false);
+        }
+        void draw(const bool filled) const noexcept {
+            if(filled) {
+                constexpr bool debug = false;
+                vec_t ac = p_c - p_a;
+                ac.normalize();
+                vec_t vunit_per_pixel(pixel::cart_coord.from_fb_dx( 1 ), pixel::cart_coord.from_fb_dy( 1 ));
+                if( debug ) {
+                    printf("unit_per_pixel real %s\n", vunit_per_pixel.toString().c_str());
+                }
+                vunit_per_pixel.normalize();
+                float unit_per_pixel = vunit_per_pixel.length();
+                /**
+                 * Problem mit rotation, wo step breite und linien-loop zu luecken fuehrt!
+                 */
+                vec_t step = ac * unit_per_pixel * 1.0f;
+                vec_t i(p_a), j(p_b);
+                if( debug ) {
+                    printf("%s\n", toString().c_str());
+                    printf("ac %s\n", ac.toString().c_str());
+                    printf("unit_per_pixel norm %s, %f\n", vunit_per_pixel.toString().c_str(), unit_per_pixel);
+                    printf("step %s\n", step.toString().c_str());
+                    printf("i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
+                }
+                if( 0.0f == step.length_sq() ){
+                    lineseg_t::draw(i, j);
+                    if( debug ) {
+                        printf("z: i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
+                    }
+                } else if(p_a.y < p_c.y){
+                    for(; /*i.x > p_c.x ||*/ i.y <= p_c.y; i+=step, j+=step) {
+                        lineseg_t::draw(i, j);
+                        if( debug ) {
+                            printf("a: i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
+                        }
+                    }
+                }else{
+                    for(; /*i.x > p_c.x ||*/ i.y >= p_c.y; i+=step, j+=step) {
+                        lineseg_t::draw(i, j);
+                        if( debug ) {
+                            printf("b: i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
+                        }
                     }
                 }
-                {
-                    // bl .. br
-                    const lineseg_t l(p_c, p_d);
-                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                        return true;
-                    }
-                }
-                {
-                    // br .. tr
-                    const lineseg_t l(p_d, p_b);
-                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                        return true;
-                    }
-                }
-                {
-                    // bl .. tl
-                    const lineseg_t l(p_c, p_a);
-                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                        return true;
-                    }
-                }
-                return false;
-            }
 
-            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in, const float in_radius) const noexcept {
-                {
-                    // tl .. tr
-                    lineseg_t l(p_a, p_b);
-                    const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
-                    l.p0 += added_size;
-                    l.p1 += added_size;
-                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                        return true;
-                    }
-                }
-                {
-                    // bl .. br
-                    lineseg_t l(p_c, p_d);
-                    const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
-                    l.p0 += added_size;
-                    l.p1 += added_size;
-                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                        return true;
-                    }
-                }
-                {
-                    // br .. tr
-                    lineseg_t l(p_d, p_b);
-                    const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
-                    l.p0 += added_size;
-                    l.p1 += added_size;
-                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                        return true;
-                    }
-                }
-                {
-                    // bl .. tl
-                    lineseg_t l(p_c, p_a);
-                    const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
-                    l.p0 += added_size;
-                    l.p1 += added_size;
-                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            void draw() const noexcept override {
+            } else {
                 lineseg_t::draw(p_a, p_b);
                 lineseg_t::draw(p_b, p_d);
                 lineseg_t::draw(p_d, p_c);
                 lineseg_t::draw(p_c, p_a);
             }
+        }
 
-            std::string toString() const noexcept override {
-                return "rect[a " + p_a.toString() +
-                       ", b " + p_b.toString() +
-                       ", c " + p_c.toString() +
-                       ", d " + p_d.toString() +
-                       "]"; }
+        std::string toString() const noexcept override {
+            return "rect[a " + p_a.toString() +
+                    ", b " + p_b.toString() +
+                    ", c " + p_c.toString() +
+                    ", d " + p_d.toString() +
+                    "]";
+        }
     };
     typedef std::shared_ptr<rect_t> rect_ref_t;
+    class triangle_t : public ageom_t {
+    public:
+        /**
+         * Unrotated, clockwise (CW):
+         *
+         *       (a)
+         *       / \
+         *      /   \
+         *     /     \
+         *   (b)-----(c)
+         */
+        /** Unrotated top */
+        point_t p_a;
+        /** Unrotated bottom-left */
+        point_t p_b;
+        /** Unrotated bottom-right */
+        point_t p_c;
+        point_t p_center;
+        /** direction angle in radians */
+        float dir_angle;
+
+    public:
+        triangle_t(const point_t& a_, const point_t& b_, const point_t& c_) noexcept
+        : p_a(a_), p_b(b_), p_c(c_)
+        {
+            // FIXME ???
+            p_center = { (p_c.x + p_b.x) / 2.0f, (p_a.y + p_b.y) / 2.0f };
+            dir_angle = 0.0f;
+        }
+
+        aabbox_t box() const noexcept override {
+            return aabbox_t().resize(p_a).resize(p_b).resize(p_c);
+        }
+
+        void move_dir(const float d) noexcept override {
+            point_t dir { d, 0 };
+            dir.rotate(dir_angle, { 0, 0 });
+            p_a += dir;
+            p_b += dir;
+            p_c += dir;
+            p_center += dir;
+        }
+
+        void move(const point_t& d) noexcept override {
+            p_a += d;
+            p_b += d;
+            p_c += d;
+            p_center += d;
+        }
+        void move(const float dx, const float dy) noexcept override {
+            p_a.add(dx, dy);
+            p_b.add(dx, dy);
+            p_c.add(dx, dy);
+            p_center.add(dx, dy);
+        }
+
+        void rotate(const float radians) noexcept override {
+            const float cos = std::cos(radians);
+            const float sin = std::sin(radians);
+            p_a.rotate(sin, cos, p_center);
+            p_b.rotate(sin, cos, p_center);
+            p_c.rotate(sin, cos, p_center);
+            dir_angle += radians;
+        }
+
+        bool on_screen() const noexcept override {
+            return box().on_screen();
+        }
+
+        float area() const noexcept { return area(p_a, p_b, p_c); }
+
+        static float area(const point_t &a, const point_t &b, const point_t &c) {
+            if( false ) {
+                vec_t v_ba = b - a;
+                vec_t v_ca = c - a;
+                return std::abs( v_ba.cross(v_ca) ) * 0.5f;
+            } else {
+                return std::abs( 0.5f * ( (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x) ) );
+            }
+        }
+
+        bool contains(const point_t& o) const noexcept override {
+            if( true ) {
+                return std::numeric_limits<float>::epsilon() >
+                std::abs(area(p_a, p_b, p_c) -
+                        ( area(p_a, p_b, o) +
+                                area(o,   p_b, p_c) +
+                                area(p_a, o,   p_c)
+                        ) );
+            } else {
+                return 0 == pixel::compare(area(p_a, p_b, p_c),
+                        area(p_a, p_b, o) +
+                        area(o,   p_b, p_c) +
+                        area(p_a, o,   p_c));
+            }
+        }
+
+        bool intersects(const lineseg_t & o) const noexcept override {
+            return o.intersects(box());
+        }
+
+        bool intersects(const aabbox_t& o) const noexcept override {
+            return box().intersects(o);
+        }
+
+        bool intersects(const geom_t& o) const noexcept override {
+            return box().intersects(o.box());
+        }
+
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
+            {
+                // tl .. tr
+                const lineseg_t l(p_a, p_b);
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
+            }
+            {
+                // bl .. br
+                const lineseg_t l(p_b, p_c);
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
+            }
+            {
+                // br .. tr
+                const lineseg_t l(p_c, p_a);
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in, const float in_radius) const noexcept {
+            {
+                // tl .. tr
+                lineseg_t l(p_a, p_b);
+                const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                l.p0 += added_size;
+                l.p1 += added_size;
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
+            }
+            {
+                // bl .. br
+                lineseg_t l(p_b, p_c);
+                const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                l.p0 += added_size;
+                l.p1 += added_size;
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
+            }
+            {
+                // br .. tr
+                lineseg_t l(p_c, p_a);
+                const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
+                l.p0 += added_size;
+                l.p1 += added_size;
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        void draw() const noexcept override {
+            draw(true);
+        }
+
+        void draw(const bool filled) const noexcept {
+            if(!filled) {
+                lineseg_t::draw(p_a, p_b);
+                lineseg_t::draw(p_b, p_c);
+                lineseg_t::draw(p_c, p_a);
+            } else {
+                const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
+                const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
+                const aabbox_t b = box();
+                for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) {
+                    for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
+                        const point_t p { x, y };
+                        if( contains(p) ){
+                            p.draw();
+                        }
+                    }
+                }
+            }
+        }
+
+        std::string toString() const noexcept override {
+            return "tri[a " + p_a.toString() +
+                    ", b " + p_b.toString() +
+                    ", c " + p_c.toString() +
+                    "]"; }
+    };
+    typedef std::shared_ptr<triangle_t> triangle_ref_t;
+
 
     /**
      * A clockwise (CW) polyline
      */
     class linestrip_t : public ageom_t {
-        public:
-            std::vector<point_t> p_list;
-            point_t p_center;
-            /** direction angle in radians */
-            float dir_angle;
+    public:
+        std::vector<point_t> p_list;
+        point_t p_center;
+        /** direction angle in radians */
+        float dir_angle;
 
-        private:
-            int lala = 0;
+    public:
+        linestrip_t() noexcept
+        : p_list(), p_center(), dir_angle(0.0f) {
+        }
 
-        public:
-            linestrip_t() noexcept
-            : p_list(), p_center(), dir_angle(0.0f) {
+        linestrip_t(const point_t& center, const float angle) noexcept
+        : p_list(), p_center(center), dir_angle(angle) {
+        }
+
+
+        aabbox_t box() const noexcept override {
+            aabbox_t box;
+            for(const point_t& p : p_list) {
+                box.resize(p);
             }
+            return box;
+        }
 
-            linestrip_t(const point_t& center, const float angle) noexcept
-            : p_list(), p_center(center), dir_angle(angle) {
+        void move_dir(const float d) noexcept override {
+            point_t dir { d, 0 };
+            dir.rotate(dir_angle, { 0, 0 });
+            for(point_t& p : p_list) {
+                p += dir;
             }
+            p_center += dir;
+        }
 
-
-            aabbox_t box() const noexcept override {
-                aabbox_t box;
-                for(const point_t& p : p_list) {
-                    box.resize(p);
-                }
-                return box;
+        void move(const point_t& d) noexcept override {
+            for(point_t& p : p_list) {
+                p += d;
             }
-
-            void move_dir(const float d) noexcept override {
-                point_t dir { d, 0 };
-                dir.rotate(dir_angle, { 0, 0 });
-                for(point_t& p : p_list) {
-                    p += dir;
-                }
-                p_center += dir;
+            p_center += d;
+        }
+        void move(const float dx, const float dy) noexcept override {
+            for(point_t& p : p_list) {
+                p.add(dx, dy);
             }
+            p_center.add(dx, dy);
+        }
 
-            void move(const point_t& d) noexcept override {
-                for(point_t& p : p_list) {
-                    p += d;
-                }
-                p_center += d;
-            }
-            void move(const float dx, const float dy) noexcept override {
-                for(point_t& p : p_list) {
-                    p.add(dx, dy);
-                }
-                p_center.add(dx, dy);
-            }
-
-            void rotate(const float radians) noexcept override {
-                const float cos = std::cos(radians);
-                const float sin = std::sin(radians);
+        void rotate(const float radians) noexcept override {
+            const float cos = std::cos(radians);
+            const float sin = std::sin(radians);
 #if 0
-                // pre-ranged loop
-                for(size_t i=0; i<p_list.size(); ++i) {
-                    point_t& p = p_list[i];
-                    p.rotate(sin, cos, p_center);
-                }
+            // pre-ranged loop
+            for(size_t i=0; i<p_list.size(); ++i) {
+                point_t& p = p_list[i];
+                p.rotate(sin, cos, p_center);
+            }
 #endif
-                for(point_t& p : p_list) {
-                    p.rotate(sin, cos, p_center);
-                }
-                dir_angle += radians;
+            for(point_t& p : p_list) {
+                p.rotate(sin, cos, p_center);
             }
+            dir_angle += radians;
+        }
 
-            void set_center(const point_t& p) {
-                const float dx = p.x - p_center.x;
-                const float dy = p.y - p_center.y;
-                move( dx, dy );
-            }
+        void set_center(const point_t& p) {
+            const float dx = p.x - p_center.x;
+            const float dy = p.y - p_center.y;
+            move( dx, dy );
+        }
 
-            bool on_screen() const noexcept override {
-                return box().on_screen();
-            }
+        bool on_screen() const noexcept override {
+            return box().on_screen();
+        }
 
-            bool contains(const point_t& o) const noexcept override {
-                return box().contains(o);
-            }
+        bool contains(const point_t& o) const noexcept override {
+            return box().contains(o);
+        }
 
-            bool intersects(const lineseg_t & o) const noexcept override {
-                return o.intersects(box());
-            }
+        bool intersects(const lineseg_t & o) const noexcept override {
+            return o.intersects(box());
+        }
 
-            bool intersects(const aabbox_t& o) const noexcept override {
-                return box().intersects(o);
-            }
+        bool intersects(const aabbox_t& o) const noexcept override {
+            return box().intersects(o);
+        }
 
-            bool intersects(const geom_t& o) const noexcept override {
-                return box().intersects(o.box());
-            }
+        bool intersects(const geom_t& o) const noexcept override {
+            return box().intersects(o.box());
+        }
 
-            bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point,
-                              const lineseg_t& in) const noexcept override {
-                if( p_list.size() < 2 ) {
-                    return false;
-                }
-                point_t p0 = p_list[0];
-                for(size_t i=1; i<p_list.size(); ++i) {
-                    const point_t& p1 = p_list[i];
-                    const lineseg_t l(p0, p1);
-                    if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                        return true;
-                    }
-                    p0 = p1;
-                }
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point,
+                const lineseg_t& in) const noexcept override {
+            if( p_list.size() < 2 ) {
                 return false;
             }
-
-            void draw() const noexcept override {
-                if( p_list.size() < 2 ) {
-                    return;
+            point_t p0 = p_list[0];
+            for(size_t i=1; i<p_list.size(); ++i) {
+                const point_t& p1 = p_list[i];
+                const lineseg_t l(p0, p1);
+                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                    return true;
                 }
-                point_t p0 = p_list[0];
-                for(size_t i=1; i<p_list.size(); ++i) {
-                    const point_t& p1 = p_list[i];
-                    lineseg_t::draw(p0, p1);
-                    p0 = p1;
-                }
+                p0 = p1;
             }
+            return false;
+        }
 
-            std::string toString() const noexcept override {
-                return "linestrip[center " + p_center.toString() +
-                       ", points " + std::to_string(p_list.size())+"]"; }
+        void draw() const noexcept override {
+            if( p_list.size() < 2 ) {
+                return;
+            }
+            point_t p0 = p_list[0];
+            for(size_t i=1; i<p_list.size(); ++i) {
+                const point_t& p1 = p_list[i];
+                lineseg_t::draw(p0, p1);
+                p0 = p1;
+            }
+        }
+
+        std::string toString() const noexcept override {
+            return "linestrip[center " + p_center.toString() +
+                    ", points " + std::to_string(p_list.size())+"]"; }
     };
     typedef std::shared_ptr<linestrip_t> linestrip_ref_t;
 
     /**
      * Unrotated:
      *
-     *       (a)
+     *       (a1)
      *      /   \
      *     /     \
      *    /       \
@@ -1297,7 +1582,7 @@ namespace pixel::f2 {
     {
         linestrip_ref_t lf = std::make_shared<linestrip_t>(m, 0.0f);
 
-        // a
+        // a1
         point_t p = m;
         p.y += h/2.0f;
         lf->p_list.push_back(p);
