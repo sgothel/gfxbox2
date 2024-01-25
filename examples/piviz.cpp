@@ -209,7 +209,6 @@ double circumferenceInner(double r, double n){
  * @param n ist die Anzahl der Ecken
  * @return
  */
-
 float draw_circumferenceInner(const point_t& pm, float r, int n){
     const float alpha = 2 * M_PI / n; // Den Mittelpunkt verbindet man mit 2 benachbarten Ecken,
     // so bildet sich ein Dreieck und der Winkel aus dem Mittelpunkt ist alpha
@@ -241,7 +240,6 @@ double circumferenceOutter(double r, double n){
  * @param n ist die Anzahl der Ecken
  * @return
  */
-
 float draw_circumferenceOutter(const point_t& pm, float r, int n){
     const float alpha = 2 * M_PI / n; // Den Mittelpunkt verbindet man mit 2 benachbarten Ecken,
     // so bildet sich ein Dreieck und der Winkel aus dem Mittelpunkt ist alpha
