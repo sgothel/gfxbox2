@@ -47,6 +47,7 @@ int main(int argc, char *argv[])
 
     const pixel::i2::point_t p0_i = { 0, 0 };
     //pixel::i2::lineseg_t la = { p0, { max_x, max_y } };
+    // const pixel::f2::point_t p0_f = { pixel::cart_coord.min_x(), pixel::cart_coord.min_y() }; // { 0, 0 };
     const pixel::f2::point_t p0_f = { 0, 0 };
     pixel::f2::lineseg_t la = { p0_f, { pixel::cart_coord.max_x(), pixel::cart_coord.max_y() } };
 
@@ -64,6 +65,7 @@ int main(int argc, char *argv[])
         const float sz = 50;
         const float radius = sz/2.0f;
         const float spacing = 10;
+        if(true){
         for(int i=0; i<20; ++i) {
             pixel::f2::point_t p = { bl.x + (float)i * ( sz + spacing ), bl.y + (float)i * ( sz + spacing ) };
             if( 0 == i % 2 ) { // modulo (divisionsrest) mit zwei, d.h. durch zwei teilbar?
@@ -76,6 +78,15 @@ int main(int argc, char *argv[])
                 list.push_back(o);
             }
             printf("[%d]: Added %s\n", i, list.back()->toString().c_str());
+        }
+        }
+        {
+            const float sz2 = 1000;
+            pixel::f2::point_t a = { 0, sz2/2.0f };
+            pixel::f2::point_t b = { -sz2/2.0f, -sz2/2.0f };
+            pixel::f2::point_t c = { sz2/2.0f, -sz2/2.0f };
+            std::shared_ptr<pixel::f2::triangle_t> o = std::make_shared<pixel::f2::triangle_t>(a, b, c);
+            list.push_back(o);
         }
     }
     pixel::i2::blob_t blob1 = { { 0, 0 }, 100 };
@@ -97,6 +108,7 @@ int main(int argc, char *argv[])
 
     while(!close) {
         handle_events(close, resized, set_dir, dir);
+        const bool animating = pixel::direction_t::PAUSE != dir;
         {
             float fps = pixel::get_gpu_fps();
             if( fps != last_fps ) {
@@ -110,6 +122,10 @@ int main(int argc, char *argv[])
         // black background
         pixel::clear_pixel_fb(0, 0, 0, 255);
 
+        pixel::draw_grid(50,
+                100 /* r */, 100 /* g */, 100 /* b */, 255 /* a */,
+                  0 /* r */, 100 /* g */, 100 /* b */, 255 /* a */);
+
         bool hero_hit_la = false;
         bool hero_hit_geom = false;
 
@@ -117,7 +133,9 @@ int main(int argc, char *argv[])
             pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
             pixel::f2::ageom_list_t& list = pixel::f2::agobjects();
             for(pixel::f2::ageom_ref_t g : list) {
-                g->rotate(pixel::adeg_to_rad(1.0f));
+                if( false && animating ) {
+                    g->rotate(pixel::adeg_to_rad(1.0f));
+                }
                 g->draw();
 
                 if( hero.intersects(*g) ) {
@@ -141,35 +159,28 @@ int main(int argc, char *argv[])
 
         pixel::set_pixel_color(  0 /* r */, 255 /* g */,   0 /* b */, 255 /* a */);
         l3.draw();
-
         pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
 
-        anim_step = 10;
-        int ph = 0;
-        if( la.p1.x > -pixel::cart_coord.max_x() && la.p1.y == pixel::cart_coord.max_y()) {
-            // ph 1
-            la.p1.x = std::max<float>( -pixel::cart_coord.max_x(), la.p1.x - (float)anim_step );
-            ++anim_step;
-            ph = 1;
-        } else if( la.p1.x == -pixel::cart_coord.max_x() && la.p1.y > -pixel::cart_coord.max_y() ) {
-            // ph 2
-            la.p1.y = std::max<float>( -pixel::cart_coord.max_y(), la.p1.y - (float)anim_step ) ;
-            ++anim_step;
-            ph = 2;
-        } else if( la.p1.x < pixel::cart_coord.max_x() && la.p1.y == -pixel::cart_coord.max_y() ) {
-            // ph 3
-            la.p1.x = std::min<float>( pixel::cart_coord.max_x(), la.p1.x + (float)anim_step ) ;
-            ++anim_step;
-            ph = 3;
-        } else if( la.p1.x == pixel::cart_coord.max_x() && la.p1.y < pixel::cart_coord.max_y() ) {
-            // ph 4
-            la.p1.y = std::min<float>( pixel::cart_coord.max_y(), la.p1.y + (float)anim_step ) ;
-            ++anim_step;
-            ph = 4;
-        } else {
-            ph = 5;
+        if( animating ) {
+            anim_step = 10;
+            if( la.p1.x > -pixel::cart_coord.max_x() && la.p1.y == pixel::cart_coord.max_y()) {
+                // ph 1
+                la.p1.x = std::max<float>( -pixel::cart_coord.max_x(), la.p1.x - (float)anim_step );
+                ++anim_step;
+            } else if( la.p1.x == -pixel::cart_coord.max_x() && la.p1.y > -pixel::cart_coord.max_y() ) {
+                // ph 2
+                la.p1.y = std::max<float>( -pixel::cart_coord.max_y(), la.p1.y - (float)anim_step ) ;
+                ++anim_step;
+            } else if( la.p1.x < pixel::cart_coord.max_x() && la.p1.y == -pixel::cart_coord.max_y() ) {
+                // ph 3
+                la.p1.x = std::min<float>( pixel::cart_coord.max_x(), la.p1.x + (float)anim_step ) ;
+                ++anim_step;
+            } else if( la.p1.x == pixel::cart_coord.max_x() && la.p1.y < pixel::cart_coord.max_y() ) {
+                // ph 4
+                la.p1.y = std::min<float>( pixel::cart_coord.max_y(), la.p1.y + (float)anim_step ) ;
+                ++anim_step;
+            }
         }
-        (void)ph;
         pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
         la.draw();
 
@@ -177,7 +188,7 @@ int main(int argc, char *argv[])
             hero_hit_la = true;
         }
 
-        if( !blob1_hit ) {
+        if( !blob1_hit && animating ) {
             if( blob1_grow ) {
                 blob1.size += 10;
                 if( blob1.size >= 200 ) {
@@ -189,10 +200,10 @@ int main(int argc, char *argv[])
                     blob1_grow = true;
                 }
             }
-            blob1.draw();
         }
+        blob1.draw();
 
-        if( set_dir ) {
+        if( set_dir && animating ) {
             blob0_speed += 2;
             pixel::f2::point_t p_old = hero.p_a;
             switch( dir ) {
@@ -209,6 +220,8 @@ int main(int argc, char *argv[])
                 case pixel::direction_t::RIGHT:
                     hero.rotate(pixel::adeg_to_rad(-2.0f));
                     // hero.move(blob0_speed, 0);
+                    break;
+                default:
                     break;
             }
             if( !hero.on_screen() ) {
@@ -229,7 +242,6 @@ int main(int argc, char *argv[])
         pixel::i2::draw_circle(   0,    0, 100, pixel::i2::CircleDrawType::OUTLINE);
         pixel::i2::draw_circle( 200,  200, 100, pixel::i2::CircleDrawType::FILLED);
         pixel::i2::draw_circle(-200, -200, 100, pixel::i2::CircleDrawType::BB_INVERTED);
-
         if( hero_hit_la ) {
             pixel::set_pixel_color(255 /* r */, 255 /* g */, 0 /* b */, 255 /* a */);
         } else if( hero_hit_geom ) {
@@ -239,12 +251,13 @@ int main(int argc, char *argv[])
         }
         hero.draw();
         hero.box().draw();
-
         pixel::swap_pixel_fb(false);
         if( nullptr != hud_text ) {
             hud_text->draw(0, 0);
         }
         pixel::swap_gpu_buffer();
+        // sleep(2);
+        // break;
     }
     exit(0);
 }
