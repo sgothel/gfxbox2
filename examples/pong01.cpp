@@ -355,6 +355,8 @@ int main(int argc, char *argv[])
                 case pixel::direction_t::RIGHT:
                     pad_r->rotate(pixel::adeg_to_rad(-pad_rot_step));
                     break;
+                default:
+                    break;
             }
         }
 
