@@ -27,6 +27,7 @@
 #include "pixel/pixel.hpp"
 
 #include <algorithm>
+#include <random>
 
 const float field_width = 4.0f;
 const float field_height = 3.0f;
@@ -34,9 +35,169 @@ const float diff_bounce = 0.075f;
 const float rho_deaccel = 1.0f-diff_bounce; // factor
 const float pad_accel = 1.0f+diff_bounce; // factor
 
+const float ship_height = 0.10f; // [m]
+std::random_device rng;
+
 bool debug_gfx = false;
 
-std::vector<pixel::f2::ageom_ref_t> player_pads;
+class fragment_t : public pixel::f2::linestrip_t {
+    public:
+        pixel::f2::vec_t velocity; // [m/s]
+        float roration_velocity; // [angle_radians/s]
+
+        /**
+         *
+         * @param center center position
+         * @param angle angle in radians
+         * @param v velocity in meter per seconds
+         * @param rot_v rotation velocity in radians per seconds
+         */
+        fragment_t(const pixel::f2::point_t& center,
+                   const float angle, const float v, const float rot_v) noexcept
+        : linestrip_t(center, angle)
+        {
+            velocity = pixel::f2::vec_t::from_length_angle(v, angle);
+            roration_velocity = rot_v;
+        }
+
+        /**
+         *
+         * @param center center position
+         * @param angle angle in radians
+         * @param v velocity in meter per seconds
+         * @param rot_v rotation velocity in radians per seconds
+         */
+        fragment_t(const pixel::f2::point_t& center,
+                const pixel::f2::vec_t& velocity_, const float rot_v) noexcept
+        : linestrip_t(center, velocity_.angle())
+        {
+            velocity = velocity_;
+            roration_velocity = rot_v;
+        }
+
+        bool tick(const float dt) noexcept {
+            move(velocity * dt);
+            rotate(roration_velocity * dt);
+
+            if( p_center.x < pixel::cart_coord.min_x() ) {
+                return false;
+            }
+            if( p_center.x > pixel::cart_coord.max_x() ) {
+                return false;
+            }
+            if( p_center.y < pixel::cart_coord.min_y() ) {
+                return false;
+            }
+            if( p_center.y > pixel::cart_coord.max_y() ) {
+                return false;
+            }
+            return true;
+        }
+};
+typedef std::shared_ptr<fragment_t> fragment_ref_t;
+
+void make_fragments(std::vector<fragment_ref_t>& dest,
+                   const pixel::f2::linestrip_ref_t& ls, const float v, const float rot_v)
+{
+    if( ls->p_list.size() < 2 ) {
+        return;
+    }
+    pixel::f2::point_t p0 = ls->p_list[0];
+    for(size_t i=1; i<ls->p_list.size(); ++i) {
+        const pixel::f2::point_t& pc = ls->p_center;
+        const pixel::f2::point_t& p1 = ls->p_list[i];
+        const pixel::f2::point_t p_v = p0 + ( p1 - p0 ) / 2.0f;
+        const pixel::f2::vec_t v_v0 = ( p_v - pc ).normalize() * v;
+        fragment_ref_t f = std::make_shared<fragment_t>(pc, v_v0, rot_v);
+        f->p_list.push_back(pc);
+        f->p_list.push_back(p0);
+        f->p_list.push_back(p1);
+        f->p_list.push_back(pc);
+        dest.push_back(f);
+        p0 = p1;
+    }
+}
+
+class asteroid_t : public pixel::f2::linestrip_t {
+    public:
+        pixel::f2::vec_t velocity; // [m/s]
+        float roration_velocity; // [angle_radians/s]
+
+        /**
+         *
+         * @param center center position
+         * @param angle angle in radians
+         * @param v velocity in meter per seconds
+         * @param rot_v rotation velocity in radians per seconds
+         */
+        asteroid_t(const pixel::f2::point_t& center,
+                   const float angle, const float v, const float rot_v) noexcept
+        : linestrip_t(center, angle)
+        {
+            velocity = pixel::f2::vec_t::from_length_angle(v, angle);
+            roration_velocity = rot_v;
+        }
+
+        void tick(const float dt) noexcept {
+            move(velocity * dt);
+            rotate(roration_velocity * dt);
+            if( p_center.x < pixel::cart_coord.min_x() ) {
+                move(pixel::cart_coord.max_x()-p_center.x, 0.0f);
+            }
+            if( p_center.x > pixel::cart_coord.max_x() ) {
+                move(pixel::cart_coord.min_x()-p_center.x, 0.0f);
+            }
+            if( p_center.y < pixel::cart_coord.min_y() ) {
+                move(0.0f, pixel::cart_coord.max_y()-p_center.y);
+            }
+            if( p_center.y > pixel::cart_coord.max_y() ) {
+                move(0.0f, pixel::cart_coord.min_y()-p_center.y);
+            }
+        }
+};
+typedef std::shared_ptr<asteroid_t> asteroid_ref_t;
+
+std::vector<asteroid_ref_t> asteroids;
+std::vector<fragment_ref_t> fragments;
+
+class spaceship_t : public pixel::f2::linestrip_t {
+    public:
+        pixel::f2::vec_t velocity; // [m/s]
+
+        spaceship_t(const pixel::f2::point_t& center, const float angle) noexcept
+        : linestrip_t(center, angle)
+        {}
+
+        bool tick(const float dt) noexcept {
+            move(velocity * dt);
+            if( p_center.x < pixel::cart_coord.min_x() ) {
+                move(pixel::cart_coord.max_x()-p_center.x, 0.0f);
+            }
+            if( p_center.x > pixel::cart_coord.max_x() ) {
+                move(pixel::cart_coord.min_x()-p_center.x, 0.0f);
+            }
+            if( p_center.y < pixel::cart_coord.min_y() ) {
+                move(0.0f, pixel::cart_coord.max_y()-p_center.y);
+            }
+            if( p_center.y > pixel::cart_coord.max_y() ) {
+                move(0.0f, pixel::cart_coord.min_y()-p_center.y);
+            }
+            bool keep_alive = true;
+            for(int i=(int)asteroids.size()-1; i>=0; --i) {
+                std::vector<asteroid_ref_t>::iterator it = asteroids.begin() + i;
+                asteroid_ref_t a = *it;
+                if( intersects(a->box()) ) {
+                    keep_alive = false;
+                    make_fragments(fragments, a, a->velocity.length(), a->roration_velocity*2.0f);
+                    asteroids.erase(it);
+                }
+            }
+            return keep_alive;
+        }
+
+};
+typedef std::shared_ptr<spaceship_t> spaceship_ref_t;
+
 
 /**
  * Unrotated:
@@ -47,9 +208,9 @@ std::vector<pixel::f2::ageom_ref_t> player_pads;
  *    /  / \ \
  *   (d)/   \(b)
  */
-pixel::f2::linestrip_ref_t make_spaceship1( const pixel::f2::point_t& m, const float h) noexcept
+spaceship_ref_t make_spaceship1( const pixel::f2::point_t& m, const float h) noexcept
 {
-    pixel::f2::linestrip_ref_t lf = std::make_shared<pixel::f2::linestrip_t>(m, 0.0f);
+    spaceship_ref_t lf = std::make_shared<spaceship_t>(m, pixel::adeg_to_rad(90.0f));
 
     // a
     pixel::f2::point_t p = m;
@@ -71,6 +232,73 @@ pixel::f2::linestrip_ref_t make_spaceship1( const pixel::f2::point_t& m, const f
     p.x -= width;
     lf->p_list.push_back(p);
 
+    p = m;
+    p.y += h/2.0f;
+    lf->p_list.push_back(p);
+    return lf;
+}
+
+asteroid_ref_t make_asteroid(const pixel::f2::point_t& center, float height,
+                             const float angle,
+                             const float velocity,
+                             const float jitter=1.0f/8.0f) noexcept
+{
+    const float max_height = 6.0f*ship_height;
+    const float min_height = 1.0f*ship_height;
+    height = std::max(min_height, std::min(height, 6*max_height));
+    const float s = 1.0f - ( height - min_height ) / (max_height - min_height );
+    const float rot_velocity = pixel::adeg_to_rad(5.0f) + s * pixel::adeg_to_rad(15.0f); // angle/s
+    asteroid_ref_t lf = std::make_shared<asteroid_t>(center, angle, velocity, rot_velocity);
+
+    const float w = height;
+    const float j = height * jitter;
+
+    // a
+    pixel::f2::point_t p = center;
+    p.x += -w/4.0f + j;
+    p.y +=  height/2.0f - j;
+    lf->p_list.push_back(p);
+    pixel::f2::point_t a = p;
+
+    // lf->lala = 4;
+
+    // b
+    p.x += w/2.0f + j;
+    p.y += j;
+    lf->p_list.push_back(p);
+
+    // c
+    p.x +=  w/4.0f - j;
+    p.y += -height/4.0f + j;
+    lf->p_list.push_back(p);
+
+    // d
+    p.x +=  j;
+    p.y += -height/2.0f + j;
+    lf->p_list.push_back(p);
+
+    // e
+    p.x += -w/4.0f + j;
+    p.y += -height/4.0f + j;
+    lf->p_list.push_back(p);
+
+    // f
+    p.x += -w/2.0f;
+    p.y += -j-j;
+    lf->p_list.push_back(p);
+
+    // g
+    p.x += -w/4.0f - j;
+    p.y += height/4.0f - j;
+    lf->p_list.push_back(p);
+
+    // height
+    p.x += j;
+    p.y += height/2.0f - j;
+    lf->p_list.push_back(p);
+
+    // a
+    lf->p_list.push_back(a);
     return lf;
 }
 
@@ -158,6 +386,7 @@ class ball_t : public pixel::f2::disk_t {
             pixel::f2::point_t coll_point;
             pixel::f2::vec_t coll_normal;
             pixel::f2::vec_t coll_out;
+            #if 0
             {
                 // detect a collision
                 pixel::f2::geom_list_t& list = pixel::f2::gobjects();
@@ -170,6 +399,7 @@ class ball_t : public pixel::f2::disk_t {
                     }
                 }
             }
+            #endif
             if( debug_gfx ) {
                 pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
                 this->draw(false);
@@ -204,12 +434,7 @@ class ball_t : public pixel::f2::disk_t {
                             coll_point.toString().c_str(), coll_out.toString().c_str(), pixel::rad_to_adeg(coll_out.angle()));
                     pixel::log_printf(elapsed_ms, "Ball %s-e-a: %s\n", id.c_str(), coll_obj->toString().c_str());
                 }
-                float accel_factor;
-                if( std::find(player_pads.begin(), player_pads.end(), coll_obj) != player_pads.end() ) {
-                    accel_factor = pad_accel; // speedup
-                } else {
-                    accel_factor = rho_deaccel; // rho deaccel
-                }
+                float accel_factor = rho_deaccel; // rho deaccel;
                 velocity = pixel::f2::vec_t::from_length_angle(velocity.length() * accel_factor, coll_out.angle()); // cont using simulated velocity
                 center = coll_point + coll_out;
                 if( !this->on_screen() ) {
@@ -237,6 +462,7 @@ int main(int argc, char *argv[])
     bool enable_vsync = true;
     int forced_fps = -1;
     bool one_player = true;
+    pixel::log_printf("X1\n");
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-2p", argv[i]) ) {
@@ -271,14 +497,11 @@ int main(int argc, char *argv[])
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("pong01", win_width, win_height, origin_norm, enable_vsync);
+        pixel::init_gfx_subsystem("spacewars", win_width, win_height, origin_norm, enable_vsync);
     }
 
     // const float bullet_height = 0.02f; // [m] .. diameter
     // const float ball_radius = ball_height/2.0f; // [m]
-    const float ship_height = 0.10f; // [m]
-    pixel::f2::vec_t v_ss1(0.0f, 0.0f); // [m/s]
-
     const float ship_vel_step = 0.1f; // [m/s]
     const float ship_rot_step = 3.0f; // ang-degrees
     const float ship_thickness = 0.07f; // [m]
@@ -288,24 +511,30 @@ int main(int argc, char *argv[])
     const pixel::f2::point_t p0_ss1 = { pixel::cart_coord.min_x()+pixel::cart_coord.width()/4.0f, 0.0f };
     const pixel::f2::point_t p0_ss2 = { pixel::cart_coord.min_x()+pixel::cart_coord.width()*3.0f/4.0f, 0.0f };
 
-    pixel::f2::linestrip_ref_t ship_l;
+    spaceship_ref_t ship_l;
     if( !one_player ) {
         ship_l = make_spaceship1(p0_ss1, ship_height);
-        player_pads.push_back(ship_l);
     }
-    pixel::f2::linestrip_ref_t ship_r = make_spaceship1(p0_ss2, ship_height);
-    player_pads.push_back(ship_r);
+    spaceship_ref_t ship_r = make_spaceship1(p0_ss2, ship_height);
 
+    {
+        pixel::f2::point_t p0 = { 0.0f, 0.0f };
+        float height = ship_height*4.0f;
+        for(int i = 0; i < 10; ++i) {
+            const float angle = pixel::adeg_to_rad(i * 360.0f / 10.0f);
+            const float velocity = 0.3f; // m/s
+            p0 += pixel::f2::point_t(height, 0);
+            asteroid_ref_t asteroid1 = make_asteroid(p0, height,
+                    angle, velocity, 1.0f/(2.0f+i));
+            asteroids.push_back(asteroid1);
+        }
+
+    }
     {
         const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
         if( debug_gfx ) {
             pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
         }
-        pixel::f2::geom_list_t& list = pixel::f2::gobjects();
-        if( nullptr != ship_l ) {
-            list.push_back(ship_l);
-        }
-        list.push_back(ship_r);
     }
 
     bool close = false;
@@ -334,15 +563,23 @@ int main(int argc, char *argv[])
         const float dt_diff = (float)( dt_exp - dt ) * 1000.0f; // [ms]
         t_last = t1;
 
-        hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+", fps "+std::to_string(pixel::get_gpu_fps()));
+        const float ship_r_v_abs = ship_r->velocity.length();
+        hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+
+                      ", v "+std::to_string(ship_r_v_abs)+
+                      " [m/s], fps "+std::to_string(pixel::get_gpu_fps()));
 
-        if( set_dir ) {
+        if( nullptr != ship_r && set_dir ) {
             switch( dir ) {
-                case pixel::direction_t::UP:
-                    v_ss1 += pixel::f2::vec_t::from_length_angle(ship_vel_step, ship_r->dir_angle);
+                case pixel::direction_t::UP: {
+                        pixel::f2::vec_t v = ship_r->velocity;
+                        v += pixel::f2::vec_t::from_length_angle(ship_vel_step, ship_r->dir_angle);
+                        if( v.length() < 2.0f + ship_vel_step) {
+                            ship_r->velocity = v;
+                        }
+                    }
                     break;
                 case pixel::direction_t::DOWN:
-                    v_ss1 += pixel::f2::vec_t::from_length_angle(-ship_vel_step, ship_r->dir_angle);
+                    //ship_r->velocity += pixel::f2::vec_t::from_length_angle(-ship_vel_step, ship_r->dir_angle);
                     break;
                 case pixel::direction_t::LEFT:
                     ship_r->rotate(pixel::adeg_to_rad(ship_rot_step));
@@ -350,35 +587,49 @@ int main(int argc, char *argv[])
                 case pixel::direction_t::RIGHT:
                     ship_r->rotate(pixel::adeg_to_rad(-ship_rot_step));
                     break;
+                default:
+                    break;
             }
         }
 
-        // move ship
-        {
-            const pixel::f2::vec_t ds = v_ss1 /* [m/s] */ * dt /* [s] */; // = [m]
-            ship_r->move(ds);
+        for(asteroid_ref_t a : asteroids) {
+            a->tick(dt);
         }
+        for(fragment_ref_t a : fragments) {
+            a->tick(dt);
+        }
+        for(int i=(int)fragments.size()-1; i>=0; --i) {
+            std::vector<fragment_ref_t>::iterator it = fragments.begin() + i;
+            // fragment_ref_t& e = fragments[i];
+            if( !(*it)->tick(dt) ) {
+                fragments.erase(it);
+            }
+        }
+        /**
+        for(auto i=fragments.end()-1; i>=fragments.begin(); --i) {
+            if( !(*i)->tick(dt) ) {
+                fragments.erase(i);
+            }
+        } */
+        if( nullptr != ship_r && !ship_r->tick(dt) ) {
+            // make_fragments(fragments, ship_r);
+            // make_fragments(fragments, ship_r, ship_r->velocity.length(), 0.003f);
+            // ship_r = nullptr;
+        }
+
         // move ball_1
         // ball_1->tick(dt);
 
         pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
-        ship_r->draw();
-        #if 0
-        {
-            pixel::f2::geom_list_t& list = pixel::f2::gobjects();
-            if( debug_gfx ) {
-                for(pixel::f2::geom_ref_t g : list) {
-                    if( g.get() != ball_1.get() ) {
-                        g->draw();
-                    }
-                }
-            } else {
-                for(pixel::f2::geom_ref_t g : list) {
-                    g->draw();
-                }
-            }
+        for(asteroid_ref_t a : asteroids) {
+            a->draw();
         }
-        #endif
+        for(fragment_ref_t a : fragments) {
+            a->draw();
+        }
+        if( nullptr != ship_r ) {
+            ship_r->draw();
+        }
 
         fflush(nullptr);
         pixel::swap_pixel_fb(false);
