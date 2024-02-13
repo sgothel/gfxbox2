@@ -311,7 +311,8 @@ int main(int argc, char *argv[])
 
     bool close = false;
     bool resized = false;
-    bool set_dir = false;
+    bool set_dir  = false;
+    bool set_dir2 = false;
     pixel::direction_t dir = pixel::direction_t::UP;
     pixel::texture_ref hud_text;
     float last_fps = -1.0f;
@@ -347,7 +348,7 @@ int main(int argc, char *argv[])
     pixel::f2::point_t center(0, 0);
     bool manual = false;
     while( !close ) {
-        handle_events(close, resized, set_dir, dir);
+        handle_events2(close, resized, set_dir, set_dir2, dir);
         const bool animating = pixel::direction_t::PAUSE != dir;
         manual = manual && animating;
 

@@ -22,6 +22,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include <pixel/pixel3f.hpp>
+#include <pixel/pixel4f.hpp>
 #include <pixel/pixel2f.hpp>
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
@@ -44,6 +45,7 @@ class fragment_t : public pixel::f2::linestrip_t {
     public:
         pixel::f2::vec_t velocity; // [m/s]
         float roration_velocity; // [angle_radians/s]
+        //pixel::f4::vec_t color(1.0f, 1.0f, 1.0f, 1.0f);
 
         /**
          *
@@ -165,7 +167,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
         pixel::f2::vec_t velocity; // [m/s]
 
         spaceship_t(const pixel::f2::point_t& center, const float angle) noexcept
-        : linestrip_t(center, angle)
+        : linestrip_t(center, angle), velocity()
         {}
 
         bool tick(const float dt) noexcept {
@@ -197,6 +199,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
 
 };
 typedef std::shared_ptr<spaceship_t> spaceship_ref_t;
+std::vector<spaceship_ref_t> spaceship;
 
 
 /**
@@ -520,10 +523,10 @@ int main(int argc, char *argv[])
     {
         pixel::f2::point_t p0 = { 0.0f, 0.0f };
         float height = ship_height*4.0f;
-        for(int i = 0; i < 10; ++i) {
+        for(int i = 0; i < 5; ++i) {
             const float angle = pixel::adeg_to_rad(i * 360.0f / 10.0f);
             const float velocity = 0.3f; // m/s
-            p0 += pixel::f2::point_t(height, 0);
+            p0 -= pixel::f2::point_t(height, 0);
             asteroid_ref_t asteroid1 = make_asteroid(p0, height,
                     angle, velocity, 1.0f/(2.0f+i));
             asteroids.push_back(asteroid1);
@@ -563,10 +566,15 @@ int main(int argc, char *argv[])
         const float dt_diff = (float)( dt_exp - dt ) * 1000.0f; // [ms]
         t_last = t1;
 
-        const float ship_r_v_abs = ship_r->velocity.length();
-        hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+
-                      ", v "+std::to_string(ship_r_v_abs)+
-                      " [m/s], fps "+std::to_string(pixel::get_gpu_fps()));
+        if(nullptr != ship_r){
+            const float ship_r_v_abs = ship_r->velocity.length();
+            hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+
+                          ", v "+std::to_string(ship_r_v_abs)+
+                          " [m/s], fps "+std::to_string(pixel::get_gpu_fps()));
+        } else {
+            hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+
+                          ", KAPUTT, fps "+std::to_string(pixel::get_gpu_fps()));
+        }
 
         if( nullptr != ship_r && set_dir ) {
             switch( dir ) {
@@ -612,9 +620,8 @@ int main(int argc, char *argv[])
             }
         } */
         if( nullptr != ship_r && !ship_r->tick(dt) ) {
-            // make_fragments(fragments, ship_r);
-            // make_fragments(fragments, ship_r, ship_r->velocity.length(), 0.003f);
-            // ship_r = nullptr;
+            make_fragments(fragments, ship_r, ship_r->velocity.length() + ship_vel_step, 0.003f);
+            ship_r = nullptr;
         }
 
         // move ball_1
@@ -630,6 +637,8 @@ int main(int argc, char *argv[])
         if( nullptr != ship_r ) {
             ship_r->draw();
         }
+
+
 
         fflush(nullptr);
         pixel::swap_pixel_fb(false);
@@ -669,5 +678,6 @@ int main(int argc, char *argv[])
         }
         t_fps_last = pixel::getCurrentMilliseconds();
     }
+    printf("Exit");
     exit(0);
 }
