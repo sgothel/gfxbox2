@@ -149,27 +149,45 @@ bool pixel::f2::aabbox_t::intersection(vec_t& reflect_out, vec_t& cross_normal, 
     const point_t tl(bl.x, tr.y);
     const point_t br(tr.x, bl.y);
     {
-        const lineseg_t l(tl, tr);
-        if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-            return true;
+        const lineseg_t lt(tl, tr);
+        const lineseg_t lb(bl, br);
+        const float dt = lt.distance( in.p0 );
+        const float db = lb.distance( in.p0 );
+        if( dt < db ) {
+            if( lt.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                return true;
+            }
+            if( lb.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                return true;
+            }
+        } else {
+            if( lb.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                return true;
+            }
+            if( lt.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                return true;
+            }
         }
     }
     {
-        const lineseg_t l(bl, br);
-        if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-            return true;
-        }
-    }
-    {
-        const lineseg_t l(br, tr);
-        if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-            return true;
-        }
-    }
-    {
-        const lineseg_t l(bl, tl);
-        if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-            return true;
+        const lineseg_t lr(br, tr);
+        const lineseg_t ll(bl, tl);
+        const float dr = lr.distance( in.p0 );
+        const float dl = ll.distance( in.p0 );
+        if( dr < dl ) {
+            if( lr.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                return true;
+            }
+            if( ll.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                return true;
+            }
+        } else {
+            if( ll.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                return true;
+            }
+            if( lr.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                return true;
+            }
         }
     }
     return false;
