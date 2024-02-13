@@ -793,6 +793,32 @@ namespace pixel::f2 {
 #endif
         }
 
+        /**
+         * Returns minimum distance between this line segment and given point p
+         * <p>
+         * See [Shortest distance between a point and a line segment](https://stackoverflow.com/a/1501725)
+         * </p>
+         * <p>
+         * Slightly more expensive than intersects().
+         * </p>
+         */
+        float distance(point_t p) const noexcept {
+            // Operations: 15+, 9*, 1-sqrt, 3 branches
+            const float l2 = p1.dist_sq(p0); // i.e. |p1-p0|^2 -  avoid a sqrt
+            if( l2 < std::numeric_limits<float>::epsilon() ) {
+                return p.dist(p1);   // p1 == p0 case
+            }
+            // Consider the line extending the segment, parameterized as p0 + t (p1 - p0).
+            // We find projection of point p onto the line.
+            // It falls where t = [(p-p0) . (p1-p0)] / |p1-p0|^2
+            // We clamp t from [0,1] to handle points outside the line segment.
+            vec_t pv = p - p0;
+            vec_t wv = p1 - p0;
+            const float t = std::max(0.0f, std::min(1.0f, pv.dot(wv) / l2));
+            const vec_t projection = p0 + t * (p1 - p0);  // Projection falls on the segment
+            return p.dist(projection);
+        }
+
         bool intersects(const aabbox_t& box) const noexcept override {
             // separating axis theorem.
             const vec_t d = (p1 - p0) * 0.5f; // half lineseg direction
