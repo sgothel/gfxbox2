@@ -1534,6 +1534,22 @@ namespace pixel::f2 {
             return box().intersects(o.box());
         }
 
+        bool intersects_lineonly(const lineseg_t & o) const noexcept {
+            if( p_list.size() < 2 ) {
+                return false;
+            }
+            point_t p0 = p_list[0];
+            for(size_t i=1; i<p_list.size(); ++i) {
+                const point_t& p1 = p_list[i];
+                const lineseg_t l(p0, p1);
+                if( l.intersects(o) ) {
+                    return true;
+                }
+                p0 = p1;
+            }
+            return false;
+        }
+
         bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point,
                 const lineseg_t& in) const noexcept override {
             if( p_list.size() < 2 ) {
