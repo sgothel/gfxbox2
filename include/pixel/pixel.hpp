@@ -269,7 +269,12 @@ namespace pixel {
         DOWN,
         RIGHT,
         LEFT,
-        PAUSE
+        PAUSE,
+        UP2,
+        DOWN2,
+        RIGHT2,
+        LEFT2,
+        RESET
     };
 
     //
@@ -409,6 +414,8 @@ namespace pixel {
     /** GFX Toolkit: Handle windowing and keyboard events. */
     void handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir) noexcept;
     void handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir, mouse_motion_t& mouse_motion) noexcept;
+    void handle_events2(bool& close, bool& resized, bool& set_dir1, bool& set_dir2, direction_t& dir) noexcept;
+    void handle_events2(bool& close, bool& resized, bool& set_dir1, bool& set_dir2, direction_t& dir, mouse_motion_t& mouse_motion) noexcept;
 
     void save_snapshot(const std::string& fname) noexcept;
 

@@ -334,6 +334,148 @@ void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t
     }
 }
 
+void pixel::handle_events2(bool& close, bool& resized, bool& set_dir1, bool& set_dir2, direction_t& dir, mouse_motion_t& mouse_motion) noexcept {
+    mouse_motion.id = -1;
+    static SDL_Scancode scancode = SDL_SCANCODE_STOP;
+    static bool paused = false;
+    close = false;
+    resized = false;
+    // set_dir1 = false;
+    // dir = pixel::direction_t::NONE;
+
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        switch (event.type) {
+            case SDL_QUIT:
+                close = true;
+                break;
+
+            case SDL_WINDOWEVENT:
+                switch (event.window.event) {
+                    case SDL_WINDOWEVENT_SHOWN:
+                        // log_printf("Window Shown\n");
+                        break;
+                    case SDL_WINDOWEVENT_HIDDEN:
+                        // log_printf("Window Hidden\n");
+                        break;
+                    case SDL_WINDOWEVENT_RESIZED:
+                        printf("Window Resized: %d x %d\n", event.window.data1, event.window.data2);
+                        resized = true;
+                        on_window_resized();
+                        break;
+                    case SDL_WINDOWEVENT_SIZE_CHANGED:
+                        // printf("Window SizeChanged: %d x %d\n", event.window.data1, event.window.data2);
+                        break;
+                }
+                break;
+
+            case SDL_MOUSEMOTION: {
+                    mouse_motion.id = (int)event.motion.which;
+                    mouse_motion.x = (int)event.motion.x;
+                    mouse_motion.y = (int)event.motion.y;
+                }
+                break;
+            case SDL_KEYUP:
+                /**
+                 * The following key sequence is possible, hence we need to validate whether the KEYUP
+                 * matches and releases the current active keyscan/direction:
+                 * - KEY DOWN: scancode 81 -> 'D', scancode 81, set_dir 1)
+                 * - [    3,131] KEY DOWN: scancode 81 -> 'D', scancode 81, set_dir 1)
+                 * - [    3,347] KEY DOWN: scancode 80 -> 'L', scancode 80, set_dir 1)
+                 * - [    3,394] KEY UP: scancode 81 (ignored) -> 'L', scancode 80, set_dir 1)
+                 * - [    4,061] KEY UP: scancode 80 (release) -> 'L', scancode 80, set_dir 0)
+                 */
+                if ( event.key.keysym.scancode == scancode ) {
+                    set_dir1 = false;
+                }
+                break;
+
+            case SDL_KEYDOWN:
+                // keyboard API for key pressed
+                switch (event.key.keysym.scancode) {
+                    case SDL_SCANCODE_Q:
+                        [[fallthrough]];
+                    case SDL_SCANCODE_ESCAPE:
+                        close = true;
+                        break;
+                    case SDL_SCANCODE_UP:
+                        if( !paused ) {
+                            dir = direction_t::UP;
+                            set_dir1 = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_LEFT:
+                        if( !paused ) {
+                            dir = direction_t::LEFT;
+                            set_dir1 = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_DOWN:
+                        if( !paused ) {
+                            dir = direction_t::DOWN;
+                            set_dir1 = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_RIGHT:
+                        if( !paused ) {
+                            dir = direction_t::RIGHT;
+                            set_dir1 = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_W:
+                        if( !paused ) {
+                            dir = direction_t::UP2;
+                            set_dir2 = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_A:
+                        if( !paused ) {
+                            dir = direction_t::LEFT2;
+                            set_dir2 = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_S:
+                        if( !paused ) {
+                            dir = direction_t::DOWN2;
+                            set_dir2 = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_D:
+                        if( !paused ) {
+                            dir = direction_t::RIGHT2;
+                            set_dir2 = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_R:
+                        if( !paused ) {
+                            dir = direction_t::RESET;
+                            set_dir1 = true;
+                        }
+                        break;
+                    case SDL_SCANCODE_P:
+                        if( paused ) {
+                            dir = direction_t::NONE;
+                            paused = false;
+                        } else {
+                            dir = direction_t::PAUSE;
+                            paused = true;
+                        }
+                        set_dir1 = false;
+                        break;
+                    default:
+                        break;
+                }
+                if( set_dir1 ) {
+                    scancode = event.key.keysym.scancode;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+
 static std::atomic<int> active_threads = 0;
 
 static void store_surface(SDL_Surface *sshot, char* fname) noexcept {
