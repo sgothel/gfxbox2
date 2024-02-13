@@ -663,14 +663,16 @@ namespace pixel::f2 {
          */
         static bool intersects(point_t& result,
                 const point_t& p, const point_t& p2,
-                const point_t& q, const point_t& q2)
+                const point_t& q, const point_t& q2, const bool do_collinear=false)
         {
+            // Operations: 11+, 8*, 2 branches without collinear case
+            constexpr const float eps = std::numeric_limits<float>::epsilon();
             const vec_t r = p2 - p;
             const vec_t s = q2 - q;
             const float rxs = r.cross(s);
 
             if ( pixel::is_zero(rxs) ) {
-                if constexpr ( false ) {
+                if ( do_collinear ) {
                     const vec_t q_p = q - p;
                     const float qpxr = q_p.cross(r);
                     if ( pixel::is_zero(qpxr) ) // disabled collinear case
@@ -680,10 +682,12 @@ namespace pixel::f2 {
                         const point_t p_q = p - q;
                         const float qp_dot_r = q_p.dot(r);
                         const float pq_dot_s = p_q.dot(s);
-                        if ( ( 0 <= qp_dot_r && qp_dot_r <= r.dot(r) ) ||
-                                ( 0 <= pq_dot_s && pq_dot_s <= s.dot(s) ) )
+                        // if ( ( 0 <= qp_dot_r && qp_dot_r <= r.dot(r) ) ||
+                        //      ( 0 <= pq_dot_s && pq_dot_s <= s.dot(s) ) )
+                        if ( ( eps <= qp_dot_r && qp_dot_r - r.dot(r) <= eps ) ||
+                             ( eps <= pq_dot_s && pq_dot_s - s.dot(s) <= eps ) )
                         {
-                            // 1.1) 0 <= (q - p) ������ r <= r ������ r or 0 <= (p - q) ������ s <= s ������ s, the two lines are overlapping
+                            // 1.1) 0 <= (q - p) · r <= r · r or 0 <= (p - q) · s <= s · s, the two lines are overlapping
                             // FIXME: result set to q2 endpoint, OK?
                             result = q2;
                             return true;
@@ -692,7 +696,7 @@ namespace pixel::f2 {
                         // 1.2 the two lines are collinear but disjoint.
                         return false;
                     } else {
-                        // 2) r ������ s = 0 and (q ��������� p) ������ r ��������� 0, the two lines are parallel and non-intersecting.
+                        // 2) r × s = 0 and (q − p) × r ≠ 0, the two lines are parallel and non-intersecting.
                         return false;
                     }
                 } else {
@@ -705,17 +709,18 @@ namespace pixel::f2 {
                 const float qpxr = q_p.cross(r);
 
                 // p + t r = q + u s
-                // (p + t r) ������ s = (q + u s) ������ s
-                // t (r ������ s) = (q ��������� p) ������ s, with s x s = 0
+                // (p + t r) × s = (q + u s) × s
+                // t (r × s) = (q − p) × s, with s x s = 0
                 // t = (q - p) x s / (r x s)
                 const float t = q_p.cross(s) / rxs;
 
-                // u = (p ��������� q) ������ r / (s ������ r) = (q - p) x r / (r x s), with s ������ r = ��������� r ������ s
+                // u = (p − q) × r / (s × r) = (q - p) x r / (r x s), with s × r = − r × s
                 const float u = qpxr / rxs;
 
-                if ( (0 <= t && t <= 1) && (0 <= u && u <= 1) )
+                // if ( (0 <= t && t <= 1) && (0 <= u && u <= 1) )
+                if ( (eps <= t && t - 1 <= eps) && (eps <= u && u - 1 <= eps) )
                 {
-                    // 3) r ������ s ��������� 0 and 0 ��������� t ��������� 1 and 0 ��������� u ��������� 1, the two line segments meet at the point p + t * r = q + u * s.
+                    // 3) r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t * r = q + u * s.
                     result = p + (t * r); // == q + (u * s)
                     return true;
                 }
