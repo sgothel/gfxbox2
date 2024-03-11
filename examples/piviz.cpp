@@ -249,11 +249,13 @@ float draw_circumferenceOutter(const point_t& pm, float r, int n){
         l_2 = l / 2; // Halbe Seitenlaenge
         res = n * l; // Umfang von dem Multi-Eck
     }
+    point_t p1 = pm +
+                 vec_t::from_length_angle(r, 0) +
+                 vec_t::from_length_angle(l_2, -M_PI_2);
     for(float i = 0.0f; i < 2 * M_PI; i += alpha){ // i = jetzige Winkel wo wir grade malen
-        point_t p1 = pm + point_t::from_length_angle(r, i);
-        point_t p1a = p1 + vec_t::from_length_angle(l_2, i + M_PI_2);
-        point_t p1b = p1 + vec_t::from_length_angle(l_2, i - M_PI_2);
-        lineseg_t::draw(p1a, p1b); // Eine Linie vom Multi-Eck
+        point_t p2 = p1 + vec_t::from_length_angle(l, i + M_PI_2);
+        lineseg_t::draw(p1, p2); // Eine Linie vom Multi-Eck
+        p1 = p2;
     }
     return res;
 }
@@ -417,7 +419,7 @@ int main(int argc, char *argv[])
     const float ticks_per_circle = 12.0f * 60.0f; // one circle in 12s @ 60Hz, [s] * [1/s] = [1]
     const float plot_inc = pixel::cart_coord.width() / ( ticks_per_circle * circles_per_plot );
     const float angrad_inc = ( 2.0f * M_PI ) / ticks_per_circle;
-    float angrad = 0.0f;
+    float ang_rad = 0.0f, ang_grad = 0.0f;
     float an = -0.35f;
     float off_pct = an;
     int demo_index = 0;
@@ -425,7 +427,6 @@ int main(int argc, char *argv[])
     const float grid_gap = 50;
     //float max_radius = pixel::cart_coord.max_y() * 0.9f;
     int circum_corners = 3;
-    int Winkel = 0;
     /*
     {
         const int decimalAccuracy = 10;
@@ -464,14 +465,14 @@ int main(int argc, char *argv[])
                 if( circum_corners < 128 ) {
                     circum_corners += 1;
                 }
-                angrad += 2*angrad_inc;
+                ang_rad += angrad_inc / 2;
                 off_pct += 0.01;
             } else if( pixel::direction_t::DOWN == dir ) {
                 manual = true;
                 if( circum_corners >= 4 ) {
                     circum_corners -= 1;
                 }
-                angrad -= 2*angrad_inc;
+                ang_rad -= angrad_inc / 2;
                 off_pct -= 0.01;
             } else if( pixel::direction_t::LEFT == dir ) {
                 demo_index -= 1;
@@ -523,7 +524,7 @@ int main(int argc, char *argv[])
                 float Umfang = 2 * M_PI * radius;
                 float PI = Umfang / (2 * radius);
                 draw_circle_unroll(point_t(pixel::cart_coord.min_x() + radius, 0),
-                        radius, 5, off_pct);
+                        radius, 10, off_pct);
                 point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
                 texts.push_back( make_text(text_pos4, "2*PI*r Ausgerollt", text_color) );
                 text_pos4.add(0, enter);
@@ -544,18 +545,18 @@ int main(int argc, char *argv[])
             }
             break;
             case 2: {
-                draw_sin_cos_graph(max_radius, angrad, angrad_inc, plot_inc);
-                draw_sin_cos(origin, max_radius, angrad, 5);
+                draw_sin_cos_graph(max_radius, ang_rad, angrad_inc, plot_inc);
+                draw_sin_cos(origin, max_radius, ang_rad, 5);
                 point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
                 texts.push_back( make_text(text_pos4, "Einheitskreis 2*PI Sinus & Cosinus", text_color) );
-                float cosval = cos(angrad);
-                float sinval = sin(angrad);
+                float cosval = cos(ang_rad);
+                float sinval = sin(ang_rad);
                 text_pos4.add(0, enter);
                 texts.push_back( make_text(text_pos4, "Cosinus = "+std::to_string(cosval), text_color) );
                 text_pos4.add(0, enter);
                 texts.push_back( make_text(text_pos4, "Sinus = "+std::to_string(sinval), text_color) );
                 text_pos4.add(0, enter);
-                texts.push_back( make_text(text_pos4, "Winkel (Grad) = "+std::to_string(Winkel),
+                texts.push_back( make_text(text_pos4, "Winkel (Grad) = "+std::to_string(ang_grad),
                         text_color) );
             }
             break;
@@ -595,16 +596,17 @@ int main(int argc, char *argv[])
             }
         }
         if( animating && !manual ){
-            angrad += angrad_inc;
+            ang_rad += angrad_inc;
         }
-        Winkel = pixel::rad_to_adeg(angrad);
-        if(angrad > circles_per_plot * 2 * M_PI){
-            angrad = 0.0f;
+        if(ang_rad > circles_per_plot * 2 * M_PI){
+            ang_rad = 0.0f;
         }
-        if(Winkel >= 360){
-            int a = Winkel / 360;
-            Winkel = Winkel - 360 * a;
+        ang_grad = pixel::rad_to_adeg(ang_rad);
+        if(ang_rad > 2 * M_PI) {
+            const int n = (int)( ang_grad / 360.0f );
+            ang_grad -= n * 360.0f;
         }
+
         pixel::swap_pixel_fb(false);
         for(pixel::texture_ref tex : texts) {
             tex->draw(0, 0);
