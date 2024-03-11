@@ -65,12 +65,14 @@ class Tron : public pixel::f2::linestrip_t {
          *
          * @param dt in seconds
          */
-        void tick(const float dt) noexcept {
+        bool tick(const float dt) noexcept override {
             pixel::f2::point_t p1_move = pixel::f2::point_t::from_length_angle(velo * dt, angle);
             // std::cout << "tick " << p1_move.toString() << " + " << head.toString();
             head += p1_move;
             // std::cout << " = " << head.toString() << std::endl;
             body.center = head;
+
+            return true;
         }
 
         void reset() noexcept {

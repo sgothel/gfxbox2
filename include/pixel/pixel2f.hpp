@@ -895,6 +895,7 @@ namespace pixel::f2 {
         virtual void move_dir(const float d) noexcept = 0;
         virtual void move(const point_t& d) noexcept = 0;
         virtual void move(const float dx, const float dy) noexcept = 0;
+        virtual bool tick(const float dt) noexcept { (void)dt; return true; }
     };
     typedef std::shared_ptr<ageom_t> ageom_ref_t;
     typedef std::vector<ageom_ref_t> ageom_list_t;

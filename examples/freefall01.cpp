@@ -102,7 +102,7 @@ class ball_t : public pixel::f2::disk_t {
             velocity = pixel::f2::vec_t::from_length_angle(velocity_start, this->dir_angle);
         }
 
-        void tick(const float dt) noexcept {
+        bool tick(const float dt) noexcept override {
             const float min_velocity = 0.00005f;
             // const float min_velocity = 0.02f;
 
@@ -229,6 +229,7 @@ class ball_t : public pixel::f2::disk_t {
                 }
                 reset();
             }
+            return true;
         }
 };
 

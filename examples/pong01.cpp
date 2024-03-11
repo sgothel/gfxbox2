@@ -81,7 +81,7 @@ class ball_t : public pixel::f2::disk_t {
                     toString().c_str(), box().toString().c_str());
         }
 
-        void tick(const float dt) noexcept {
+        bool tick(const float dt) noexcept override {
             const float min_velocity = 3.0f;
 
             {
@@ -192,6 +192,7 @@ class ball_t : public pixel::f2::disk_t {
                 }
                 reset();
             }
+            return true;
         }
 };
 
