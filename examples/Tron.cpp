@@ -11,24 +11,6 @@
 #include <cmath>
 #include <iostream>
 
-void draw_circle_seg(const pixel::f2::point_t& pm, float r, const float thickness, float const alpha1, const float alpha2){
-    float x;
-    float y;
-    float i = alpha1;
-    for(; i <= alpha2; i += 0.01){
-        x = std::cos(i) * r;
-        y = std::sin(i) * r;
-        pixel::f2::point_t p0 = pixel::f2::point_t(x, y);
-        p0 += pm;
-        if( 1 >= thickness ) {
-            p0.draw();
-        } else {
-            const float t = thickness*2.0f/3.0f;
-            pixel::f2::rect_t(p0, t, t, true).draw(true);
-        }
-    }
-}
-
 class Tron : public pixel::f2::linestrip_t {
     public:
         const pixel::f2::point_t sp;
@@ -201,9 +183,9 @@ int main(int argc, char *argv[])
         if(animating){
             if( set_dir ) {
                 set_dir = false;
-                if( pixel::direction_t::UP == dir ) {
+                if( pixel::direction_t::UP == dir && p1.velo < 2001.0f) {
                     p1.changeSpeed(1.10f);
-                } else if( pixel::direction_t::DOWN == dir ) {
+                } else if( pixel::direction_t::DOWN == dir && p1.velo > 10.0f) {
                     p1.changeSpeed(0.90f);
                 } else if( pixel::direction_t::LEFT == dir ) {
                     p1.rotate(M_PI_2);
@@ -220,9 +202,9 @@ int main(int argc, char *argv[])
 
             if( set_dir2 ) {
                 set_dir2 = false;
-                if( pixel::direction_t::UP2 == dir ) {
+                if( pixel::direction_t::UP2 == dir && p2.velo < 2001.0f) {
                     p2.changeSpeed(1.10f);
-                } else if( pixel::direction_t::DOWN2 == dir ) {
+                } else if( pixel::direction_t::DOWN2 == dir && p2.velo > 10.0f) {
                     p2.changeSpeed(0.90f);
                 } else if( pixel::direction_t::LEFT2 == dir ) {
                     p2.rotate(M_PI_2);
@@ -231,40 +213,62 @@ int main(int argc, char *argv[])
                 }
             }
         }
+
+        float dbs = 1500;
         if(animating){
+
+            if(p1.velo > 10.0f && p1.velo < dbs){
+                p1.velo -= 0.01;
+            } else if(p1.velo > dbs){
+                p1.velo -= 1;
+            }
+
+            if(p2.velo > 10.0f && p1.velo < dbs){
+                p2.velo -= 0.01;
+            } else if(p2.velo > dbs){
+                p2.velo -= 1;
+            }
+
             p1.tick(dt);
             if(!p1.body.on_screen()){
                 std::cout << "Exited P1: " << p1.toString() << std::endl;
                 p1.reset();
-                a1 += 100;
+                a2 += 100;
             }
 
-            if( p1.intersects(p2) ) {
-                std::cout << "Crash P1: " << p1.toString() << std::endl;
-                p1.reset();
-                a1 += p2.velo;
+            if(p1.velo < dbs){
+                if( p1.intersects(p2) ) {
+                    std::cout << "Crash P1: " << p1.toString() << std::endl;
+                    p1.reset();
+                    a2 += p2.velo;
+                }
             }
-
             p2.tick(dt);
             if(!p2.body.on_screen()){
                 std::cout << "Exited P2: " << p2.toString() << std::endl;
                 p2.reset();
-                a2 += 100;
+                a1 += 100;
             }
 
-            if( p2.intersects(p1) ) {
-                std::cout << "Crash P2: " << p2.toString() << std::endl;
-                p2.reset();
-                a2 += p1.velo;
+            if(p2.velo < dbs){
+                if( p2.intersects(p1) ) {
+                    std::cout << "Crash P2: " << p2.toString() << std::endl;
+                    p2.reset();
+                    a1 += p1.velo;
+                }
             }
         }
+
+
         texts.push_back( make_text(
-                pixel::f2::point_t(pixel::cart_coord.min_x() + 1000, pixel::cart_coord.max_y()), "Tron: "+std::to_string(a1)+
-                ", Master Controll Programm: "+std::to_string(a2), text_color));
-        pixel::set_pixel_color(255, 0, 0, 255);
+                pixel::f2::point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y() - 50), "Tron: "+std::to_string(a1)+
+                "   Tron`s Geschwindigkeit: "+std::to_string(p1.velo)+
+                ", MCP: "+std::to_string(a2)+
+                "   MCP`s Geschwindigkeit: "+std::to_string(p2.velo), text_color));
+        pixel::set_pixel_color(0, 0, 255, 255);
         p1.draw();
 
-        pixel::set_pixel_color(0, 0, 255, 255);
+        pixel::set_pixel_color(255, 0, 0, 255);
         p2.draw();
 
         pixel::swap_pixel_fb(false);

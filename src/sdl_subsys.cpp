@@ -393,9 +393,9 @@ void pixel::handle_events2(bool& close, bool& resized, bool& set_dir1, bool& set
             case SDL_KEYDOWN:
                 // keyboard API for key pressed
                 switch (event.key.keysym.scancode) {
-                    case SDL_SCANCODE_Q:
+                 /*   case SDL_SCANCODE_Q:
                         [[fallthrough]];
-                    case SDL_SCANCODE_ESCAPE:
+                   */ case SDL_SCANCODE_ESCAPE:
                         close = true;
                         break;
                     case SDL_SCANCODE_UP:
