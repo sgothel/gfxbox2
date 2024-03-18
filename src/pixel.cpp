@@ -203,3 +203,16 @@ void pixel::f2::aabbox_t::draw() const noexcept {
     lineseg_t::draw(br, bl);
     lineseg_t::draw(bl, tl);
 }
+
+std::string pixel::input_event_t::to_string() const noexcept {
+    return "event[p1 "+std::to_string(has_any_p1())+
+            ", pressed "+std::to_string(m_pressed)+", p1_mask "+std::to_string(p1_mask)+
+            ", p2 "+std::to_string(has_any_p2())+
+            ", paused "+std::to_string(paused())+
+            ", close "+std::to_string(pressed( pixel::input_event_type_t::WINDOW_CLOSE_REQ ))+
+            ", last "+std::to_string((int)last)+", key "+std::to_string(last_key_code)+
+            ", ptr["+std::to_string(pointer_id)+" "+std::to_string(pointer_x)+"/"+
+            std::to_string(pointer_y)+"]]"
+            ;
+}
+
