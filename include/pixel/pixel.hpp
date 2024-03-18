@@ -385,7 +385,7 @@ namespace pixel {
     /** GFX Toolkit: Copy the soft-framebuffer to the GPU back-buffer, if swap_buffer is true (default) also swap_gpu_buffer(). */
     void swap_pixel_fb(const bool swap_buffer=true) noexcept;
     /** GFX Toolkit: Swap GPU back to front framebuffer while maintaining vertical monitor synchronization if possible. */
-    void swap_gpu_buffer() noexcept;
+    void swap_gpu_buffer(int fps=0) noexcept;
     float get_gpu_fps() noexcept;
 
     texture_ref make_text_texture(const std::string& text) noexcept;

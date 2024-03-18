@@ -246,7 +246,7 @@ int main(int argc, char *argv[])
         if( nullptr != hud_text ) {
             hud_text->draw(0, 0);
         }
-        pixel::swap_gpu_buffer();
+        pixel::swap_gpu_buffer(30);
         // sleep(2);
         // break;
     }

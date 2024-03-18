@@ -36,15 +36,17 @@ static sf::Texture fb_tbuffer;
 static std::shared_ptr<sf::Sprite> fb_sbuffer;
 
 static float gpu_fps = 0.0f;
-static int gpu_fps_count = 0;
+static int gpu_frame_count = 0;
 static uint64_t gpu_fps_t0 = 0;
+static uint64_t gpu_swap_t0 = 0;
+static uint64_t gpu_swap_t1 = 0;
 
 uint32_t pixel::rgba_to_uint32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
     // 32-bit ABGR8888
     return ( ( (uint32_t)a << 24 ) & 0xff000000U ) |
-           ( ( (uint32_t)b << 16 ) & 0x00ff0000U ) |
-           ( ( (uint32_t)g <<  8 ) & 0x0000ff00U ) |
-           ( ( (uint32_t)r       ) & 0x000000ffU );
+            ( ( (uint32_t)b << 16 ) & 0x00ff0000U ) |
+            ( ( (uint32_t)g <<  8 ) & 0x0000ff00U ) |
+            ( ( (uint32_t)r       ) & 0x000000ffU );
 }
 
 void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t& b, uint8_t& a) noexcept {
@@ -100,7 +102,7 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
 
     gpu_fps = 0.0f;
     gpu_fps_t0 = getCurrentMilliseconds();
-    gpu_fps_count = 0;
+    gpu_frame_count = 0;
 
     on_window_resized(false /* set_view */);
 }
@@ -123,14 +125,31 @@ void pixel::swap_pixel_fb(const bool swap_buffer) noexcept {
         pixel::swap_gpu_buffer();
     }
 }
-void pixel::swap_gpu_buffer() noexcept {
+void pixel::swap_gpu_buffer(int fps) noexcept {
     window->display();
-    if( ++gpu_fps_count >= 5*60 ) {
-        const uint64_t t1 = getCurrentMilliseconds();
-        const uint64_t td = t1 - gpu_fps_t0;
-        gpu_fps = (float)gpu_fps_count / ( (float)td / 1000.0f );
-        gpu_fps_t0 = t1;
-        gpu_fps_count = 0;
+    gpu_swap_t0 = getCurrentMilliseconds();
+    ++gpu_frame_count;
+    const uint64_t td = gpu_swap_t0 - gpu_fps_t0;
+    if( td >= 5000 ) {
+        gpu_fps = (float)gpu_frame_count / ( (float)td / 1000.0f );
+        gpu_fps_t0 = gpu_swap_t0;
+        gpu_frame_count = 0;
+    }
+    if( 0 < fps ) {
+        const int64_t fudge_ns = pixel::NanoPerMilli / 4;
+        const uint64_t ms_per_frame = (uint64_t)std::round(1000.0 / fps);
+        const uint64_t ms_this_frame =  gpu_swap_t0 - gpu_swap_t1;
+        int64_t td_ns = int64_t( ms_per_frame - ms_this_frame ) * pixel::NanoPerMilli;
+        if( td_ns > fudge_ns ) {
+            const int64_t td_ns_0 = td_ns%pixel::NanoPerOne;
+            struct timespec ts { td_ns/pixel::NanoPerOne, td_ns_0 - fudge_ns };
+            nanosleep( &ts, NULL );
+            // pixel::log_printf("soft-sync [exp %zd > has %zd]ms, delay %" PRIi64 "ms (%lds, %ldns)\n",
+            //         ms_per_frame, ms_this_frame, td_ns/pixel::NanoPerMilli, ts.tv_sec, ts.tv_nsec);
+        }
+        gpu_swap_t1 = pixel::getCurrentMilliseconds();
+    } else {
+        gpu_swap_t1 = gpu_swap_t0;
     }
 }
 

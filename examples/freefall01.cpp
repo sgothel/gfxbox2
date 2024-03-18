@@ -339,7 +339,6 @@ int main(int argc, char *argv[])
     uint64_t frame_count_total = 0;
 
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
-    uint64_t t_fps_last = pixel::getCurrentMilliseconds();
     pixel::input_event_t event;
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
         if( pixel::handle_events(event) ) {
@@ -354,8 +353,6 @@ int main(int argc, char *argv[])
 
         const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
         const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
-        const float dt_exp = 1.0f / (float)pixel::frames_per_sec; // [s]
-        const float dt_diff = (float)( dt_exp - dt ) * 1000.0f; // [ms]
         t_last = t1;
 
         hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+", fps "+std::to_string(pixel::get_gpu_fps()));
@@ -397,35 +394,13 @@ int main(int argc, char *argv[])
             const float sy = (float)text_height / (float)hud_text->height;
             hud_text->draw(small_gap_pixel*2.0f, small_gap_pixel+1, sy, sy);
         }
-        pixel::swap_gpu_buffer();
+        pixel::swap_gpu_buffer(forced_fps);
         if( record_bmpseq_basename.size() > 0 ) {
             std::string snap_fname(128, '\0');
             const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
             snap_fname.resize(written);
             pixel::save_snapshot(snap_fname);
         }
-        ++frame_count_total;
-        if( 0 < forced_fps ) {
-            const int64_t fudge_ns = pixel::NanoPerMilli / 4;
-            const uint64_t ms_per_frame = (uint64_t)std::round(1000.0 / forced_fps);
-            const uint64_t ms_last_frame = pixel::getCurrentMilliseconds() - t_fps_last;
-            int64_t td_ns = int64_t( ms_per_frame - ms_last_frame ) * pixel::NanoPerMilli;
-            if( td_ns > fudge_ns )
-            {
-                if( true ) {
-                    const int64_t td_ns_0 = td_ns%pixel::NanoPerOne;
-                    struct timespec ts { td_ns/pixel::NanoPerOne, td_ns_0 - fudge_ns };
-                    nanosleep( &ts, NULL );
-                    // pixel::log_printf("soft-sync [exp %zd > has %zd]ms, delay %" PRIi64 "ms (%lds, %ldns)\n", ms_per_frame, ms_last_frame, td_ns/pixel::NanoPerMilli, ts.tv_sec, ts.tv_nsec);
-                } else {
-                    pixel::milli_sleep( td_ns / pixel::NanoPerMilli );
-                    // pixel::log_printf("soft-sync [exp %zd > has %zd]ms, delay %" PRIi64 "ms\n", ms_per_frame, ms_last_frame, td_ns/pixel::NanoPerMilli);
-                }
-            }
-        } else if( dt_diff > 1.0f ) {
-            pixel::milli_sleep( (uint64_t)dt_diff );
-        }
-        t_fps_last = pixel::getCurrentMilliseconds();
     }
     exit(0);
 }

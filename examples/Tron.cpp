@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
             tex->draw(0, 0);
         }
         texts.clear();
-        pixel::swap_gpu_buffer();
+        pixel::swap_gpu_buffer(30);
     }
     printf("Exit\n");
     exit(0);
