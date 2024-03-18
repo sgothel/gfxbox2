@@ -51,8 +51,8 @@ void draw_circle_seg(const point_t& pm, float r, const float thickness, float co
         if( 1 >= thickness ) {
             p0.draw();
         } else {
-            const float t = thickness*2.0f/3.0f;
-            rect_t(p0, t, t, true).draw(true);
+            //const float t = thickness*2.0f/3.0f;
+            rect_t(p0, thickness, thickness, true).draw(true);
         }
     }
 }
