@@ -11,6 +11,7 @@ set (THREADS_PREFER_PTHREAD_FLAG ON)
 find_package (Threads REQUIRED)
 
 # set(CMAKE_MESSAGE_LOG_LEVEL DEBUG)
+# set(DEBUG ON)
 
 if(NOT DEFINED DONT_USE_RTTI)
     set(DONT_USE_RTTI ON)
@@ -24,5 +25,7 @@ Setup()
 
 find_path (SYSTEM_USR_DIR "stdlib.h")
 include_directories (${SYSTEM_USR_DIR})
+
+# set (USE_SFML ON)
 
 add_subdirectory (examples)
