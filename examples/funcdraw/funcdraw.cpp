@@ -140,6 +140,7 @@ int main(int argc, char *argv[])
         pixel::init_gfx_subsystem("funcdraw", win_width, win_height, origin_norm);
     }
 
+    pixel::f2::vec_t pointer_pos;
     pixel::texture_ref hud_text;
 
     cart_coord_setup();
@@ -179,9 +180,9 @@ int main(int argc, char *argv[])
             printf("x-axis: %s\n", l_x.toString().c_str());
             printf("y-axis: %s\n", l_y.toString().c_str());
         }
-        if( 0 <= mouse_motion.id ) {
-            const pixel::f2::vec_t p = pixel::f2::fb_to_cart(mouse_motion.x, mouse_motion.y);
-            hud_text = pixel::make_text_texture("fps "+std::to_string(pixel::get_gpu_fps())+", "+p.toString());
+        if( pointer ) {
+            hud_text = pixel::make_text_texture("fps "+std::to_string(pixel::get_gpu_fps())+", "+
+                                    pointer_pos.toString());
         }
 
         const uint64_t t = pixel::getElapsedMillisecond(); // [ms]
