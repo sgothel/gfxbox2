@@ -12,103 +12,101 @@
 #include <iostream>
 
 class Tron : public pixel::f2::linestrip_t {
-    public:
-        const pixel::f2::point_t sp;
-        float angle;
-        float velo;
-        pixel::f2::point_t head;
-        pixel::f2::point_t last;
-        pixel::f2::point_t last_last;
-        pixel::f2::disk_t body;
+public:
+    const pixel::f2::point_t sp;
+    float angle;
+    float velo;
+    pixel::f2::point_t head;
+    pixel::f2::point_t last;
+    pixel::f2::point_t last_last;
+    pixel::f2::disk_t body;
 
-        Tron(pixel::f2::point_t sp_)
-        : sp(sp_), body(head, 5)
-        {
-            reset();
-        }
+    Tron(pixel::f2::point_t sp_)
+    : sp(sp_), body(head, 5)
+    {
+        reset();
+    }
 
-        void rotate(float angrad) noexcept override {
-            // std::cout << "rot.pre " << toString() << std::endl ;
-            angle += angrad;
-            if(false){
-                if( pixel::compare(angle, 2*M_PI) >= 0 ) { // p1_angle >= 2*M_PI
-                    angle = 0;
-                } else if( pixel::compare(angle, 0) < 0 ) { // p1_angle < 0
-                    angle = 1.5f * M_PI;
-                }
-            }
-            p_list.push_back(head);
-            last_last = last;
-            last = head;
-            //std::cout << "rot.post " << toString() << std::endl ;
-        }
-
-        /**
-         *
-         * @param dt in seconds
-         */
-        bool tick(const float dt) noexcept override {
-            pixel::f2::point_t p1_move = pixel::f2::point_t::from_length_angle(velo * dt, angle);
-            // std::cout << "tick " << p1_move.toString() << " + " << head.toString();
-            head += p1_move;
-            // std::cout << " = " << head.toString() << std::endl;
-            body.center = head;
-
-            return true;
-        }
-
-        void reset() noexcept {
-            last = sp;
-            head = sp;
-            last_last = sp;
-            body.center = head;
-            p_list.clear();
-            p_list.push_back(last_last);
-            angle = M_PI_2;
-            velo = 2.0f / 0.016f; // 2 pixel pro 16 ms
-        }
-
-        void draw() const noexcept override {
-            pixel::f2::lineseg_t::draw(last, head);
-            pixel::f2::lineseg_t::draw(last_last, last);
-            pixel::f2::linestrip_t::draw();
-            body.draw(true);
-        }
-
-        void changeSpeed(float a){
-            if(velo > 2.0f) {
-                velo *= a;
+    void rotate(float angrad) noexcept override {
+        // std::cout << "rot.pre " << toString() << std::endl ;
+        angle += angrad;
+        if(false){
+            if( pixel::compare(angle, 2*M_PI) >= 0 ) { // p1_angle >= 2*M_PI
+                angle = 0;
+            } else if( pixel::compare(angle, 0) < 0 ) { // p1_angle < 0
+                angle = 1.5f * M_PI;
             }
         }
+        p_list.push_back(head);
+        last_last = last;
+        last = head;
+        //std::cout << "rot.post " << toString() << std::endl ;
+    }
 
-        std::string toString() const noexcept {
-            return "Tron[h "+head.toString()+", a "+std::to_string(angle)+", v "+std::to_string(velo)+
-                   ", tail "+std::to_string(p_list.size())+"]";
-        }
+    /**
+     *
+     * @param dt in seconds
+     */
+    bool tick(const float dt) noexcept override {
+        pixel::f2::point_t p1_move = pixel::f2::point_t::from_length_angle(velo * dt, angle);
+        // std::cout << "tick " << p1_move.toString() << " + " << head.toString();
+        head += p1_move;
+        // std::cout << " = " << head.toString() << std::endl;
+        body.center = head;
 
-        bool intersects(const Tron& o) const {
-            const pixel::f2::lineseg_t h(head, last);
-            const pixel::f2::lineseg_t o_h(o.head, o.last);
-            return my_intersects(h) ||
-                   o.intersects_lineonly(h) ||
-                   o_h.intersects(h);
-        }
+        return true;
+    }
+
+    void reset() noexcept {
+        last = sp;
+        head = sp;
+        last_last = sp;
+        body.center = head;
+        p_list.clear();
+        p_list.push_back(last_last);
+        angle = M_PI_2;
+        velo = 2.0f / 0.016f; // 2 pixel pro 16 ms
+    }
+
+    void draw() const noexcept override {
+        pixel::f2::lineseg_t::draw(last, head);
+        pixel::f2::lineseg_t::draw(last_last, last);
+        pixel::f2::linestrip_t::draw();
+        body.draw(true);
+    }
+
+    void changeSpeed(float a){
+        velo *= a;
+    }
+
+    std::string toString() const noexcept {
+        return "Tron[h "+head.toString()+", a "+std::to_string(angle)+", v "+std::to_string(velo)+
+                ", tail "+std::to_string(p_list.size())+"]";
+    }
+
+    bool intersects(const Tron& o) const {
+        const pixel::f2::lineseg_t h(head, last);
+        const pixel::f2::lineseg_t o_h(o.head, o.last);
+        return my_intersects(h) ||
+                o.intersects_lineonly(h) ||
+                o_h.intersects(h);
+    }
 private:
-        bool my_intersects(const pixel::f2::lineseg_t & o) const noexcept {
-            if( p_list.size() < 3 ) {
-                return false;
-            }
-            pixel::f2::point_t p0 = p_list[0];
-            for(size_t i=1; i<p_list.size()-1; ++i) {
-                const pixel::f2::point_t& p1 = p_list[i];
-                const pixel::f2::lineseg_t l(p0, p1);
-                if( l.intersects(o) ) {
-                    return true;
-                }
-                p0 = p1;
-            }
+    bool my_intersects(const pixel::f2::lineseg_t & o) const noexcept {
+        if( p_list.size() < 3 ) {
             return false;
         }
+        pixel::f2::point_t p0 = p_list[0];
+        for(size_t i=1; i<p_list.size()-1; ++i) {
+            const pixel::f2::point_t& p1 = p_list[i];
+            const pixel::f2::lineseg_t l(p0, p1);
+            if( l.intersects(o) ) {
+                return true;
+            }
+            p0 = p1;
+        }
+        return false;
+    }
 
 };
 
@@ -203,9 +201,8 @@ int main(int argc, char *argv[])
                 p2.rotate(-M_PI_2);
             }
         }
-        float dbs = 1500;
+        float dbs = 2000;
         if(animating){
-
             if(p1.velo > 10.0f && p1.velo < dbs){
                 p1.velo -= 0.01;
             } else if(p1.velo > dbs){
@@ -220,28 +217,28 @@ int main(int argc, char *argv[])
 
             p1.tick(dt);
             if(!p1.body.on_screen()){
-                std::cout << "Exited P1: " << p1.toString() << std::endl;
+                //  std::cout << "Exited P1: " << p1.toString() << std::endl;
                 p1.reset();
                 a2 += 100;
             }
 
             if(p1.velo < dbs){
                 if( p1.intersects(p2) ) {
-                    std::cout << "Crash P1: " << p1.toString() << std::endl;
+                    //     std::cout << "Crash P1: " << p1.toString() << std::endl;
                     p1.reset();
                     a2 += p2.velo;
                 }
             }
             p2.tick(dt);
             if(!p2.body.on_screen()){
-                std::cout << "Exited P2: " << p2.toString() << std::endl;
+                //   std::cout << "Exited P2: " << p2.toString() << std::endl;
                 p2.reset();
                 a1 += 100;
             }
 
             if(p2.velo < dbs){
                 if( p2.intersects(p1) ) {
-                    std::cout << "Crash P2: " << p2.toString() << std::endl;
+                    //  std::cout << "Crash P2: " << p2.toString() << std::endl;
                     p2.reset();
                     a1 += p1.velo;
                 }
