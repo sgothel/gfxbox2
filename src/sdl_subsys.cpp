@@ -223,24 +223,65 @@ pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
     return tex;
 }
 
-void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir, mouse_motion_t& mouse_motion) noexcept {
-    mouse_motion.id = -1;
-    static SDL_Scancode scancode = SDL_SCANCODE_STOP;
-    static bool paused = false;
-    close = false;
-    resized = false;
-    // set_dir = false;
-    // dir = pixel::direction_t::NONE;
+static input_event_type_t to_event_type(SDL_Scancode scancode) {
+    switch ( scancode ) {
+        case SDL_SCANCODE_ESCAPE:
+            return input_event_type_t::WINDOW_CLOSE_REQ;
+        case SDL_SCANCODE_P:
+            return input_event_type_t::PAUSE;
+        case SDL_SCANCODE_UP:
+            return input_event_type_t::P1_UP;
+        case SDL_SCANCODE_LEFT:
+            return input_event_type_t::P1_LEFT;
+        case SDL_SCANCODE_DOWN:
+            return input_event_type_t::P1_DOWN;
+        case SDL_SCANCODE_RIGHT:
+            return input_event_type_t::P1_RIGHT;
+        case SDL_SCANCODE_RSHIFT:
+            return input_event_type_t::P1_ACTION1;
+        case SDL_SCANCODE_RETURN:
+            return input_event_type_t::P1_ACTION2;
+        case SDL_SCANCODE_W:
+            return input_event_type_t::P2_UP;
+        case SDL_SCANCODE_A:
+            return input_event_type_t::P2_LEFT;
+        case SDL_SCANCODE_S:
+            return input_event_type_t::P2_DOWN;
+        case SDL_SCANCODE_D:
+            return input_event_type_t::P2_RIGHT;
+        case SDL_SCANCODE_LSHIFT:
+            return input_event_type_t::P2_ACTION1;
+        case SDL_SCANCODE_LCTRL:
+            return input_event_type_t::P2_ACTION2;
+        case SDL_SCANCODE_R:
+            return input_event_type_t::RESET;
+        default:
+            return input_event_type_t::NONE;
+    }
+}
+static uint16_t to_ascii(SDL_Scancode scancode) {
+    if(SDL_SCANCODE_A <= scancode && scancode <= SDL_SCANCODE_Z ) {
+        return 'A' + ( scancode - SDL_SCANCODE_A );
+    }
+    if(SDL_SCANCODE_1 <= scancode && scancode <= SDL_SCANCODE_9 ) {
+        return '1' + ( scancode - SDL_SCANCODE_1 );
+    }
+    if(SDL_SCANCODE_0 == scancode ) {
+        return '0' + ( scancode - SDL_SCANCODE_0 );
+    }
+    return 0;
+}
 
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        switch (event.type) {
+bool pixel::handle_one_event(input_event_t& event) noexcept {
+    SDL_Event sdl_event;
+    if( SDL_PollEvent(&sdl_event) ) {
+        switch (sdl_event.type) {
             case SDL_QUIT:
-                close = true;
+                event.set( input_event_type_t::WINDOW_CLOSE_REQ );
                 break;
 
             case SDL_WINDOWEVENT:
-                switch (event.window.event) {
+                switch (sdl_event.window.event) {
                     case SDL_WINDOWEVENT_SHOWN:
                         // log_printf("Window Shown\n");
                         break;
@@ -248,8 +289,8 @@ void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t
                         // log_printf("Window Hidden\n");
                         break;
                     case SDL_WINDOWEVENT_RESIZED:
-                        printf("Window Resized: %d x %d\n", event.window.data1, event.window.data2);
-                        resized = true;
+                        printf("Window Resized: %d x %d\n", sdl_event.window.data1, sdl_event.window.data2);
+                        event.set(input_event_type_t::WINDOW_RESIZED);
                         on_window_resized();
                         break;
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
@@ -258,223 +299,27 @@ void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t
                 }
                 break;
 
-            case SDL_MOUSEMOTION: {
-                    mouse_motion.id = (int)event.motion.which;
-                    mouse_motion.x = (int)event.motion.x;
-                    mouse_motion.y = (int)event.motion.y;
-                }
-                break;
-            case SDL_KEYUP:
-                /**
-                 * The following key sequence is possible, hence we need to validate whether the KEYUP
-                 * matches and releases the current active keyscan/direction:
-                 * - KEY DOWN: scancode 81 -> 'D', scancode 81, set_dir 1)
-                 * - [    3,131] KEY DOWN: scancode 81 -> 'D', scancode 81, set_dir 1)
-                 * - [    3,347] KEY DOWN: scancode 80 -> 'L', scancode 80, set_dir 1)
-                 * - [    3,394] KEY UP: scancode 81 (ignored) -> 'L', scancode 80, set_dir 1)
-                 * - [    4,061] KEY UP: scancode 80 (release) -> 'L', scancode 80, set_dir 0)
-                 */
-                if ( event.key.keysym.scancode == scancode ) {
-                    set_dir = false;
-                }
-                break;
+                case SDL_MOUSEMOTION:
+                    event.pointer_motion((int)sdl_event.motion.which,
+                                         (int)sdl_event.motion.x, (int)sdl_event.motion.y);
+                    break;
+                case SDL_KEYUP: {
+                    const SDL_Scancode scancode = sdl_event.key.keysym.scancode;
+                    event.clear(to_event_type(scancode), to_ascii(scancode));
+                  }
+                  break;
 
-            case SDL_KEYDOWN:
-                // keyboard API for key pressed
-                switch (event.key.keysym.scancode) {
-                    case SDL_SCANCODE_Q:
-                        [[fallthrough]];
-                    case SDL_SCANCODE_ESCAPE:
-                        close = true;
-                        break;
-                    case SDL_SCANCODE_UP:
-                        if( !paused ) {
-                            dir = direction_t::UP;
-                            set_dir = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_LEFT:
-                        if( !paused ) {
-                            dir = direction_t::LEFT;
-                            set_dir = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_DOWN:
-                        if( !paused ) {
-                            dir = direction_t::DOWN;
-                            set_dir = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_RIGHT:
-                        if( !paused ) {
-                            dir = direction_t::RIGHT;
-                            set_dir = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_P:
-                        if( paused ) {
-                            dir = direction_t::NONE;
-                            paused = false;
-                        } else {
-                            dir = direction_t::PAUSE;
-                            paused = true;
-                        }
-                        set_dir = false;
-                        break;
-                    default:
-                        break;
-                }
-                if( set_dir ) {
-                    scancode = event.key.keysym.scancode;
-                }
-                break;
-            default:
-                break;
+                case SDL_KEYDOWN: {
+                    const SDL_Scancode scancode = sdl_event.key.keysym.scancode;
+                    event.set(to_event_type(scancode), to_ascii(scancode));
+                  }
+                  break;
         }
+        return true;
+    } else {
+        return false;
     }
 }
-
-void pixel::handle_events2(bool& close, bool& resized, bool& set_dir1, bool& set_dir2, direction_t& dir, mouse_motion_t& mouse_motion) noexcept {
-    mouse_motion.id = -1;
-    static SDL_Scancode scancode = SDL_SCANCODE_STOP;
-    static bool paused = false;
-    close = false;
-    resized = false;
-    // set_dir1 = false;
-    // dir = pixel::direction_t::NONE;
-
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        switch (event.type) {
-            case SDL_QUIT:
-                close = true;
-                break;
-
-            case SDL_WINDOWEVENT:
-                switch (event.window.event) {
-                    case SDL_WINDOWEVENT_SHOWN:
-                        // log_printf("Window Shown\n");
-                        break;
-                    case SDL_WINDOWEVENT_HIDDEN:
-                        // log_printf("Window Hidden\n");
-                        break;
-                    case SDL_WINDOWEVENT_RESIZED:
-                        printf("Window Resized: %d x %d\n", event.window.data1, event.window.data2);
-                        resized = true;
-                        on_window_resized();
-                        break;
-                    case SDL_WINDOWEVENT_SIZE_CHANGED:
-                        // printf("Window SizeChanged: %d x %d\n", event.window.data1, event.window.data2);
-                        break;
-                }
-                break;
-
-            case SDL_MOUSEMOTION: {
-                    mouse_motion.id = (int)event.motion.which;
-                    mouse_motion.x = (int)event.motion.x;
-                    mouse_motion.y = (int)event.motion.y;
-                }
-                break;
-            case SDL_KEYUP:
-                /**
-                 * The following key sequence is possible, hence we need to validate whether the KEYUP
-                 * matches and releases the current active keyscan/direction:
-                 * - KEY DOWN: scancode 81 -> 'D', scancode 81, set_dir 1)
-                 * - [    3,131] KEY DOWN: scancode 81 -> 'D', scancode 81, set_dir 1)
-                 * - [    3,347] KEY DOWN: scancode 80 -> 'L', scancode 80, set_dir 1)
-                 * - [    3,394] KEY UP: scancode 81 (ignored) -> 'L', scancode 80, set_dir 1)
-                 * - [    4,061] KEY UP: scancode 80 (release) -> 'L', scancode 80, set_dir 0)
-                 */
-                if ( event.key.keysym.scancode == scancode ) {
-                    set_dir1 = false;
-                }
-                break;
-
-            case SDL_KEYDOWN:
-                // keyboard API for key pressed
-                switch (event.key.keysym.scancode) {
-                 /*   case SDL_SCANCODE_Q:
-                        [[fallthrough]];
-                   */ case SDL_SCANCODE_ESCAPE:
-                        close = true;
-                        break;
-                    case SDL_SCANCODE_UP:
-                        if( !paused ) {
-                            dir = direction_t::UP;
-                            set_dir1 = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_LEFT:
-                        if( !paused ) {
-                            dir = direction_t::LEFT;
-                            set_dir1 = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_DOWN:
-                        if( !paused ) {
-                            dir = direction_t::DOWN;
-                            set_dir1 = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_RIGHT:
-                        if( !paused ) {
-                            dir = direction_t::RIGHT;
-                            set_dir1 = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_W:
-                        if( !paused ) {
-                            dir = direction_t::UP2;
-                            set_dir2 = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_A:
-                        if( !paused ) {
-                            dir = direction_t::LEFT2;
-                            set_dir2 = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_S:
-                        if( !paused ) {
-                            dir = direction_t::DOWN2;
-                            set_dir2 = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_D:
-                        if( !paused ) {
-                            dir = direction_t::RIGHT2;
-                            set_dir2 = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_R:
-                        if( !paused ) {
-                            dir = direction_t::RESET;
-                            set_dir1 = true;
-                        }
-                        break;
-                    case SDL_SCANCODE_P:
-                        if( paused ) {
-                            dir = direction_t::NONE;
-                            paused = false;
-                        } else {
-                            dir = direction_t::PAUSE;
-                            paused = true;
-                        }
-                        set_dir1 = false;
-                        break;
-                    default:
-                        break;
-                }
-                if( set_dir1 ) {
-                    scancode = event.key.keysym.scancode;
-                }
-                break;
-            default:
-                break;
-        }
-    }
-}
-
 
 static std::atomic<int> active_threads = 0;
 

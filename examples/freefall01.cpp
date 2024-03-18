@@ -335,20 +335,17 @@ int main(int argc, char *argv[])
         }
     }
 
-    bool close = false;
-    bool resized = false;
-    bool set_dir = false;
-    pixel::direction_t dir = pixel::direction_t::UP;
     pixel::texture_ref hud_text;
     uint64_t frame_count_total = 0;
 
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     uint64_t t_fps_last = pixel::getCurrentMilliseconds();
-
-    while(!close) {
-        handle_events(close, resized, set_dir, dir);
-
-        if( resized ) {
+    pixel::input_event_t event;
+    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        if( pixel::handle_events(event) ) {
+            // std::cout << "Event " << pixel::to_string(event) << std::endl;
+        }
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             pixel::cart_coord.set_height(0.0f, drop_height+2.0f*thickness);
         }
 

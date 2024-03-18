@@ -99,16 +99,14 @@ int main(int argc, char *argv[])
     pixel::f2::rect_t hero(blob0_home, 200, 100);
     int blob0_speed = 2;
 
-    bool close = false;
-    bool resized = false;
-    bool set_dir = false;
-    pixel::direction_t dir = pixel::direction_t::UP;
     pixel::texture_ref hud_text;
     float last_fps = -1.0f;
-
-    while(!close) {
-        handle_events(close, resized, set_dir, dir);
-        const bool animating = pixel::direction_t::PAUSE != dir;
+    pixel::input_event_t event;
+    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        if( pixel::handle_events(event) ) {
+            // std::cout << "Event " << pixel::to_string(event) << std::endl;
+        }
+        const bool animating = pixel::input_event_type_t::PAUSE != event.last;
         {
             float fps = pixel::get_gpu_fps();
             if( fps != last_fps ) {
@@ -203,26 +201,19 @@ int main(int argc, char *argv[])
         }
         blob1.draw();
 
-        if( set_dir && animating ) {
+        if( event.has_any_p1() && animating ) {
             blob0_speed += 2;
             pixel::f2::point_t p_old = hero.p_a;
-            switch( dir ) {
-                case pixel::direction_t::UP:
-                    hero.move_dir((float)blob0_speed);
-                    break;
-                case pixel::direction_t::DOWN:
-                    hero.move_dir((float)-blob0_speed);
-                    break;
-                case pixel::direction_t::LEFT:
-                    hero.rotate(pixel::adeg_to_rad(2.0f));
-                    // hero.move(-blob0_speed, 0);
-                    break;
-                case pixel::direction_t::RIGHT:
-                    hero.rotate(pixel::adeg_to_rad(-2.0f));
-                    // hero.move(blob0_speed, 0);
-                    break;
-                default:
-                    break;
+            if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) ) {
+                hero.move_dir((float)blob0_speed);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
+                hero.move_dir((float)-blob0_speed);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
+                hero.rotate(pixel::adeg_to_rad(2.0f));
+                // hero.move(-blob0_speed, 0);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
+                hero.rotate(pixel::adeg_to_rad(-2.0f));
+                // hero.move(blob0_speed, 0);
             }
             if( !hero.on_screen() ) {
                 hero.set_top_left( p_old );

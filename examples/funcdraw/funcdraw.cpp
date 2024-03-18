@@ -140,11 +140,6 @@ int main(int argc, char *argv[])
         pixel::init_gfx_subsystem("funcdraw", win_width, win_height, origin_norm);
     }
 
-    bool close = false;
-    bool resized = false;
-    bool set_dir = false;
-    pixel::direction_t dir = pixel::direction_t::UP;
-    pixel::mouse_motion_t mouse_motion;
     pixel::texture_ref hud_text;
 
     cart_coord_setup();
@@ -168,10 +163,15 @@ int main(int argc, char *argv[])
 
     std::thread commandline_thread(&commandline_proc);
     commandline_thread.detach();
+    pixel::input_event_t event;
 
-    while(!close && !exit_raised) {
-        handle_events(close, resized, set_dir, dir, mouse_motion);
-        if( resized || resized_ext ) {
+    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) && !exit_raised) {
+        bool pointer = false;
+        if( pixel::handle_events(event) ) {
+            // std::cout << "Event " << pixel::to_string(event) << std::endl;
+        }
+        // const bool animating = pixel::input_event_type_t::PAUSE != event.type;
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) || resized_ext ) {
             resized_ext = false;
             cart_coord_setup();
             l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
@@ -196,7 +196,8 @@ int main(int argc, char *argv[])
 
         {
             bool expected = true;
-            if( rpn_funcs_dirty.compare_exchange_strong(expected, false) || resized ) {
+            if( rpn_funcs_dirty.compare_exchange_strong(expected, false) ||
+                event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
                 pixel::clear_pixel_fb(255, 255, 255, 255);
                 draw_funcs();
             }

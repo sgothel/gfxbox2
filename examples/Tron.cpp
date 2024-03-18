@@ -138,11 +138,6 @@ int main(int argc, char *argv[])
         pixel::init_gfx_subsystem("gfxbox example01", win_width, win_height, origin_norm);
     }
 
-    bool close = false;
-    bool resized = false;
-    bool set_dir = false;
-    bool set_dir2 = false;
-    pixel::direction_t dir = pixel::direction_t::UP;
     std::vector<pixel::texture_ref> texts;
     pixel::f2::point_t origin(0, 0);
     pixel::f4::vec_t text_color(0, 0, 0, 1);
@@ -164,11 +159,14 @@ int main(int argc, char *argv[])
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     int a1 = 0;
     int a2 = 0;
+    pixel::input_event_t event;
 
-    while( !close ) {
-        pixel::handle_events2(close, resized, set_dir, set_dir2, dir);
-        const bool animating = pixel::direction_t::PAUSE != dir;
-
+    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        // bool resize = false;
+            if( pixel::handle_events(event) ) {
+                // std::cout << "Event " << pixel::to_string(event) << std::endl;
+            }
+        const bool animating = pixel::input_event_type_t::PAUSE != event.last;
         float fps = pixel::get_gpu_fps();
         texts.push_back( make_text(
                 pixel::f2::point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()),
@@ -176,44 +174,37 @@ int main(int argc, char *argv[])
 
         // white background
         pixel::clear_pixel_fb( 255, 255, 255, 255);
-
         const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
         const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
         t_last = t1;
-        if(animating){
-            if( set_dir ) {
-                set_dir = false;
-                if( pixel::direction_t::UP == dir && p1.velo < 2001.0f) {
-                    p1.changeSpeed(1.10f);
-                } else if( pixel::direction_t::DOWN == dir && p1.velo > 10.0f) {
-                    p1.changeSpeed(0.90f);
-                } else if( pixel::direction_t::LEFT == dir ) {
-                    p1.rotate(M_PI_2);
-                } else if( pixel::direction_t::RIGHT == dir ) {
-                    p1.rotate(-M_PI_2);
-                } else if( pixel::direction_t::RESET == dir ){
-                    p1.reset();
-                    p2.reset();
-                    a1 = 0;
-                    a2 = 0;
-                }
-
-            }
-
-            if( set_dir2 ) {
-                set_dir2 = false;
-                if( pixel::direction_t::UP2 == dir && p2.velo < 2001.0f) {
-                    p2.changeSpeed(1.10f);
-                } else if( pixel::direction_t::DOWN2 == dir && p2.velo > 10.0f) {
-                    p2.changeSpeed(0.90f);
-                } else if( pixel::direction_t::LEFT2 == dir ) {
-                    p2.rotate(M_PI_2);
-                } else if( pixel::direction_t::RIGHT2 == dir ) {
-                    p2.rotate(-M_PI_2);
-                }
+        if( event.has_any_p1() ) {
+            if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) && p1.velo < 3000.0f) {
+                p1.changeSpeed(1.10f);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) && p1.velo > 1.0f) {
+                p1.changeSpeed(0.90f);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
+                p1.rotate(M_PI_2);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
+                p1.rotate(-M_PI_2);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::RESET) ){
+                p1.reset();
+                p2.reset();
+                a1 = 0;
+                a2 = 0;
             }
         }
 
+        if( event.has_any_p2() ) {
+            if( event.pressed_and_clr(pixel::input_event_type_t::P2_UP) && p2.velo < 3000.0f) {
+                p2.changeSpeed(1.10f);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_DOWN) && p2.velo > 1.0f) {
+                p2.changeSpeed(0.90f);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_LEFT) ) {
+                p2.rotate(M_PI_2);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_RIGHT) ) {
+                p2.rotate(-M_PI_2);
+            }
+        }
         float dbs = 1500;
         if(animating){
 

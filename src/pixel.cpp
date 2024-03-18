@@ -38,16 +38,6 @@ pixel::cart_coord_t pixel::cart_coord;
 
 uint32_t pixel::draw_color = 0;
 
-void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir) noexcept {
-    mouse_motion_t mouse_motion = mouse_motion_t();
-    pixel::handle_events(close, resized, set_dir, dir, mouse_motion);
-}
-
-void pixel::handle_events2(bool& close, bool& resized, bool& set_dir1, bool& set_dir2, direction_t& dir) noexcept {
-    mouse_motion_t mouse_motion = mouse_motion_t();
-    pixel::handle_events2(close, resized, set_dir1, set_dir2, dir, mouse_motion);
-}
-
 /**
  * See <http://man7.org/linux/man-pages/man2/clock_gettime.2.html>
  * <p>

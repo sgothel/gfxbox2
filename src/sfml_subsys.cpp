@@ -157,71 +157,72 @@ pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
     return nullptr;
 }
 
-void pixel::handle_events(bool& close, bool& resized, bool& set_dir, direction_t& dir, mouse_motion_t& mouse_motion) noexcept {
-    mouse_motion.id = -1;
-    static sf::Keyboard::Key scancode = sf::Keyboard::Key::Escape;
-    close = false;
-    resized = false;
+static input_event_type_t to_event_type(sf::Keyboard::Key scancode) {
+    switch ( scancode ) {
+        case sf::Keyboard::Key::Escape:
+            return input_event_type_t::WINDOW_CLOSE_REQ;
+        case sf::Keyboard::Key::P:
+            return input_event_type_t::PAUSE;
+        case sf::Keyboard::Key::Up:
+            return input_event_type_t::P1_UP;
+        case sf::Keyboard::Key::Left:
+            return input_event_type_t::P1_LEFT;
+        case sf::Keyboard::Key::Down:
+            return input_event_type_t::P1_DOWN;
+        case sf::Keyboard::Key::Right:
+            return input_event_type_t::P1_RIGHT;
+        case sf::Keyboard::Key::RShift:
+            return input_event_type_t::P1_ACTION1;
+        case sf::Keyboard::Key::Return:
+            return input_event_type_t::P1_ACTION2;
+        case sf::Keyboard::Key::W:
+            return input_event_type_t::P2_UP;
+        case sf::Keyboard::Key::A:
+            return input_event_type_t::P2_LEFT;
+        case sf::Keyboard::Key::S:
+            return input_event_type_t::P2_DOWN;
+        case sf::Keyboard::Key::D:
+            return input_event_type_t::P2_RIGHT;
+        case sf::Keyboard::Key::LShift:
+            return input_event_type_t::P2_ACTION1;
+        case sf::Keyboard::Key::LControl:
+            return input_event_type_t::P2_ACTION2;
+        case sf::Keyboard::Key::R:
+            return input_event_type_t::RESET;
+        default:
+            return input_event_type_t::NONE;
+    }
+}
 
-    sf::Event event;
-    while ( window->pollEvent(event) ) {
-        if (event.type == sf::Event::Closed) {
-            close = true;
-        } else if (event.type == sf::Event::Resized) {
-            printf("Window Resized: %u x %u\n", event.size.width, event.size.height);
-            resized = true;
+static uint16_t to_ascii(sf::Keyboard::Key scancode) {
+    if(sf::Keyboard::Key::A <= scancode && scancode <= sf::Keyboard::Key::Num9 ) {
+        return 'A' + ( scancode - sf::Keyboard::Key::A );
+    }
+    return 0;
+}
+
+bool pixel::handle_one_event(input_event_t& event) noexcept {
+    sf::Event sf_event;
+    if ( window->pollEvent(sf_event) ) {
+        if (sf_event.type == sf::Event::Closed) {
+            event.set(input_event_type_t::WINDOW_CLOSE_REQ);
+        } else if (sf_event.type == sf::Event::Resized) {
+            printf("Window Resized: %u x %u\n", sf_event.size.width, sf_event.size.height);
+            event.set(input_event_type_t::WINDOW_RESIZED);
             on_window_resized(true /* set_view */);
-        } else if (event.type == sf::Event::KeyReleased) {
-            /**
-             * The following key sequence is possible, hence we need to validate whether the KEYUP
-             * matches and releases the current active keyscan/direction:
-             * - KEY DOWN: scancode 81 -> 'D', scancode 81, set_dir 1)
-             * - [    3,131] KEY DOWN: scancode 81 -> 'D', scancode 81, set_dir 1)
-             * - [    3,347] KEY DOWN: scancode 80 -> 'L', scancode 80, set_dir 1)
-             * - [    3,394] KEY UP: scancode 81 (ignored) -> 'L', scancode 80, set_dir 1)
-             * - [    4,061] KEY UP: scancode 80 (release) -> 'L', scancode 80, set_dir 0)
-             */
-            if ( event.key.code == scancode ) {
-                set_dir = false;
-            }
-            break;
-        } else if (event.type == sf::Event::KeyPressed) {
-            switch( event.key.code ) {
-                case sf::Keyboard::Key::Q:
-                    [[fallthrough]];
-                case sf::Keyboard::Key::Escape:
-                    close = true;
-                    break;
-                case sf::Keyboard::Key::Up:
-                    dir = direction_t::UP;
-                    set_dir = true;
-                    break;
-                case sf::Keyboard::Key::Left:
-                    dir = direction_t::LEFT;
-                    set_dir = true;
-                    break;
-                case sf::Keyboard::Key::Down:
-                    dir = direction_t::DOWN;
-                    set_dir = true;
-                    break;
-                case sf::Keyboard::Key::Right:
-                    dir = direction_t::RIGHT;
-                    set_dir = true;
-                    break;
-                case sf::Keyboard::Key::R:
-                    dir = direction_t::RESET;
-                    set_dir = true;
-                    break;
-                case sf::Keyboard::Key::P:
-                    dir = direction_t::PAUSE;
-                    break;
-                default:
-                    break;
-            }
-            if( set_dir ) {
-                scancode = event.key.code;
-            }
+        } else if (sf_event.type == sf::Event::MouseMoved) {
+            event.pointer_motion((int)1 /* FIXME */,
+                                 (int)sf_event.mouseMove.x, (int)sf_event.mouseMove.y);
+        } else if (sf_event.type == sf::Event::KeyReleased) {
+            const sf::Keyboard::Key scancode = sf_event.key.code;
+            event.clear(to_event_type(scancode), to_ascii(scancode));
+        } else if (sf_event.type == sf::Event::KeyPressed) {
+            const sf::Keyboard::Key scancode = sf_event.key.code;
+            event.set(to_event_type(scancode), to_ascii(scancode));
         }
+        return true;
+    } else {
+        return false;
     }
 }
 

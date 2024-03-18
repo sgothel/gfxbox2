@@ -299,20 +299,18 @@ int main(int argc, char *argv[])
         }
     }
 
-    bool close = false;
-    bool resized = false;
-    bool set_dir = false;
-    pixel::direction_t dir = pixel::direction_t::UP;
     pixel::texture_ref hud_text;
     uint64_t frame_count_total = 0;
 
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     uint64_t t_fps_last = pixel::getCurrentMilliseconds();
+    pixel::input_event_t event;
 
-    while(!close) {
-        handle_events(close, resized, set_dir, dir);
-
-        if( resized ) {
+    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        if( pixel::handle_events(event) ) {
+            // std::cout << "Event " << pixel::to_string(event) << std::endl;
+        }
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             pixel::cart_coord.set_height(-field_height/2.0f, field_height/2.0f);
         }
 
@@ -336,28 +334,21 @@ int main(int argc, char *argv[])
             hud_text = pixel::make_text_texture(hud_s);
         }
 
-        if( set_dir ) {
-            switch( dir ) {
-                case pixel::direction_t::UP:
-                    pad_r->move(pad_step_up);
-                    if( !pad_r->on_screen() ) {
-                        pad_r->move(pad_step_down);
-                    }
-                    break;
-                case pixel::direction_t::DOWN:
+        if( event.has_any_p1() ){
+            if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
+                pad_r->move(pad_step_up);
+                if( !pad_r->on_screen() ) {
                     pad_r->move(pad_step_down);
-                    if( !pad_r->on_screen() ) {
-                        pad_r->move(pad_step_up);
-                    }
-                    break;
-                case pixel::direction_t::LEFT:
-                    pad_r->rotate(pixel::adeg_to_rad(pad_rot_step));
-                    break;
-                case pixel::direction_t::RIGHT:
-                    pad_r->rotate(pixel::adeg_to_rad(-pad_rot_step));
-                    break;
-                default:
-                    break;
+                }
+            } else if( event.pressed(pixel::input_event_type_t::P1_DOWN) ) {
+                pad_r->move(pad_step_down);
+                if( !pad_r->on_screen() ) {
+                    pad_r->move(pad_step_up);
+                }
+            } else if( event.pressed(pixel::input_event_type_t::P1_LEFT) ) {
+                pad_r->rotate(pixel::adeg_to_rad(pad_rot_step));
+            } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ) {
+                pad_r->rotate(pixel::adeg_to_rad(-pad_rot_step));
             }
         }
 

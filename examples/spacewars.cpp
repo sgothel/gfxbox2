@@ -367,20 +367,16 @@ int main(int argc, char *argv[])
         }
     }
 
-    bool close = false;
-    bool resized = false;
-    bool set_dir = false;
-    pixel::direction_t dir = pixel::direction_t::UP;
     pixel::texture_ref hud_text;
     uint64_t frame_count_total = 0;
 
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     uint64_t t_fps_last = pixel::getCurrentMilliseconds();
 
-    while(!close) {
-        handle_events(close, resized, set_dir, dir);
-
-        if( resized ) {
+    pixel::input_event_t event;
+    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        pixel::handle_events(event);
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             pixel::cart_coord.set_height(-field_height/2.0f, field_height/2.0f);
         }
 
@@ -403,27 +399,20 @@ int main(int argc, char *argv[])
                           ", KAPUTT, fps "+std::to_string(pixel::get_gpu_fps()));
         }
 
-        if( nullptr != ship_r && set_dir ) {
-            switch( dir ) {
-                case pixel::direction_t::UP: {
-                        pixel::f2::vec_t v = ship_r->velocity;
-                        v += pixel::f2::vec_t::from_length_angle(ship_vel_step, ship_r->dir_angle);
-                        if( v.length() < 2.0f + ship_vel_step) {
-                            ship_r->velocity = v;
-                        }
-                    }
-                    break;
-                case pixel::direction_t::DOWN:
-                    //ship_r->velocity += pixel::f2::vec_t::from_length_angle(-ship_vel_step, ship_r->dir_angle);
-                    break;
-                case pixel::direction_t::LEFT:
-                    ship_r->rotate(pixel::adeg_to_rad(ship_rot_step));
-                    break;
-                case pixel::direction_t::RIGHT:
-                    ship_r->rotate(pixel::adeg_to_rad(-ship_rot_step));
-                    break;
-                default:
-                    break;
+        if( nullptr != ship_r && event.has_any_p1() ) {
+            if( event.pressed(pixel::input_event_type_t::P1_UP) ){
+                pixel::f2::vec_t v = ship_r->velocity;
+                v += pixel::f2::vec_t::from_length_angle(ship_vel_step, ship_r->dir_angle);
+                if( v.length() < 2.0f + ship_vel_step) {
+                    ship_r->velocity = v;
+                }
+            } else if( event.pressed(pixel::input_event_type_t::P1_DOWN) ){
+                //ship_r->velocity += pixel::f2::vec_t::from_length_angle(-ship_vel_step, ship_r->dir_angle);
+            } else if( event.pressed(pixel::input_event_type_t::P1_LEFT) ){
+                ship_r->rotate(pixel::adeg_to_rad(ship_rot_step));
+            } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
+                ship_r->rotate(pixel::adeg_to_rad(-ship_rot_step));
+
             }
         }
 

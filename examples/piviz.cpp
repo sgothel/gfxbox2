@@ -397,10 +397,6 @@ int main(int argc, char *argv[])
         pixel::init_gfx_subsystem("gfxbox example01", win_width, win_height, origin_norm);
     }
 
-    bool close = false;
-    bool resized = false;
-    bool set_dir = false;
-    pixel::direction_t dir = pixel::direction_t::UP;
     vector<pixel::texture_ref> texts;
     point_t origin(0, 0);
     pixel::f4::vec_t text_color(0, 0, 0, 1);
@@ -417,7 +413,6 @@ int main(int argc, char *argv[])
 
     const int circles_per_plot = 2;
     const float ticks_per_circle = 12.0f * 60.0f; // one circle in 12s @ 60Hz, [s] * [1/s] = [1]
-    const float plot_inc = pixel::cart_coord.width() / ( ticks_per_circle * circles_per_plot );
     const float angrad_inc = ( 2.0f * M_PI ) / ticks_per_circle;
     float ang_rad = 0.0f, ang_grad = 0.0f;
     float an = -0.35f;
@@ -439,11 +434,23 @@ int main(int argc, char *argv[])
      */
 
     bool manual = false;
-    while( !close ) {
-        handle_events(close, resized, set_dir, dir);
-        const bool animating = pixel::direction_t::PAUSE != dir;
-        manual = manual && animating;
+    bool m1 = false;
+    bool m2 = false;
 
+    bool anim1 = true;
+    bool anim2 = true;
+    int a1 = 0;
+    int a2 = 0;
+    pixel::input_event_t event;
+    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        const float plot_inc = pixel::cart_coord.width() / ( ticks_per_circle * circles_per_plot );
+        pixel::handle_events(event);
+        const bool animating = pixel::input_event_type_t::PAUSE != event.last;
+        manual = manual && animating;
+        m1 = m1 && anim1;
+        m2 = m2 && anim2;
+        anim1 = pixel::input_event_type_t::PAUSE != event.last && demo_index == 1;
+        anim2 = pixel::input_event_type_t::PAUSE != event.last && demo_index == 2;
         float fps = pixel::get_gpu_fps();
         texts.push_back( make_text(
                 point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()),
@@ -458,31 +465,44 @@ int main(int argc, char *argv[])
                 225 /* r */, 225 /* g */, 225 /* b */, 255 /* a */,
                 200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
 
-        if( set_dir ) {
-            set_dir = false;
-            if( pixel::direction_t::UP == dir ) {
+        if( event.has_any_p1() ) {
+            if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) ) {
                 manual = true;
-                if( circum_corners < 128 ) {
+                if( circum_corners < 128 && demo_index == 3 ) {
                     circum_corners += 1;
+                } else if( demo_index == 2 ){
+                    ang_rad += angrad_inc / 2;
+                    m2 = true;
+                } else if(demo_index == 1){
+                    off_pct += 0.0025;
+                    m1 = true;
                 }
-                ang_rad += angrad_inc / 2;
-                off_pct += 0.01;
-            } else if( pixel::direction_t::DOWN == dir ) {
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
                 manual = true;
-                if( circum_corners >= 4 ) {
+                if( circum_corners > 3 && demo_index == 3 ) {
                     circum_corners -= 1;
+                } else if( demo_index == 2 ){
+                    ang_rad -= angrad_inc / 2;
+                    m2 = true;
+                } else if(demo_index == 1){
+                    off_pct -= 0.0025;
+                    m1 = true;
                 }
-                ang_rad -= angrad_inc / 2;
-                off_pct -= 0.01;
-            } else if( pixel::direction_t::LEFT == dir ) {
+            } else if( event.released_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
                 demo_index -= 1;
                 if( demo_index < 0 ) {
                     demo_index = DEMO_MAX_IDX;
                 }
-            } else if( pixel::direction_t::RIGHT == dir ) {
+            } else if( event.released_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
                 demo_index += 1;
                 if( demo_index > DEMO_MAX_IDX ) {
                     demo_index = 0;
+                }
+            } else if( event.last == pixel::input_event_type_t::PAUSE ) {
+                if( demo_index == 1 ) {
+                    ++a1;
+                } else if( demo_index == 2) {
+                    ++a2;
                 }
             }
         }
@@ -542,6 +562,13 @@ int main(int argc, char *argv[])
                 texts.push_back( make_text(text_pos2, "r = "+std::to_string(radius), text_color) );
                 text_pos2.add(0, enter);
                 texts.push_back( make_text(text_pos2, "d = "+std::to_string(radius * 2), text_color) );
+                if( anim1 && !m1/*&& !manual*/ ) {
+                    if(off_pct < 1.3f){
+                        off_pct += 0.005f;
+                    } else {
+                        off_pct = an;
+                    }
+                }
             }
             break;
             case 2: {
@@ -558,6 +585,9 @@ int main(int argc, char *argv[])
                 text_pos4.add(0, enter);
                 texts.push_back( make_text(text_pos4, "Winkel (Grad) = "+std::to_string(ang_grad),
                         text_color) );
+                if( anim2 && !m2/*&& !manual*/ ){
+                    ang_rad += angrad_inc;
+                }
             }
             break;
             case 3: {
@@ -587,16 +617,6 @@ int main(int argc, char *argv[])
             default:
                 break;
             }
-        }
-        if( animating && !manual) {
-            if(off_pct < 1.3f){
-                off_pct += 0.005f;
-            } else {
-                off_pct = an;
-            }
-        }
-        if( animating && !manual ){
-            ang_rad += angrad_inc;
         }
         if(ang_rad > circles_per_plot * 2 * M_PI){
             ang_rad = 0.0f;
