@@ -169,11 +169,9 @@ void pixel::texture_t::draw(const int x_pos, const int y_pos, const float scale_
     // TODO
 }
 
-pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
+pixel::texture_ref pixel::make_text_texture(const std::string&) noexcept
 {
-    // TODO
-    (void)text;
-    return nullptr;
+    return std::make_shared<texture_t>(nullptr, 0, 0, 0, 0);
 }
 
 static input_event_type_t to_event_type(sf::Keyboard::Key scancode) {

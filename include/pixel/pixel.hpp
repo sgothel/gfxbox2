@@ -36,6 +36,17 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <iostream>
+
+namespace pixel::f2 {
+    class vec_t; // fwd
+    typedef vec_t point_t;
+
+}
+namespace pixel::f4 {
+    class vec_t; // fwd
+    typedef vec_t point_t;
+}
 
 /**
  * Basic computer graphics math and utilities helping with the framebuffer and I/O tooling.
@@ -121,6 +132,8 @@ namespace pixel {
     typedef std::vector<uint32_t> pixel_buffer_t; // 32-bit pixel
     extern pixel_buffer_t fb_pixels;
     extern int frames_per_sec;
+    extern int font_height;
+
 
     /**
      * Cartesian coordinate system within the framebuffer space in pixels.

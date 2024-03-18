@@ -23,6 +23,7 @@
  */
 #include "pixel/pixel.hpp"
 #include "pixel/pixel2f.hpp"
+#include "pixel/pixel4f.hpp"
 
 #include <cstdint>
 #include <ctime>
@@ -33,6 +34,7 @@ int pixel::fb_max_x=0;
 int pixel::fb_max_y=0;
 pixel::pixel_buffer_t pixel::fb_pixels;
 int pixel::frames_per_sec=60;
+int pixel::font_height = 24;
 
 pixel::cart_coord_t pixel::cart_coord;
 
@@ -115,6 +117,16 @@ void pixel::draw_grid(float raster_sz,
         pixel::f2::point_t p1(0, +raster_sz);
         pixel::f2::lineseg_t::draw(p0, p1);
     }
+}
+
+pixel::texture_ref pixel::make_text(const pixel::f2::point_t& tl, const int lineno,
+                                    const std::string& text,
+                                    const pixel::f4::vec_t& color) noexcept {
+    pixel::set_pixel_color4f(color.x, color.y, color.z, color.w);
+    pixel::texture_ref tex = pixel::make_text_texture(text.c_str());
+    tex->dest_x = pixel::cart_coord.to_fb_x(tl.x);
+    tex->dest_y = pixel::cart_coord.to_fb_y(tl.y - (int)std::round(lineno * font_height * 1.15f));
+    return tex;
 }
 
 //

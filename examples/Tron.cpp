@@ -111,13 +111,6 @@ private:
         }
 
 };
-pixel::texture_ref make_text(const pixel::f2::point_t& pos, const std::string& text, const pixel::f4::vec_t& color) {
-    pixel::set_pixel_color4f(color.x, color.y, color.z, color.w);
-    pixel::texture_ref tex = pixel::make_text_texture(text.c_str());
-    tex->dest_x = pixel::cart_coord.to_fb_x(pos.x);
-    tex->dest_y = pixel::cart_coord.to_fb_y(pos.y);
-    return tex;
-}
 
 int main(int argc, char *argv[])
 {
@@ -160,6 +153,7 @@ int main(int argc, char *argv[])
     int a1 = 0;
     int a2 = 0;
     pixel::input_event_t event;
+    const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
 
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
         // bool resize = false;
@@ -168,9 +162,13 @@ int main(int argc, char *argv[])
             }
         const bool animating = pixel::input_event_type_t::PAUSE != event.last;
         float fps = pixel::get_gpu_fps();
-        texts.push_back( make_text(
-                pixel::f2::point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()),
+        texts.push_back( pixel::make_text(tl_text, 0,
                 "fps "+std::to_string(fps)+", "+(animating?"animating":"paused"), text_color));
+        texts.push_back( pixel::make_text(tl_text, 1,
+                "Velocity: Tron "+std::to_string(p1.velo)+
+                ", MCP "+std::to_string(p2.velo)+
+                " | Score: Tron "+std::to_string(a1)+
+                ", MCP "+std::to_string(a2), text_color));
 
         // white background
         pixel::clear_pixel_fb( 255, 255, 255, 255);
@@ -251,11 +249,6 @@ int main(int argc, char *argv[])
         }
 
 
-        texts.push_back( make_text(
-                pixel::f2::point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y() - 50), "Tron: "+std::to_string(a1)+
-                "   Tron`s Geschwindigkeit: "+std::to_string(p1.velo)+
-                ", MCP: "+std::to_string(a2)+
-                "   MCP`s Geschwindigkeit: "+std::to_string(p2.velo), text_color));
         pixel::set_pixel_color(0, 0, 255, 255);
         p1.draw();
 

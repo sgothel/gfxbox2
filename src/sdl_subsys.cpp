@@ -101,7 +101,7 @@ static void on_window_resized() noexcept {
             sdl_font = nullptr;
         }
         const std::string fontfilename = "fonts/freefont/FreeSansBold.ttf";
-        const int font_height = std::max(24, fb_height / 35);
+        font_height = std::max(24, fb_height / 35);
         sdl_font = TTF_OpenFont(fontfilename.c_str(), font_height);
         if( nullptr == sdl_font ) {
             fprintf(stderr, "font: Null font for '%s': %s\n", fontfilename.c_str(), SDL_GetError());
