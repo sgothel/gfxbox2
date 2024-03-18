@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
         if( pixel::handle_events(event) ) {
             // std::cout << "Event " << pixel::to_string(event) << std::endl;
         }
-        const bool animating = pixel::input_event_type_t::PAUSE != event.last;
+        const bool animating = !event.paused();
         {
             float fps = pixel::get_gpu_fps();
             if( fps != last_fps ) {

@@ -437,12 +437,12 @@ int main(int argc, char *argv[])
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
         const float plot_inc = pixel::cart_coord.width() / ( ticks_per_circle * circles_per_plot );
         pixel::handle_events(event);
-        const bool animating = pixel::input_event_type_t::PAUSE != event.last;
+        const bool animating = !event.paused();
         manual = manual && animating;
         m1 = m1 && anim1;
         m2 = m2 && anim2;
-        anim1 = pixel::input_event_type_t::PAUSE != event.last && demo_index == 1;
-        anim2 = pixel::input_event_type_t::PAUSE != event.last && demo_index == 2;
+        anim1 = animating && demo_index == 1;
+        anim2 = animating && demo_index == 2;
         float fps = pixel::get_gpu_fps();
         texts.push_back( pixel::make_text(
                 point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), 0,
@@ -489,7 +489,7 @@ int main(int argc, char *argv[])
                 if( demo_index > DEMO_MAX_IDX ) {
                     demo_index = 0;
                 }
-            } else if( event.last == pixel::input_event_type_t::PAUSE ) {
+            } else if( !animating ) {
                 if( demo_index == 1 ) {
                     ++a1;
                 } else if( demo_index == 2) {
