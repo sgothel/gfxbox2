@@ -564,7 +564,7 @@ namespace pixel::f2 {
                         return;
                     }
                 }
-            } else {
+            } else if( !is_zero(dx_abs) ) {
                 const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
                 const float step_x = ( dx >= 0 ) ? x_ival : -x_ival;
                 const float step_y = dy / dx_abs * x_ival;
@@ -579,7 +579,7 @@ namespace pixel::f2 {
             }
         }
         static void draw(const point_t& p0, const point_t& p1) noexcept {
-            if( false ) {
+            if constexpr ( false ) {
                 for_all_points(p0, p1, [](const point_t& p) -> bool { p.draw(); return true; });
             } else {
                 const int p0_x = cart_coord.to_fb_x( p0.x );
@@ -592,15 +592,15 @@ namespace pixel::f2 {
                 const int dy_abs = std::abs(dy);
                 float p_x = p0_x, p_y = p0_y;
                 if( dy_abs > dx_abs ) {
-                    const float a = (float)dx / (float)dy_abs; // [0..1)
+                    const float a = (float)dx / (float)dy_abs; // [0..1), dy_abs > 0
                     const int step_h = dy / dy_abs; // +1 or -1
                     for(int i = 0; i <= dy_abs; ++i) {
                         pixel::set_pixel_fbcoord( p_x, (int)(fb_height - p_y) );
                         p_y += step_h; // = p0.y + i * step_h
                         p_x += a;
                     }
-                } else {
-                    const float a = (float)dy / (float)dx_abs; // [0..1]
+                } else if( dx_abs > 0 ) {
+                    const float a = (float)dy / (float)dx_abs; // [0..1], dx_abs > 0
                     const int step_w = dx / dx_abs; // +1 or -1
                     for(int i = 0; i <= dx_abs; ++i) {
                         pixel::set_pixel_fbcoord( p_x, (int)(fb_height - p_y) );
@@ -1097,12 +1097,15 @@ namespace pixel::f2 {
         }
 
         void rotate(const float radians) noexcept override {
+            rotate(radians, p_center);
+        }
+        void rotate(const float radians, const point_t& p) noexcept {
             const float cos = std::cos(radians);
             const float sin = std::sin(radians);
-            p_a.rotate(sin, cos, p_center);
-            p_b.rotate(sin, cos, p_center);
-            p_c.rotate(sin, cos, p_center);
-            p_d.rotate(sin, cos, p_center);
+            p_a.rotate(sin, cos, p);
+            p_b.rotate(sin, cos, p);
+            p_c.rotate(sin, cos, p);
+            p_d.rotate(sin, cos, p);
             dir_angle += radians;
         }
 
