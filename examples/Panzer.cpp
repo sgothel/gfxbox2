@@ -256,9 +256,9 @@ int main(int argc, char *argv[])
     int a1 = 0;
     int a2 = 0;
     pixel::input_event_t event;
-    const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
 
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
         if( pixel::handle_events(event) ) {
             // std::cout << "Event " << pixel::to_string(event) << std::endl;
         }
@@ -269,9 +269,12 @@ int main(int argc, char *argv[])
             texts.push_back( pixel::make_text(tl_text, 0,
                     "fps "+std::to_string(fps)+", "+(event.paused()?"paused":"animating"), text_color));
             texts.push_back( pixel::make_text(tl_text, 1,
-                    "Pengs: Tron "+std::to_string(p1.peng_inventory)+", MCP "+std::to_string(p2.peng_inventory), text_color));
+                    "Pengs Velocity [pixel pro sec] = Velocity + 100 | Pengs: Tron "
+                    +std::to_string(p1.peng_inventory)+
+                    ", MCP "+std::to_string(p2.peng_inventory), text_color));
             texts.push_back( pixel::make_text(tl_text, 2,
-                    "Punkte: Tron "+std::to_string(a1)+", MCP "+std::to_string(a2), text_color));
+                    "Velocity [pixel pro sec]: Tron "+std::to_string(p1.velo)+", MCP "+std::to_string(p2.velo)+
+                    " | Score: Tron "+std::to_string(a1)+", MCP "+std::to_string(a2), text_color));
         }
 
         // white background
