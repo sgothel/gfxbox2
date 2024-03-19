@@ -284,7 +284,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
         void peng() noexcept {
             if(peng_inventory > 0){
                 pixel::f2::point_t p0 = p_list[0];
-                pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(velocity.length() + peng_velo_0, dir_angle);
+                pixel::f2::vec_t v_p = velocity + pixel::f2::vec_t::from_length_angle(peng_velo_0, dir_angle);
                 pengs.push_back( peng_t(p0, peng_diag, v_p ) );
                 --peng_inventory;
             }
