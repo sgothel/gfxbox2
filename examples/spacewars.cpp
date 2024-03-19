@@ -30,6 +30,35 @@
 #include <algorithm>
 #include <random>
 
+class star_t {
+    public:
+        pixel::f2::disk_t body;
+        const float g0; // m/(s*s)
+
+        star_t(const pixel::f2::point_t& p0, const float r, const float g)
+        : body(p0, r), g0(g) {}
+
+        void draw(){
+            body.draw(true);
+        }
+
+        pixel::f2::vec_t gravity(const pixel::f2::point_t& p) {
+            const pixel::f2::vec_t v = body.center - p;
+            const float d = v.length();
+
+            float g1;
+            if( pixel::is_zero(d) ) {
+                g1 = g0;
+            } else {
+                g1 = g0 /(d*d);
+            }
+            return v / d * g1; // normalize(len=1): v / d; scale to g1 len
+            // return pixel::f2::vec_t::from_length_angle(g1, v.angle());
+        }
+};
+
+star_t star(pixel::f2::point_t(0, 0), 0.1f, 0.1f);
+
 const float field_width = 4.0f;
 const float field_height = 3.0f;
 const float diff_bounce = 0.075f;
@@ -303,7 +332,21 @@ class spaceship_t : public pixel::f2::linestrip_t {
         }
 
         bool tick(const float dt) noexcept {
+          //  pixel::f2::point_t p0 = p_center;
+          //  pixel::f2::vec_t v0 = velocity;
+            pixel::f2::vec_t g = star.gravity(p_center);
+            velocity += g * dt;
             move(velocity * dt);
+         /*   std::cout << "p0 " << p0.toString()
+                      << ", g " << g.toString()
+                      << ", v " << v0.toString()
+                      << " -> p1 " << p_center.toString()
+                      << ", v1 " << velocity.toString()
+                      << std::endl;*/
+            float d = (p_center - star.body.center).length();
+            if( d <= star.body.radius ){
+                return false;
+            }
             if( p_center.x < pixel::cart_coord.min_x() ) {
                 move(pixel::cart_coord.max_x()-p_center.x, 0.0f);
             }
@@ -452,14 +495,14 @@ int main(int argc, char *argv[])
 
     const pixel::f2::point_t p0_ss1 = { pixel::cart_coord.min_x()+pixel::cart_coord.width()/4.0f, 0.0f };
     const pixel::f2::point_t p0_ss2 = { pixel::cart_coord.min_x()+pixel::cart_coord.width()*3.0f/4.0f, 0.0f };
-
+    const int anstroid_count = 5;
     spaceship_ref_t ship_l;
     if( !one_player ) {
         ship_l = make_spaceship1(p0_ss1);
     }
     spaceship_ref_t ship_r = make_spaceship1(p0_ss2);
 
-    reset_asteroids(5);
+    reset_asteroids(anstroid_count);
     {
         const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
         if( debug_gfx ) {
@@ -473,6 +516,7 @@ int main(int argc, char *argv[])
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
 
     pixel::input_event_t event;
+    int level = 1;
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
         pixel::handle_events(event);
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
@@ -490,18 +534,20 @@ int main(int argc, char *argv[])
             const float ship_r_v_abs = ship_r->velocity.length();
             hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+
                           ", v "+std::to_string(ship_r_v_abs)+
-                          " [m/s], fps "+std::to_string(pixel::get_gpu_fps()));
+                          " [m/s], fps "+std::to_string(pixel::get_gpu_fps())+
+                          ", "+std::to_string(level)+". Level");
         } else {
             hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+
                           ", KAPUTT, fps "+std::to_string(pixel::get_gpu_fps()));
         }
 
         if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
+            level = 1;
             ship_r = make_spaceship1(p0_ss2);
             if( !one_player ) {
                 ship_l = make_spaceship1(p0_ss1);
             }
-            reset_asteroids(5);
+            reset_asteroids(anstroid_count);
         }
         if( nullptr != ship_r && event.has_any_p1() ) {
             if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
@@ -528,7 +574,8 @@ int main(int argc, char *argv[])
         }
 
         if( 0 == fragments.size() ) {
-            reset_asteroids(5);
+            reset_asteroids(anstroid_count);
+            ++level;
         }
 
         pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
@@ -539,6 +586,7 @@ int main(int argc, char *argv[])
             ship_r->draw();
         }
 
+        star.draw();
         fflush(nullptr);
         pixel::swap_pixel_fb(false);
         if( nullptr != hud_text ) {
