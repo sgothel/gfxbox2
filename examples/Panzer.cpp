@@ -20,18 +20,21 @@
 class peng_t {
 public:
     constexpr static const float diag = 1.0f * 25.0f / 2.0f ;
-    float velo;
-    float angle;
+    pixel::f2::vec_t velo; // [m/s]
     pixel::f2::rect_t peng;
 
-    peng_t(const pixel::f2::point_t& p0, const float v, const float angle_)
-    : velo(v * 3), angle(angle_),
+    peng_t(const pixel::f2::point_t& p0, const float v, const float angle)
+    : velo( pixel::f2::point_t::from_length_angle(v, angle) ),
       peng(p0 + pixel::f2::point_t(-diag/2, +diag/2), diag, diag, angle)
+    { }
+    peng_t(const pixel::f2::point_t& p0, const pixel::f2::vec_t& v)
+    : velo( v ),
+      peng(p0 + pixel::f2::point_t(-diag/2, +diag/2), diag, diag, v.angle())
     { }
 
     bool tick(const float dt) noexcept {
-        velo -= 0.001f;
-        peng.move( pixel::f2::point_t::from_length_angle(velo * dt, angle) );
+        velo.add(-0.0001f, -0.0001f);
+        peng.move( velo * dt );
         return true;
     }
 
@@ -44,9 +47,7 @@ public:
     }
 
     bool on_screen(){
-        const pixel::f2::point_t& center = peng.p_center;
-        return center.x > pixel::cart_coord.min_x() || center.x < pixel::cart_coord.max_x() ||
-                center.y > pixel::cart_coord.min_y() || center.y < pixel::cart_coord.max_y();
+        return peng.on_screen();
     }
     bool intersection(const peng_t& o) const {
         return peng.intersects(o.peng);
@@ -58,7 +59,7 @@ public:
     constexpr static const float velo_0 = 10.0f; // 10 pixel pro s
     constexpr static const float velo_max = 200.0f; // 10 pixel pro s
     constexpr static const float peng_velo_0 = 100.0f; // 10 pixel pro s
-    constexpr static const int vorrat_max = 50; // 45 pengs
+    constexpr static const int peng_inventory_max = 50; // 45 pengs
 
     constexpr static const float length = 100.0f;
     constexpr static const float width = length*0.6f;
@@ -77,19 +78,19 @@ public:
     pixel::f2::rect_t body;
     pixel::f2::rect_t barrel;
     std::vector<peng_t> pengs;
-    int vorrat;
+    int peng_inventory;
 
     Panzer(pixel::f2::point_t sp_)
     : sp(sp_), velo(velo_0),
       body(body_tl(sp), width, length, 0),
       barrel( barrel_tl( sp ), barrel_l, barrel_w, 0 ),
-      vorrat(vorrat_max)
+      peng_inventory(peng_inventory_max)
     {
         rotate_barrel(M_PI_2);
     }
 
     void reset(const bool e = true) noexcept {
-        vorrat = vorrat_max;
+        peng_inventory = peng_inventory_max;
         velo = velo_0;
         body = pixel::f2::rect_t(body_tl(sp), width, length, 0);
         barrel = pixel::f2::rect_t( barrel_tl( sp ), barrel_l, barrel_w, 0);
@@ -116,14 +117,13 @@ public:
     }
 
     void peng() noexcept {
-        if(vorrat > 0){
+        if(peng_inventory > 0){
             pixel::f2::point_t p0 = center() +
                                     pixel::f2::point_t::from_length_angle(barrel_l + 0.001f, barrel.dir_angle);
             pengs.push_back( peng_t(p0, velo + peng_velo_0, barrel.dir_angle) );
-            --vorrat;
+            --peng_inventory;
         }
     }
-
     size_t peng_count() const noexcept { return pengs.size(); }
 
     /**
@@ -161,7 +161,7 @@ public:
 
         for(auto it = pengs.begin(); it != pengs.end(); ) {
             peng_t& p = *it;
-            if(p.on_screen() && p.velo > 0){
+            if(p.on_screen() && p.velo.length_sq() > 0){
                 p.tick(dt);
                 ++it;
             } else {
@@ -269,7 +269,7 @@ int main(int argc, char *argv[])
             texts.push_back( pixel::make_text(tl_text, 0,
                     "fps "+std::to_string(fps)+", "+(event.paused()?"paused":"animating"), text_color));
             texts.push_back( pixel::make_text(tl_text, 1,
-                    "Pengs: Tron "+std::to_string(p1.vorrat)+", MCP "+std::to_string(p2.vorrat), text_color));
+                    "Pengs: Tron "+std::to_string(p1.peng_inventory)+", MCP "+std::to_string(p2.peng_inventory), text_color));
             texts.push_back( pixel::make_text(tl_text, 2,
                     "Punkte: Tron "+std::to_string(a1)+", MCP "+std::to_string(a2), text_color));
         }
