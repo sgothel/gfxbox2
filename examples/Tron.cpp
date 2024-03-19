@@ -173,6 +173,12 @@ int main(int argc, char *argv[])
         const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
         const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
         t_last = t1;
+        if( event.released_and_clr(pixel::input_event_type_t::RESET) ){
+            p1.reset();
+            p2.reset();
+            a1 = 0;
+            a2 = 0;
+        }
         if( event.has_any_p1() ) {
             if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) && p1.velo < 3000.0f) {
                 p1.changeSpeed(1.10f);
@@ -182,14 +188,8 @@ int main(int argc, char *argv[])
                 p1.rotate(M_PI_2);
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
                 p1.rotate(-M_PI_2);
-            } else if( event.pressed_and_clr(pixel::input_event_type_t::RESET) ){
-                p1.reset();
-                p2.reset();
-                a1 = 0;
-                a2 = 0;
             }
         }
-
         if( event.has_any_p2() ) {
             if( event.pressed_and_clr(pixel::input_event_type_t::P2_UP) && p2.velo < 3000.0f) {
                 p2.changeSpeed(1.10f);

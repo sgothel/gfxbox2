@@ -280,7 +280,7 @@ int main(int argc, char *argv[])
         const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
         t_last = t1;
         if( !event.paused() ) {
-            if( event.pressed(pixel::input_event_type_t::RESET) ) {
+            if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
                 p1.reset();
                 p2.reset();
                 a1 = 0;
