@@ -120,12 +120,14 @@ void pixel::draw_grid(float raster_sz,
 }
 
 pixel::texture_ref pixel::make_text(const pixel::f2::point_t& tl, const int lineno,
-                                    const std::string& text,
-                                    const pixel::f4::vec_t& color) noexcept {
+                                    const pixel::f4::vec_t& color, const int font_height_usr,
+                                    const std::string& text) noexcept {
     pixel::set_pixel_color4f(color.x, color.y, color.z, color.w);
     pixel::texture_ref tex = pixel::make_text_texture(text.c_str());
+    tex->dest_sx = (float)font_height_usr / (float)font_height;
+    tex->dest_sy = (float)font_height_usr / (float)font_height;
     tex->dest_x = pixel::cart_coord.to_fb_x(tl.x);
-    tex->dest_y = pixel::cart_coord.to_fb_y(tl.y - (int)std::round(lineno * font_height * 1.15f));
+    tex->dest_y = pixel::cart_coord.to_fb_y(tl.y - (int)std::round(lineno * font_height_usr * 1.15f));
     return tex;
 }
 

@@ -367,12 +367,16 @@ namespace pixel {
             int dest_x;
             /** dest texture pos-y */
             int dest_y;
+            /** dest texture scale-x */
+            float dest_sx;
+            /** dest texture scale-y */
+            float dest_sy;
 
             texture_t(void* data_, const int x_, const int y_, const int width_, const int height_) noexcept
-            : data(data_), x(x_), y(y_), width(width_), height(height_), dest_x(0), dest_y(0) {}
+            : data(data_), x(x_), y(y_), width(width_), height(height_), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
             texture_t() noexcept
-            : data(nullptr), x(0), y(0), width(0), height(0), dest_x(0), dest_y(0) {}
+            : data(nullptr), x(0), y(0), width(0), height(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
             texture_t(const texture_t&) = delete;
             void operator=(const texture_t&) = delete;
@@ -404,9 +408,15 @@ namespace pixel {
     texture_ref make_text_texture(const std::string& text) noexcept;
 
 
-    texture_ref make_text(const pixel::f2::point_t& origin, const int lineno,
-                          const std::string& text,
-                          const pixel::f4::vec_t& color) noexcept;
+    texture_ref make_text(const pixel::f2::point_t& tl, const int lineno,
+                          const pixel::f4::vec_t& color, const int font_height_usr,
+                          const std::string& text) noexcept;
+
+    inline texture_ref make_text(const pixel::f2::point_t& tl, const int lineno,
+                          const pixel::f4::vec_t& color,
+                          const std::string& text) noexcept {
+        return make_text(tl, lineno, color, font_height, text);
+    }
 
     //
     // input

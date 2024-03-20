@@ -217,7 +217,7 @@ void pixel::texture_t::draw(const int x_pos, const int y_pos, const float scale_
         SDL_Rect src = { .x=x, .y=y, .w=width, .h=height};
         SDL_Rect dest = { .x=x_pos + dest_x,
                           .y=y_pos + dest_y,
-                          .w=round_to_int(width*scale_x), .h=round_to_int(height*scale_y) };
+                          .w=round_to_int(width*dest_sx*scale_x), .h=round_to_int(height*dest_sy*scale_y) };
         SDL_RenderCopy(sdl_rend, tex, &src, &dest);
     }
 }

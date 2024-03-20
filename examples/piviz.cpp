@@ -445,8 +445,8 @@ int main(int argc, char *argv[])
         anim2 = animating && demo_index == 2;
         float fps = pixel::get_gpu_fps();
         texts.push_back( pixel::make_text(
-                point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), 0,
-                "fps "+std::to_string(fps), text_color) );
+                point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), 0, text_color,
+                "fps "+std::to_string(fps)) );
 
         const float max_radius = pixel::cart_coord.max_y() * 0.9f;
 
@@ -518,16 +518,16 @@ int main(int argc, char *argv[])
             case 0: {
                 point_t text_pos(-200, pixel::cart_coord.max_y());
                 int a = 6;
-                texts.push_back( pixel::make_text(text_pos, 0, "INNHALTSVERZEICHNIS", text_color));
+                texts.push_back( pixel::make_text(text_pos, 0, text_color, "INNHALTSVERZEICHNIS"));
                 text_pos.add(-230, enter * a);
-                texts.push_back( pixel::make_text(text_pos, 0, "1. . . . . . . . . . . . . . . . . . . . ."
-                        " . . . . . . . . . . . . . . . . . . . . 2*PI*r Ausgerollt", text_color));
+                texts.push_back( pixel::make_text(text_pos, 0, text_color, "1. . . . . . . . . . . . . . . . . . . . ."
+                        " . . . . . . . . . . . . . . . . . . . . 2*PI*r Ausgerollt"));
                 text_pos.add(0, enter * a);
-                texts.push_back( pixel::make_text(text_pos, 0, "2. . . . . . . . . . . . . . . . . . . . ."
-                        "  . . . Einheitskreis 2*PI Sinus & Cosinus", text_color));
+                texts.push_back( pixel::make_text(text_pos, 0, text_color, "2. . . . . . . . . . . . . . . . . . . . ."
+                        "  . . . Einheitskreis 2*PI Sinus & Cosinus"));
                 text_pos.add(0, enter * a);
-                texts.push_back( pixel::make_text(text_pos, 0, "3. . . . . . . . . . . . . . . . . . . . ."
-                        " . . . . . .PI Annaehrung nach Archimedes", text_color));
+                texts.push_back( pixel::make_text(text_pos, 0, text_color, "3. . . . . . . . . . . . . . . . . . . . ."
+                        " . . . . . .PI Annaehrung nach Archimedes"));
             }
             break;
             case 1: {
@@ -537,22 +537,22 @@ int main(int argc, char *argv[])
                 draw_circle_unroll(point_t(pixel::cart_coord.min_x() + radius, 0),
                         radius, 10, off_pct);
                 point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
-                texts.push_back( pixel::make_text(text_pos4, 0, "2*PI*r Ausgerollt", text_color) );
+                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "2*PI*r Ausgerollt") );
                 text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, "u = umfang, r = radius, d = durchmesser", text_color) );
+                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "u = umfang, r = radius, d = durchmesser") );
                 text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, "u = 2 * PI * Radius", text_color) );
+                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "u = 2 * PI * Radius") );
                 text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, "PI = u / 2 * r", text_color) );
+                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "PI = u / 2 * r") );
                 text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, "d = 2 * r", text_color) );
-                texts.push_back( pixel::make_text(text_pos2, 0, "PI = "+std::to_string(PI), text_color) );
+                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "d = 2 * r") );
+                texts.push_back( pixel::make_text(text_pos2, 0, text_color, "PI = "+std::to_string(PI)) );
                 text_pos2.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos2, 0, "u = "+std::to_string(Umfang), text_color) );
+                texts.push_back( pixel::make_text(text_pos2, 0, text_color, "u = "+std::to_string(Umfang)) );
                 text_pos2.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos2, 0, "r = "+std::to_string(radius), text_color) );
+                texts.push_back( pixel::make_text(text_pos2, 0, text_color, "r = "+std::to_string(radius)) );
                 text_pos2.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos2, 0, "d = "+std::to_string(radius * 2), text_color) );
+                texts.push_back( pixel::make_text(text_pos2, 0, text_color, "d = "+std::to_string(radius * 2)) );
                 if( anim1 && !m1/*&& !manual*/ ) {
                     if(off_pct < 1.3f){
                         off_pct += 0.005f;
@@ -566,16 +566,15 @@ int main(int argc, char *argv[])
                 draw_sin_cos_graph(max_radius, ang_rad, angrad_inc, plot_inc);
                 draw_sin_cos(origin, max_radius, ang_rad, 5);
                 point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
-                texts.push_back( pixel::make_text(text_pos4, 0, "Einheitskreis 2*PI Sinus & Cosinus", text_color) );
+                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Einheitskreis 2*PI Sinus & Cosinus") );
                 float cosval = cos(ang_rad);
                 float sinval = sin(ang_rad);
                 text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, "Cosinus = "+std::to_string(cosval), text_color) );
+                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Cosinus = "+std::to_string(cosval)) );
                 text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, "Sinus = "+std::to_string(sinval), text_color) );
+                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Sinus = "+std::to_string(sinval)) );
                 text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, "Winkel (Grad) = "+std::to_string(ang_grad),
-                        text_color) );
+                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Winkel (Grad) = "+std::to_string(ang_grad)) );
                 if( anim2 && !m2/*&& !manual*/ ){
                     ang_rad += angrad_inc;
                 }
@@ -588,21 +587,21 @@ int main(int argc, char *argv[])
                 draw_circumferenceInner(origin, max_radius, circum_corners);
                 draw_circumferenceOutter(origin, max_radius, circum_corners);
                 point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
-                texts.push_back( pixel::make_text(text_pos3, 0, "PI Annaehrung nach Archimedes", text_color) );
+                texts.push_back( pixel::make_text(text_pos3, 0, text_color, "PI Annaehrung nach Archimedes") );
                 const double d = 2.0f*max_radius;
                 const double ci = circumferenceInner(max_radius, circum_corners);
                 const double co = circumferenceOutter(max_radius, circum_corners);
                 const double pi_i = ci/d;
                 const double pi_o = co/d;
                 text_pos3.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos3, 0, "Ecken "+std::to_string(circum_corners)+
-                        ", d "+std::to_string(d), text_color) );
+                texts.push_back( pixel::make_text(text_pos3, 0, text_color, "Ecken "+std::to_string(circum_corners)+
+                        ", d "+std::to_string(d)) );
                 text_pos3.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos3, 0, "Innen : U "+std::to_string(ci)+
-                        ", PI "+std::to_string(pi_i), text_color) );
+                texts.push_back( pixel::make_text(text_pos3, 0, text_color, "Innen : U "+std::to_string(ci)+
+                        ", PI "+std::to_string(pi_i)) );
                 text_pos3.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos3, 0, "Aussen : U "+std::to_string(co)+
-                        ", PI "+std::to_string(pi_o), text_color) );
+                texts.push_back( pixel::make_text(text_pos3, 0, text_color, "Aussen : U "+std::to_string(co)+
+                        ", PI "+std::to_string(pi_o)) );
             }
             [[fallthrough]];
             default:

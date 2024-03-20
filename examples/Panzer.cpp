@@ -236,7 +236,8 @@ int main(int argc, char *argv[])
 
     std::vector<pixel::texture_ref> texts;
     pixel::f2::point_t origin(0, 0);
-    pixel::f4::vec_t text_color(0, 0, 0, 1);
+    const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
+    const pixel::f4::vec_t text_color(0, 0, 0, 1);
 
     pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
     {
@@ -258,7 +259,6 @@ int main(int argc, char *argv[])
     pixel::input_event_t event;
 
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
         if( pixel::handle_events(event) ) {
             // std::cout << "Event " << pixel::to_string(event) << std::endl;
         }
@@ -266,15 +266,15 @@ int main(int argc, char *argv[])
 
         if( true ) {
             float fps = pixel::get_gpu_fps();
-            texts.push_back( pixel::make_text(tl_text, 0,
-                    "fps "+std::to_string(fps)+", "+(event.paused()?"paused":"animating"), text_color));
-            texts.push_back( pixel::make_text(tl_text, 1,
+            texts.push_back( pixel::make_text(tl_text, 0, text_color,
+                    "fps "+std::to_string(fps)+", "+(event.paused()?"paused":"animating")));
+            texts.push_back( pixel::make_text(tl_text, 1, text_color,
                     "Pengs Velocity [pixel pro sec] = Velocity + 100 | Pengs: Tron "
                     +std::to_string(p1.peng_inventory)+
-                    ", MCP "+std::to_string(p2.peng_inventory), text_color));
-            texts.push_back( pixel::make_text(tl_text, 2,
+                    ", MCP "+std::to_string(p2.peng_inventory)));
+            texts.push_back( pixel::make_text(tl_text, 2, text_color,
                     "Velocity [pixel pro sec]: Tron "+std::to_string(p1.velo)+", MCP "+std::to_string(p2.velo)+
-                    " | Score: Tron "+std::to_string(a1)+", MCP "+std::to_string(a2), text_color));
+                    " | Score: Tron "+std::to_string(a1)+", MCP "+std::to_string(a2)));
         }
 
         // white background

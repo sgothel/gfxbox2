@@ -160,13 +160,13 @@ int main(int argc, char *argv[])
             }
         const bool animating = !event.paused();
         float fps = pixel::get_gpu_fps();
-        texts.push_back( pixel::make_text(tl_text, 0,
-                "fps "+std::to_string(fps)+", "+(animating?"animating":"paused"), text_color));
-        texts.push_back( pixel::make_text(tl_text, 1,
+        texts.push_back( pixel::make_text(tl_text, 0, text_color,
+                "fps "+std::to_string(fps)+", "+(animating?"animating":"paused")));
+        texts.push_back( pixel::make_text(tl_text, 1, text_color,
                 "Velocity: Tron "+std::to_string(p1.velo)+
                 ", MCP "+std::to_string(p2.velo)+
                 " | Score: Tron "+std::to_string(a1)+
-                ", MCP "+std::to_string(a2), text_color));
+                ", MCP "+std::to_string(a2)));
 
         // white background
         pixel::clear_pixel_fb( 255, 255, 255, 255);
