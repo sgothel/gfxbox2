@@ -406,13 +406,16 @@ class spaceship_t : public pixel::f2::linestrip_t {
             return !hit;
         }
 
-        void set_orbit_velocity() {
+        void set_orbit_velocity() noexcept {
+            velocity = orbit_velocity();
+        }
+        pixel::f2::vec_t orbit_velocity() const noexcept {
             // g = v^2/d
             pixel::f2::vec_t v_d = sun->body.center - p_center;
             const float d = v_d.length();
             pixel::f2::vec_t g = sun->gravity_ships(p_center);
             const float v0 = std::sqrt( g.length() * d );
-            velocity = g.normalize().rotate(-M_PI_2) * v0;
+            return g.normalize().rotate(-M_PI_2) * v0;
         }
 
         void draw() const noexcept override {
@@ -420,6 +423,9 @@ class spaceship_t : public pixel::f2::linestrip_t {
             if( debug_gfx ) {
                 pixel::set_pixel_color(rgba_yellow);
                 pixel::f2::lineseg_t::draw(p_center, p_center+velocity);
+                pixel::set_pixel_color(rgba_red);
+                pixel::f2::vec_t v_o = orbit_velocity();
+                pixel::f2::lineseg_t::draw(p_center, p_center+v_o);
                 pixel::set_pixel_color(rgba_white);
             }
             for(auto it = pengs.begin(); it != pengs.end(); ++it) {
