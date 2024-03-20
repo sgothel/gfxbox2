@@ -1496,6 +1496,20 @@ namespace pixel::f2 {
         : p_list(), p_center(center), dir_angle(angle) {
         }
 
+        void normalize_center() noexcept {
+            point_t c;
+            int n = 0;
+            for(size_t i=0; i<p_list.size()-1; ++i) {
+                c += p_list[i];
+                n++;
+            }
+            // skip first == last case
+            if( p_list[p_list.size()-1] != p_list[0] ) {
+                c += p_list[p_list.size()-1];
+                n++;
+            }
+            this->p_center = c / n;
+        }
 
         aabbox_t box() const noexcept override {
             aabbox_t box;
