@@ -627,17 +627,8 @@ int main(int argc, char *argv[])
                 } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
                     ship_r->rotate_adeg(-spaceship_t::rot_step * dt);
                 } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION1) ) {
-                    pixel::f2::vec_t v_d0 = ship_r->p_center - sun->body.center;
-                    pixel::f2::vec_t v_d1 = v_d0.normalize() * ( v_d0.length() - spaceship_height/2 );
-                    pixel::f2::point_t p1 = sun->body.center + v_d1;
-                    ship_r->move(p1 - ship_r->p_center);
-                    ship_r->set_orbit_velocity();
-                    // ship_r->peng();
+                    ship_r->peng();
                 } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
-                    pixel::f2::vec_t v_d0 = ship_r->p_center - sun->body.center;
-                    pixel::f2::vec_t v_d1 = v_d0.normalize() * ( v_d0.length() + spaceship_height/2 );
-                    pixel::f2::point_t p1 = sun->body.center + v_d1;
-                    ship_r->move(p1 - ship_r->p_center);
                     ship_r->set_orbit_velocity();
                 }
             }
