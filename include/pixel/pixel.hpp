@@ -335,7 +335,7 @@ namespace pixel {
         draw_color = pixel::rgba_to_uint32(r, g, b, a);
     }
     /** Set current pixel draw color */
-    inline void set_pixel_color(uint8_t rgba[/*4*/]) noexcept {
+    inline void set_pixel_color(const uint8_t rgba[/*4*/]) noexcept {
         draw_color = pixel::rgba_to_uint32(rgba[0], rgba[1], rgba[2], rgba[3]);
     }
     inline float clip_byte(float v) { return std::max<float>(0.0f, std::min(255.0f, v)); }
