@@ -73,14 +73,14 @@ class star_t {
         }
         /** Returns star's gravity [m/s^2] impact on given position. */
         pixel::f2::vec_t gravity(const pixel::f2::point_t& p, const float g0) {
-            pixel::f2::vec_t v = body.center - p;
-            const float d = v.length();
+            pixel::f2::vec_t v_d = body.center - p;
+            const float d = v_d.length();
             if( pixel::is_zero(d) ) {
                 return pixel::f2::vec_t();
             } else {
                 // v.normalize() -> v / d
-                // return v / d * ( g0 /(d*d) );
-                return ( v /= d ) *= ( g0 /(d*d) ); // same as above but reusing vector 'v'
+                // return v.normalize() * ( g0 / ( d * d ) );
+                return ( v_d /= d ) *= ( g0 / ( d * d ) ); // same as above but reusing vector 'v'
             }
         }
 
@@ -346,9 +346,6 @@ class spaceship_t : public pixel::f2::linestrip_t {
         pixel::f2::vec_t velocity; // [m/s]
         std::vector<peng_t> pengs;
         int peng_inventory;
-        pixel::f2::vec_t v_orbit; // [m/s]
-        pixel::f2::vec_t v_0; // [m/s]
-        pixel::f2::vec_t v_g; // [m/s]
 
         spaceship_t(const pixel::f2::point_t& center, const float angle) noexcept
         : linestrip_t(center, angle), velocity(), peng_inventory(peng_inventory_max)
@@ -377,9 +374,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
 
         bool tick(const float dt) noexcept {
             pixel::f2::vec_t g = sun->gravity_ships(p_center);
-            v_0 = velocity;
-            v_g = g * dt;
-            velocity += v_g;
+            velocity += g * dt;
             move(velocity * dt);
             if( sun->hit(p_center) ) {
                 return false;
@@ -411,21 +406,20 @@ class spaceship_t : public pixel::f2::linestrip_t {
             return !hit;
         }
 
-        void velo_orbit(const float dt){
-            velocity = (sun->gravity_ships(p_center) *= dt).rotate(-M_PI_2);
-            v_orbit = velocity;
+        void set_orbit_velocity() {
+            // g = v^2/d
+            pixel::f2::vec_t v_d = sun->body.center - p_center;
+            const float d = v_d.length();
+            pixel::f2::vec_t g = sun->gravity_ships(p_center);
+            const float v0 = std::sqrt( g.length() * d );
+            velocity = g.normalize().rotate(-M_PI_2) * v0;
         }
+
         void draw() const noexcept override {
             linestrip_t::draw();
             if( debug_gfx ) {
-                pixel::set_pixel_color(rgba_red);
-                // pixel::f2::lineseg_t::draw(p_center, p_center+v_orbit);
-                pixel::f2::lineseg_t::draw(p_center, p_center+v_0);
-                pixel::set_pixel_color(rgba_green);
-                pixel::f2::lineseg_t::draw(p_center, p_center+v_g);
                 pixel::set_pixel_color(rgba_yellow);
                 pixel::f2::lineseg_t::draw(p_center, p_center+velocity);
-                // pixel::f2::lineseg_t::draw(sun->body.center, p_center);
                 pixel::set_pixel_color(rgba_white);
             }
             for(auto it = pengs.begin(); it != pengs.end(); ++it) {
@@ -562,13 +556,15 @@ int main(int argc, char *argv[])
                                    sun_gravity * sun_gravity_scale_env,
                                    sun_gravity * sun_gravity_scale_ships);
 
-    const pixel::f2::point_t p0_ssl = { -6, -6 };
-    pixel::f2::point_t p0_ssr = { 6, 6 };
-    spaceship_ref_t ship_l;
-    if( !one_player ) {
-        ship_l = make_spaceship1(p0_ssl * spaceship_height);
+    const pixel::f2::point_t p0_ssl = { -6 * spaceship_height, -6 * spaceship_height };
+    const pixel::f2::point_t p0_ssr = {  6 * spaceship_height,  6 * spaceship_height };
+    spaceship_ref_t ship_l, ship_r;
+    {
+        if( !one_player ) {
+            ship_l = make_spaceship1(p0_ssl);
+        }
+        ship_r = make_spaceship1(p0_ssr);
     }
-    spaceship_ref_t ship_r = make_spaceship1(p0_ssr * spaceship_height);
 
     reset_asteroids(asteroid_count);
 
@@ -577,9 +573,9 @@ int main(int argc, char *argv[])
 
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
 
-    ship_r->velo_orbit(std::abs(p0_ssr.x) / 2);
+    ship_r->set_orbit_velocity();
     if(!one_player){
-        ship_l->velo_orbit(std::abs(p0_ssl.x) / 2);
+        ship_l->set_orbit_velocity();
     }
     pixel::input_event_t event;
     int level = 1;
@@ -617,9 +613,9 @@ int main(int argc, char *argv[])
                 ship_l = make_spaceship1(p0_ssl);
             }
             reset_asteroids(asteroid_count);
-            ship_r->velo_orbit(std::abs(p0_ssr.x) / 2);
+            ship_r->set_orbit_velocity();
             if(!one_player){
-                ship_l->velo_orbit(std::abs(p0_ssl.x) / 2);
+                ship_l->set_orbit_velocity();
             }
         }
         if( animating ) {
@@ -631,16 +627,18 @@ int main(int argc, char *argv[])
                 } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
                     ship_r->rotate_adeg(-spaceship_t::rot_step * dt);
                 } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION1) ) {
-                    p0_ssr.add(-0.5f, -0.5f);
-                    pixel::f2::point_t p1 = p0_ssr * spaceship_height;
+                    pixel::f2::vec_t v_d0 = ship_r->p_center - sun->body.center;
+                    pixel::f2::vec_t v_d1 = v_d0.normalize() * ( v_d0.length() - spaceship_height/2 );
+                    pixel::f2::point_t p1 = sun->body.center + v_d1;
                     ship_r->move(p1 - ship_r->p_center);
-                    ship_r->velo_orbit( p0_ssr.x / 2 );
+                    ship_r->set_orbit_velocity();
                     // ship_r->peng();
                 } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
-                    p0_ssr.add(+0.5f, +0.5f);
-                    pixel::f2::point_t p1 = p0_ssr * spaceship_height;
+                    pixel::f2::vec_t v_d0 = ship_r->p_center - sun->body.center;
+                    pixel::f2::vec_t v_d1 = v_d0.normalize() * ( v_d0.length() + spaceship_height/2 );
+                    pixel::f2::point_t p1 = sun->body.center + v_d1;
                     ship_r->move(p1 - ship_r->p_center);
-                    ship_r->velo_orbit( p0_ssr.x / 2 );
+                    ship_r->set_orbit_velocity();
                 }
             }
             for(auto it=fragments.begin(); it != fragments.end(); ) {
