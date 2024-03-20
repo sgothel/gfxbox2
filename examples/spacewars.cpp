@@ -30,40 +30,62 @@
 #include <algorithm>
 #include <random>
 
+constexpr static const float spaceship_height = 10.0f; // [m]
+constexpr static const float space_height = spaceship_height*30.0f; // [m]
+constexpr static const float sun_gravity = 28 * 10.0f; // [m/s^2]
+static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
+static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
+static bool debug_gfx = false;
+
 class star_t {
     public:
+        const float r0;
+        const float g0_env, g0_ships; // [m/s^2]
         pixel::f2::disk_t body;
-        const float g0; // m/(s*s)
+        float dr_dir = 1;
 
-        star_t(const pixel::f2::point_t& p0, const float r, const float g)
-        : body(p0, r), g0(g) {}
+        star_t(const pixel::f2::point_t& p0, const float r, const float g_env, const float g_ships)
+        : r0(r), g0_env(g_env), g0_ships(g_ships), body(p0, r) {}
 
-        void draw(){
+        bool tick(const float dt) noexcept {
+            const float dr_min = r0 * 0.95f;
+            const float dr_max = r0 * 1.05f;
+            const float r = body.radius + r0 * 0.1f * dt * dr_dir;
+            if( dr_min > r || r > dr_max ) {
+                dr_dir *= -1;
+            }
+            body.radius = r;
+            return true;
+        }
+        void draw() {
             body.draw(true);
         }
 
-        pixel::f2::vec_t gravity(const pixel::f2::point_t& p) {
+        pixel::f2::vec_t gravity_env(const pixel::f2::point_t& p) {
+            return gravity(p, g0_env);
+        }
+        pixel::f2::vec_t gravity_ships(const pixel::f2::point_t& p) {
+            return gravity(p, g0_ships);
+        }
+        pixel::f2::vec_t gravity(const pixel::f2::point_t& p, const float g0) {
             const pixel::f2::vec_t v = body.center - p;
             const float d = v.length();
-
-            float g1;
             if( pixel::is_zero(d) ) {
-                g1 = g0;
+                return pixel::f2::vec_t();
             } else {
-                g1 = g0 /(d*d);
+                // v.normalize() -> v / d
+                return v / d * ( g0 /(d*d) );
             }
-            return v / d * g1; // normalize(len=1): v / d; scale to g1 len
-            // return pixel::f2::vec_t::from_length_angle(g1, v.angle());
+        }
+
+        bool hit(const pixel::f2::point_t& c) const noexcept {
+            return (c - body.center).length() <= body.radius;
         }
 };
 
-star_t star(pixel::f2::point_t(0, 0), 0.1f, 0.1f);
+typedef std::shared_ptr<star_t> star_ref_t;
 
-const float field_width = 4.0f;
-const float field_height = 3.0f;
-const float diff_bounce = 0.075f;
-const float rho_deaccel = 1.0f-diff_bounce; // factor
-const float pad_accel = 1.0f+diff_bounce; // factor
+star_ref_t sun;
 
 std::random_device rng;
 static const float rng_range = (float)std::random_device::max() - (float)std::random_device::min() + 1.0f;
@@ -79,11 +101,8 @@ static float next_rnd() noexcept {
     }
 }
 
-bool debug_gfx = false;
-
 class fragment_t : public pixel::f2::linestrip_t {
     public:
-        constexpr static const float accel = 0.999f;
         pixel::f2::vec_t velocity; // [m/s]
         float rotation_velocity; // [angle_radians/s]
         bool leave_on_screen_exit;
@@ -116,9 +135,13 @@ class fragment_t : public pixel::f2::linestrip_t {
         { }
 
         bool tick(const float dt) noexcept override {
-            // velocity *= accel;
+            pixel::f2::vec_t g = sun->gravity_env(p_center);
+            velocity += g * dt;
             move(velocity * dt);
             rotate(rotation_velocity * dt);
+            if( sun->hit( p_center ) ) {
+                return false;
+            }
             if( p_center.x < pixel::cart_coord.min_x() ) {
                 if( leave_on_screen_exit ) {
                     return false;
@@ -145,6 +168,15 @@ class fragment_t : public pixel::f2::linestrip_t {
             }
             return true;
         }
+
+        void draw() const noexcept override {
+            linestrip_t::draw();
+            if( debug_gfx ) {
+                pixel::set_pixel_color(rgba_yellow);
+                pixel::f2::lineseg_t::draw(p_center, p_center+velocity);
+                pixel::set_pixel_color(rgba_white);
+            }
+        }
 };
 typedef std::shared_ptr<fragment_t> fragment_ref_t;
 
@@ -167,6 +199,7 @@ void make_fragments(std::vector<fragment_ref_t>& dest,
         f->p_list.push_back(p0);
         f->p_list.push_back(p1);
         f->p_list.push_back(pc);
+        f->normalize_center();
         dest.push_back(f);
         p0 = p1;
     }
@@ -233,6 +266,8 @@ fragment_ref_t make_asteroid(const pixel::f2::point_t& center, float height,
 
     // a
     lf->p_list.push_back(a);
+
+    lf->normalize_center();
     return lf;
 }
 
@@ -255,7 +290,6 @@ bool hits_fragment(const pixel::f2::aabbox_t& box, const float velocity) noexcep
 
 class peng_t {
 public:
-    constexpr static const pixel::f2::vec_t accel = pixel::f2::vec_t(-0.0001f, -0.0001f); // [m/s]
     pixel::f2::vec_t velo; // [m/s]
     pixel::f2::rect_t peng;
 
@@ -269,10 +303,11 @@ public:
     { }
 
     bool tick(const float dt) noexcept {
-        velo += accel;
+        pixel::f2::vec_t g = sun->gravity_env(peng.p_center);
+        velo += g * dt;
         peng.move( velo * dt );
         peng.rotate(pixel::adeg_to_rad(180.0f) * dt);
-        return !hits_fragment(peng.box(), velo.length()/4);
+        return !sun->hit( peng.p_center ) && !hits_fragment(peng.box(), velo.length()/4) ;
     }
 
     void draw() const noexcept {
@@ -293,10 +328,10 @@ public:
 
 class spaceship_t : public pixel::f2::linestrip_t {
     public:
-        constexpr static const float height = 0.10f; // [m]
-        constexpr static const float vel_step = 0.1f; // [m/s]
-        constexpr static const float vel_max = 2.0f + vel_step; // [m/s]
-        constexpr static const float rot_step = 3.0f; // ang-degrees
+        constexpr static const float height = spaceship_height; // [m]
+        constexpr static const float vel_step = 5.0f; // [m/s]
+        constexpr static const float vel_max = 100.0f + vel_step; // [m/s]
+        constexpr static const float rot_step = 180.0f; // [ang-degrees / s]
 
         constexpr static const float peng_diag = 0.3f*height;
         constexpr static const float peng_velo_0 = vel_max / 2;
@@ -332,19 +367,10 @@ class spaceship_t : public pixel::f2::linestrip_t {
         }
 
         bool tick(const float dt) noexcept {
-          //  pixel::f2::point_t p0 = p_center;
-          //  pixel::f2::vec_t v0 = velocity;
-            pixel::f2::vec_t g = star.gravity(p_center);
+            pixel::f2::vec_t g = sun->gravity_ships(p_center);
             velocity += g * dt;
             move(velocity * dt);
-         /*   std::cout << "p0 " << p0.toString()
-                      << ", g " << g.toString()
-                      << ", v " << v0.toString()
-                      << " -> p1 " << p_center.toString()
-                      << ", v1 " << velocity.toString()
-                      << std::endl;*/
-            float d = (p_center - star.body.center).length();
-            if( d <= star.body.radius ){
+            if( sun->hit(p_center) ) {
                 return false;
             }
             if( p_center.x < pixel::cart_coord.min_x() ) {
@@ -376,11 +402,15 @@ class spaceship_t : public pixel::f2::linestrip_t {
 
         void draw() const noexcept override {
             linestrip_t::draw();
+            if( debug_gfx ) {
+                pixel::set_pixel_color(rgba_yellow);
+                pixel::f2::lineseg_t::draw(p_center, p_center+velocity);
+                pixel::set_pixel_color(rgba_white);
+            }
             for(auto it = pengs.begin(); it != pengs.end(); ++it) {
                 (*it).draw();
             }
         }
-
 };
 typedef std::shared_ptr<spaceship_t> spaceship_ref_t;
 std::vector<spaceship_ref_t> spaceship;
@@ -422,6 +452,7 @@ spaceship_ref_t make_spaceship1( const pixel::f2::point_t& m, const float h=spac
     p = m;
     p.y += h/2.0f;
     lf->p_list.push_back(p);
+    lf->normalize_center();
     return lf;
 }
 
@@ -431,11 +462,11 @@ void reset_asteroids(int count) {
         const float height_h = spaceship_t::height*2.0f;
         const float height = height_h + height_h*next_rnd();
         const float angle = pixel::adeg_to_rad(next_rnd() * 360.0f);
-        const float velocity = 0.1f + next_rnd() * 0.1f; // m/s
+        const float velocity = 10.0f + next_rnd() * 10.0f; // m/s
         pixel::f2::point_t p0(pixel::cart_coord.min_x()+(int)(pixel::cart_coord.width()*next_rnd()),
                               i%2 == 0 ? pixel::cart_coord.min_y()+height/2 : pixel::cart_coord.max_y()-height/2);
         fragment_ref_t asteroid1 = make_asteroid(p0, height,
-                angle, velocity,  1.0f / ( 2.0f + 6.0f * next_rnd() ) ); // 1.0f/(2.0f+i) ); // 1.0f / ( 2+next_rnd() ) );
+                angle, velocity,  1.0f / ( 4.0f + 4.0f * next_rnd() ) );
         fragments.push_back(asteroid1);
     }
 
@@ -448,7 +479,9 @@ int main(int argc, char *argv[])
     bool enable_vsync = true;
     int forced_fps = 30;
     bool one_player = true;
-    pixel::log_printf("X1\n");
+    int asteroid_count = 6;
+    int sun_gravity_scale_env = 20;    //  20 x 280 =  5600
+    int sun_gravity_scale_ships = 200; // 200 x 280 = 56000
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-2p", argv[i]) ) {
@@ -469,46 +502,54 @@ int main(int argc, char *argv[])
                 ++i;
             } else if( 0 == strcmp("-no_vsync", argv[i]) ) {
                 enable_vsync = false;
+            } else if( 0 == strcmp("-asteroids", argv[i]) && i+1<argc) {
+                asteroid_count = atoi(argv[i+1]);
+                ++i;
+            } else if( 0 == strcmp("-sung_env", argv[i]) && i+1<argc) {
+                sun_gravity_scale_env = atoi(argv[i+1]);
+                ++i;
+            } else if( 0 == strcmp("-sung_ships", argv[i]) && i+1<argc) {
+                sun_gravity_scale_ships = atoi(argv[i+1]);
+                ++i;
             }
         }
     }
     {
         const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        pixel::log_printf(elapsed_ms, "Usage %s -2p -width <int> -height <int> -record <bmp-files-basename> -debug_gfx -fps <int>\n", argv[0]);
+        pixel::log_printf(elapsed_ms, "Usage %s -2p -width <int> -height <int> -record <bmp-files-basename> -debug_gfx -fps <int> -no_vsync"
+                                      " -asteroids <int> -sung_env <int> -sung_ships <int>\n", argv[0]);
         pixel::log_printf(elapsed_ms, "- win size %d x %d\n", win_width, win_height);
         pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
         pixel::log_printf(elapsed_ms, "- forced_fps %d\n", forced_fps);
+        pixel::log_printf(elapsed_ms, "- asteroid_count %d\n", asteroid_count);
+        pixel::log_printf(elapsed_ms, "- sun_gravity_scale_env %d -> %f [m/s^2]\n", sun_gravity_scale_env, sun_gravity * sun_gravity_scale_env);
+        pixel::log_printf(elapsed_ms, "- sun_gravity_scale_ships %d -> %f [m/s^2]\n", sun_gravity_scale_ships, sun_gravity * sun_gravity_scale_ships);
     }
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
         pixel::init_gfx_subsystem("spacewars", win_width, win_height, origin_norm, enable_vsync);
     }
+    pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
 
-    // const float bullet_height = 0.02f; // [m] .. diameter
-    // const float ball_radius = ball_height/2.0f; // [m]
-    const float ship_thickness = 0.07f; // [m]
+    const pixel::f2::point_t tl_text(pixel::cart_coord.min_x() + pixel::cart_coord.width()/3, pixel::cart_coord.max_y());
+    const pixel::f4::vec_t tc_white(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
 
-    pixel::cart_coord.set_height(-field_height/2.0f, field_height/2.0f);
+    sun = std::make_shared<star_t>(pixel::f2::point_t(0, 0), spaceship_height,
+                                   sun_gravity * sun_gravity_scale_env,
+                                   sun_gravity * sun_gravity_scale_ships);
 
     const pixel::f2::point_t p0_ss1 = { pixel::cart_coord.min_x()+pixel::cart_coord.width()/4.0f, 0.0f };
     const pixel::f2::point_t p0_ss2 = { pixel::cart_coord.min_x()+pixel::cart_coord.width()*3.0f/4.0f, 0.0f };
-    const int anstroid_count = 5;
     spaceship_ref_t ship_l;
     if( !one_player ) {
         ship_l = make_spaceship1(p0_ss1);
     }
     spaceship_ref_t ship_r = make_spaceship1(p0_ss2);
 
-    reset_asteroids(anstroid_count);
-    {
-        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        if( debug_gfx ) {
-            pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
-        }
-    }
+    reset_asteroids(asteroid_count);
 
     pixel::texture_ref hud_text;
     uint64_t frame_count_total = 0;
@@ -520,10 +561,10 @@ int main(int argc, char *argv[])
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
         pixel::handle_events(event);
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
-            pixel::cart_coord.set_height(-field_height/2.0f, field_height/2.0f);
+            pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
         }
 
-        // white background
+        // black background
         pixel::clear_pixel_fb(0, 0, 0, 255);
 
         const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
@@ -532,13 +573,15 @@ int main(int argc, char *argv[])
 
         if(nullptr != ship_r){
             const float ship_r_v_abs = ship_r->velocity.length();
-            hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+
-                          ", v "+std::to_string(ship_r_v_abs)+
-                          " [m/s], fps "+std::to_string(pixel::get_gpu_fps())+
-                          ", "+std::to_string(level)+". Level");
+            hud_text = pixel::make_text(tl_text, 0, tc_white, 20,
+                  "td "+pixel::to_decstring(t1, ',', 9)+
+                  ", v "+std::to_string(ship_r_v_abs)+
+                  " [m/s], fps "+std::to_string(pixel::get_gpu_fps())+
+                  ", Level "+std::to_string(level));
         } else {
-            hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+
-                          ", KAPUTT, fps "+std::to_string(pixel::get_gpu_fps()));
+            hud_text = pixel::make_text(tl_text, 0, tc_white, 20,
+                  "td "+pixel::to_decstring(t1, ',', 9)+
+                  ", KAPUTT, fps "+std::to_string(pixel::get_gpu_fps()));
         }
 
         if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
@@ -547,15 +590,15 @@ int main(int argc, char *argv[])
             if( !one_player ) {
                 ship_l = make_spaceship1(p0_ss1);
             }
-            reset_asteroids(anstroid_count);
+            reset_asteroids(asteroid_count);
         }
         if( nullptr != ship_r && event.has_any_p1() ) {
             if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
                 ship_r->velo_up(spaceship_t::vel_step);
             } else if( event.pressed(pixel::input_event_type_t::P1_LEFT) ){
-                ship_r->rotate_adeg(spaceship_t::rot_step);
+                ship_r->rotate_adeg(spaceship_t::rot_step * dt);
             } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
-                ship_r->rotate_adeg(-spaceship_t::rot_step);
+                ship_r->rotate_adeg(-spaceship_t::rot_step * dt);
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION1) ) {
                 ship_r->peng();
             }
@@ -574,11 +617,11 @@ int main(int argc, char *argv[])
         }
 
         if( 0 == fragments.size() ) {
-            reset_asteroids(anstroid_count);
+            reset_asteroids(asteroid_count);
             ++level;
         }
 
-        pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
+        pixel::set_pixel_color(rgba_white);
         for(fragment_ref_t a : fragments) {
             a->draw();
         }
@@ -586,14 +629,12 @@ int main(int argc, char *argv[])
             ship_r->draw();
         }
 
-        star.draw();
+        sun->tick(dt);
+        sun->draw();
         fflush(nullptr);
         pixel::swap_pixel_fb(false);
         if( nullptr != hud_text ) {
-            const int thickness_pixel = pixel::cart_coord.to_fb_dy(ship_thickness);
-            const int text_height = thickness_pixel;
-            const float sy = (float)text_height / (float)hud_text->height;
-            hud_text->draw(pixel::fb_width/2.0f-(hud_text->width*sy/2.0f), thickness_pixel, sy, sy);
+            hud_text->draw(0, 0);
         }
         pixel::swap_gpu_buffer(forced_fps);
         if( record_bmpseq_basename.size() > 0 ) {
