@@ -96,16 +96,24 @@ namespace pixel::f2 {
             return *this;
         }
 
-        void rotate(const float radians, const vec_t& ctr) noexcept {
-            const float cos = std::cos(radians);
-            const float sin = std::sin(radians);
-            rotate(sin, cos, ctr);
+        vec_t& rotate(const float radians, const vec_t& ctr) noexcept {
+            return rotate(std::sin(radians), std::cos(radians), ctr);
         }
-        constexpr void rotate(const float sin, const float cos, const vec_t& ctr) noexcept {
+        constexpr vec_t& rotate(const float sin, const float cos, const vec_t& ctr) noexcept {
             const float x0 = x - ctr.x;
             const float y0 = y - ctr.y;
             x = x0 * cos - y0 * sin + ctr.x;
             y = x0 * sin + y0 * cos + ctr.y;
+            return *this;
+        }
+        vec_t& rotate(const float radians) noexcept {
+            return rotate(std::sin(radians), std::cos(radians));
+        }
+        constexpr vec_t& rotate(const float sin, const float cos) noexcept {
+            const float x0 = x;
+            x = x0 * cos - y * sin;
+            y = x0 * sin + y * cos;
+            return *this;
         }
 
         std::string toString() const noexcept { return std::to_string(x)+" / "+std::to_string(y); }
@@ -1002,7 +1010,7 @@ namespace pixel::f2 {
 
         void move_dir(const float d) noexcept override {
             point_t dir { d, 0 };
-            dir.rotate(dir_angle, { 0, 0 });
+            dir.rotate(dir_angle);
             center += dir;
         }
 
@@ -1073,7 +1081,7 @@ namespace pixel::f2 {
 
         void move_dir(const float d) noexcept override {
             point_t dir { d, 0 };
-            dir.rotate(dir_angle, { 0, 0 });
+            dir.rotate(dir_angle);
             p_a += dir;
             p_b += dir;
             p_c += dir;
@@ -1312,7 +1320,7 @@ namespace pixel::f2 {
 
         void move_dir(const float d) noexcept override {
             point_t dir { d, 0 };
-            dir.rotate(dir_angle, { 0, 0 });
+            dir.rotate(dir_angle);
             p_a += dir;
             p_b += dir;
             p_c += dir;
@@ -1521,7 +1529,7 @@ namespace pixel::f2 {
 
         void move_dir(const float d) noexcept override {
             point_t dir { d, 0 };
-            dir.rotate(dir_angle, { 0, 0 });
+            dir.rotate(dir_angle);
             for(point_t& p : p_list) {
                 p += dir;
             }
