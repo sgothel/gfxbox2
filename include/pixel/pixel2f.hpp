@@ -96,9 +96,12 @@ namespace pixel::f2 {
             return *this;
         }
 
+        /** Rotates this vector in place, returns *this */
         vec_t& rotate(const float radians, const vec_t& ctr) noexcept {
             return rotate(std::sin(radians), std::cos(radians), ctr);
         }
+
+        /** Rotates this vector in place, returns *this */
         constexpr vec_t& rotate(const float sin, const float cos, const vec_t& ctr) noexcept {
             const float x0 = x - ctr.x;
             const float y0 = y - ctr.y;
@@ -106,9 +109,13 @@ namespace pixel::f2 {
             y = x0 * sin + y0 * cos + ctr.y;
             return *this;
         }
+
+        /** Rotates this vector in place, returns *this */
         vec_t& rotate(const float radians) noexcept {
             return rotate(std::sin(radians), std::cos(radians));
         }
+
+        /** Rotates this vector in place, returns *this */
         constexpr vec_t& rotate(const float sin, const float cos) noexcept {
             const float x0 = x;
             x = x0 * cos - y * sin;
@@ -144,9 +151,7 @@ namespace pixel::f2 {
             return std::atan2( y, x );
         }
 
-        /**
-         * Normalize this vector in place
-         */
+        /** Normalize this vector in place, returns *this */
         constexpr vec_t& normalize() noexcept {
             const float lengthSq = length_sq();
             if ( pixel::is_zero( lengthSq ) ) {
@@ -285,14 +290,30 @@ namespace pixel::f2 {
     } */
 
     /**
-     * Return the orientation of the given point triplet p0, p1 and p2.
+     * Computes oriented double area of a triangle,
+     * i.e. the 2x2 determinant with b-a and c-a per column.
+     * <pre>
+     *       | bx-ax, cx-ax |
+     * det = | by-ay, cy-ay |
+     * </pre>
+     * @param a first vertex
+     * @param b second vertex
+     * @param c third vertex
+     * @return area > 0 CCW, ..
      */
-    constexpr pixel::orientation_t orientation(const point_t& p, const point_t& q, const point_t& r) noexcept {
-        const float delta = ( q.y - p.y ) * ( r.x - q.x ) - ( q.x - p.x ) * ( r.y - q.y );
-        if ( pixel::is_zero( delta ) ) {
+    constexpr double tri_area(const point_t& a, const point_t& b, const point_t& c){
+        return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    }
+
+    /**
+     * Return the orientation of the given point triplet a, b and c using triArea()
+     */
+    constexpr pixel::orientation_t orientation(const point_t& a, const point_t& b, const point_t& c) noexcept {
+        const double area = tri_area(a, b, c);
+        if ( pixel::is_zero( area ) ) {
             return pixel::orientation_t::COL;
         }
-        return ( delta > 0.0f ) ? pixel::orientation_t::CLW : pixel::orientation_t::CCW;
+        return ( area > 0.0f ) ? pixel::orientation_t::CCW : pixel::orientation_t::CLW;
     }
 
     class aabbox_t; // fwd
@@ -992,8 +1013,8 @@ namespace pixel::f2 {
                 for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
                     const point_t p { x, y };
                     const float cp = center.dist(p);
-                    if( (  filled && cp <= radius ) ||
-                            ( !filled && std::abs(cp - radius) <= ival2 ) ) {
+                    if( ( filled && cp <= radius ) ||
+                        ( !filled && std::abs(cp - radius) <= ival2 ) ) {
                         p.draw();
                     }
                 }

@@ -66,6 +66,10 @@ namespace pixel {
     inline constexpr bool is_zero(const float v) noexcept {
         return std::abs(v) < std::numeric_limits<float>::epsilon();
     }
+    /** Returns true of the given double  is less than double epsilon. */
+    inline constexpr bool is_zero(const double v) noexcept {
+        return std::abs(v) < std::numeric_limits<double>::epsilon();
+    }
 
     /**
      * Return true if both values are equal, i.e. their absolute delta is less than float epsilon,
