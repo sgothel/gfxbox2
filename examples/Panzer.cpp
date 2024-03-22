@@ -236,7 +236,6 @@ int main(int argc, char *argv[])
 
     std::vector<pixel::texture_ref> texts;
     pixel::f2::point_t origin(0, 0);
-    const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     const pixel::f4::vec_t text_color(0, 0, 0, 1);
 
     pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
@@ -259,6 +258,7 @@ int main(int argc, char *argv[])
     pixel::input_event_t event;
 
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
         if( pixel::handle_events(event) ) {
             // std::cout << "Event " << pixel::to_string(event) << std::endl;
         }
