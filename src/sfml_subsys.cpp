@@ -192,6 +192,11 @@ static input_event_type_t to_event_type(sf::Keyboard::Key scancode) {
             return input_event_type_t::P1_ACTION1;
         case sf::Keyboard::Key::Return:
             return input_event_type_t::P1_ACTION2;
+        case sf::Keyboard::Key::RAlt:
+            return input_event_type_t::P1_ACTION3;
+            /**
+        case sf::Keyboard::Key::RGui:
+            return input_event_type_t::P1_ACTION4; */
         case sf::Keyboard::Key::W:
             return input_event_type_t::P2_UP;
         case sf::Keyboard::Key::A:
@@ -204,6 +209,11 @@ static input_event_type_t to_event_type(sf::Keyboard::Key scancode) {
             return input_event_type_t::P2_ACTION1;
         case sf::Keyboard::Key::LControl:
             return input_event_type_t::P2_ACTION2;
+        case sf::Keyboard::Key::LAlt:
+            return input_event_type_t::P2_ACTION3;
+            /**
+        case sf::Keyboard::Key::LGui:
+            return input_event_type_t::P2_ACTION4; */
         case sf::Keyboard::Key::R:
             return input_event_type_t::RESET;
         default:

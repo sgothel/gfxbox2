@@ -261,6 +261,11 @@ static input_event_type_t to_event_type(SDL_Scancode scancode) {
             return input_event_type_t::P1_ACTION1;
         case SDL_SCANCODE_RETURN:
             return input_event_type_t::P1_ACTION2;
+        case SDL_SCANCODE_RALT:
+            return input_event_type_t::P1_ACTION3;
+            /**
+        case SDL_SCANCODE_RGUI:
+            return input_event_type_t::P1_ACTION4; */
         case SDL_SCANCODE_W:
             return input_event_type_t::P2_UP;
         case SDL_SCANCODE_A:
@@ -273,6 +278,11 @@ static input_event_type_t to_event_type(SDL_Scancode scancode) {
             return input_event_type_t::P2_ACTION1;
         case SDL_SCANCODE_LCTRL:
             return input_event_type_t::P2_ACTION2;
+        case SDL_SCANCODE_LALT:
+            return input_event_type_t::P2_ACTION3;
+            /**
+        case SDL_SCANCODE_LGUI:
+            return input_event_type_t::P2_ACTION4; */
         case SDL_SCANCODE_R:
             return input_event_type_t::RESET;
         default:
@@ -332,6 +342,7 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
                 case SDL_KEYDOWN: {
                     const SDL_Scancode scancode = sdl_event.key.keysym.scancode;
                     event.set(to_event_type(scancode), to_ascii(scancode));
+             //       printf("%d", scancode);
                   }
                   break;
         }
