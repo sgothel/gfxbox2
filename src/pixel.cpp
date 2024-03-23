@@ -119,6 +119,56 @@ void pixel::draw_grid(float raster_sz,
     }
 }
 
+static std::string to_string_impl(const char* format, va_list args) noexcept {
+    size_t nchars;
+    std::string str;
+    {
+        const size_t bsz = 1024; // including EOS
+        str.reserve(bsz);  // incl. EOS
+        str.resize(bsz-1); // excl. EOS
+
+        nchars = vsnprintf(&str[0], bsz, format, args);
+        if( nchars < bsz ) {
+            str.resize(nchars);
+            return str;
+        }
+    }
+    {
+        const size_t bsz = std::min<size_t>(nchars+1, str.max_size()+1); // limit incl. EOS
+        str.reserve(bsz);  // incl. EOS
+        str.resize(bsz-1); // excl. EOS
+        nchars = vsnprintf(&str[0], bsz, format, args);
+        str.resize(nchars);
+        return str;
+    }
+}
+
+std::string pixel::to_string(const char* format, ...) noexcept {
+    va_list args;
+    va_start (args, format);
+    std::string str = to_string_impl(format, args);
+    va_end (args);
+    return str;
+}
+
+pixel::texture_ref pixel::make_text_texture(const char* format, ...) noexcept {
+    va_list args;
+    va_start (args, format);
+    std::string s = to_string_impl(format, args);
+    va_end (args);
+    return make_text_texture(s);
+}
+
+pixel::texture_ref pixel::make_text(const pixel::f2::point_t& tl, const int lineno,
+                                    const pixel::f4::vec_t& color, const int font_height_usr,
+                                    const char* format, ...) noexcept {
+    va_list args;
+    va_start (args, format);
+    std::string s = to_string_impl(format, args);
+    va_end (args);
+    return make_text(tl, lineno, color, font_height_usr, s);
+}
+
 pixel::texture_ref pixel::make_text(const pixel::f2::point_t& tl, const int lineno,
                                     const pixel::f4::vec_t& color, const int font_height_usr,
                                     const std::string& text) noexcept {
@@ -127,7 +177,8 @@ pixel::texture_ref pixel::make_text(const pixel::f2::point_t& tl, const int line
     tex->dest_sx = (float)font_height_usr / (float)font_height;
     tex->dest_sy = (float)font_height_usr / (float)font_height;
     tex->dest_x = pixel::cart_coord.to_fb_x(tl.x);
-    tex->dest_y = pixel::cart_coord.to_fb_y(tl.y - (int)std::round(lineno * font_height_usr * 1.15f));
+    tex->dest_y = pixel::cart_coord.to_fb_y(
+            tl.y - (int)std::round(lineno * tex->dest_sy * font_height * 1.15f));
     return tex;
 }
 
