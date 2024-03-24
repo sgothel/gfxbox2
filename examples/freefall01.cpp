@@ -26,6 +26,7 @@
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
 
+const float rho_default = 0.75f;
 const float drop_height = 2.0f; // [m]
 const float earth_accel = 9.81f; // [m/s*s]
 bool debug_gfx = false;
@@ -62,6 +63,7 @@ class ball_t : public pixel::f2::disk_t {
          *
          */
         std::string id;
+        float rho;
         float start_xpos; // [m]
         float start_ypos; // [m]
         float velocity_start; // [m/s] @ angle
@@ -75,9 +77,9 @@ class ball_t : public pixel::f2::disk_t {
          * @param y_m y position in [m] within coordinate system 0/0 center
          * @param r_m
          */
-        ball_t(std::string id_, float x_m, float y_m, const float r_m, const float velocity_, const float v_angle_rad)
+        ball_t(std::string id_, float rho_, float x_m, float y_m, const float r_m, const float velocity_, const float v_angle_rad)
         : pixel::f2::disk_t(x_m, y_m, r_m),
-          id(std::move(id_)), start_xpos(x_m), start_ypos(y_m), velocity_start(velocity_), total_fall(drop_height),
+          id(std::move(id_)), rho(rho_), start_xpos(x_m), start_ypos(y_m), velocity_start(velocity_), total_fall(drop_height),
           velocity_max(std::sqrt( 2 * earth_accel * total_fall )), velocity()
         {
             rotate(v_angle_rad); // direction of velocity
@@ -169,7 +171,7 @@ class ball_t : public pixel::f2::disk_t {
                     pixel::set_pixel_color(255 /* r */, 255 /* g */, 0 /* b */, 255 /* a */);
                     // reconstruct distance post collision, minimum to surface
                     pixel::f2::vec_t vec_post_coll = l_move.p1 - coll_point;
-                    const float s_post_coll = std::max( radius, vec_post_coll.length() * 0.75f );
+                    const float s_post_coll = std::max( radius, vec_post_coll.length() * rho );
                     // reconstruct position post collision from collision point
                     pixel::f2::vec_t new_center = coll_point + ( coll_out.normalize() * s_post_coll );
                     pixel::f2::lineseg_t l_new_center(coll_point, new_center);
@@ -193,7 +195,7 @@ class ball_t : public pixel::f2::disk_t {
                 }
                 // reconstruct distance post collision, minimum to surface
                 pixel::f2::vec_t vec_post_coll = l_move.p1 - coll_point;
-                const float s_post_coll = std::max( radius, vec_post_coll.length() * 0.75f );
+                const float s_post_coll = std::max( radius, vec_post_coll.length() * rho );
 
                 // pixel::f2::vec_t v_move = l_move.p1 - l_move.p0;
                 // adjust position out of collision space
@@ -207,8 +209,9 @@ class ball_t : public pixel::f2::disk_t {
                 }
 
                 // bounce velocity: current velocity * 0.75 (rho) in collision reflection angle
-                velocity_max *= 0.75f; // rho
-                velocity = pixel::f2::vec_t::from_length_angle(velocity.length() * 0.75f, coll_out.angle()); // cont using simulated velocity
+                velocity_max *= rho;
+                // velocity = pixel::f2::vec_t::from_length_angle(velocity.length() * rho, coll_out.angle()); // cont using simulated velocity
+                velocity = pixel::f2::vec_t::from_length_angle(velocity_max, coll_out.angle()); // cont using calculated velocity
                 if( !this->on_screen() ) {
                     center = good_position;
                 }
@@ -235,6 +238,7 @@ class ball_t : public pixel::f2::disk_t {
 
 int main(int argc, char *argv[])
 {
+    float rho = rho_default;
     int win_width = 1920, win_height = 1080;
     std::string record_bmpseq_basename;
     bool enable_vsync = true;
@@ -256,6 +260,9 @@ int main(int argc, char *argv[])
                 forced_fps = atoi(argv[i+1]);
                 enable_vsync = false;
                 ++i;
+            } else if( 0 == strcmp("-rho", argv[i]) && i+1<argc) {
+                rho = atof(argv[i+1]);
+                ++i;
             }
         }
     }
@@ -267,6 +274,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
         pixel::log_printf(elapsed_ms, "- forced_fps %d\n", forced_fps);
+        pixel::log_printf(elapsed_ms, "- rho %f\n", rho);
     }
 
     {
@@ -279,13 +287,13 @@ int main(int argc, char *argv[])
     const float thickness = 1.0f * ball_height;
     const float small_gap = ball_radius;
 
-    pixel::cart_coord.set_height(0.0f, drop_height+2.0f*thickness);
+    pixel::cart_coord.set_height(0.0f, drop_height+6.0f*thickness);
 
-    std::shared_ptr<ball_t> ball_1 = std::make_shared<ball_t>( "one", -4.0f*ball_height, drop_height-ball_radius, ball_radius,
+    std::shared_ptr<ball_t> ball_1 = std::make_shared<ball_t>( "one", rho, -4.0f*ball_height, drop_height-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-    std::shared_ptr<ball_t> ball_2 = std::make_shared<ball_t>( "two", +2.0f*ball_height, drop_height-ball_radius, ball_radius,
+    std::shared_ptr<ball_t> ball_2 = std::make_shared<ball_t>( "two", rho, +2.0f*ball_height, drop_height-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-    std::shared_ptr<ball_t> ball_3 = std::make_shared<ball_t>( "can",  pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
+    std::shared_ptr<ball_t> ball_3 = std::make_shared<ball_t>( "can", rho, pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
                     6.8f /* [m/s] */, pixel::adeg_to_rad(64));
                     // 6.1f /* [m/s] */, pixel::adeg_to_rad(78));
     {
