@@ -47,6 +47,7 @@ static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
 static const pixel::f4::vec_t vec4_white(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
 static bool debug_gfx = false;
 static bool show_ship_velo= false;
+static bool cloak_enabled = false;
 
 class idscore_t {
     public:
@@ -651,6 +652,7 @@ class player_t : public idscore_t {
         constexpr static const pixel::f2::point_t p0_ss2 = { -6 * spaceship_height, -6 * spaceship_height };
         float m_respawn_timer;
         spaceship_ref_t m_ship;
+        bool m_cloak;
 
         void ship_dtor() noexcept {
             make_fragments(fragments, m_ship, m_ship->velocity.length() + spaceship_t::vel_step, 0.003f);
@@ -659,7 +661,7 @@ class player_t : public idscore_t {
         }
 
         void respawn_ship() noexcept {
-            cloak = false;
+            m_cloak = false;
             m_respawn_timer = 0;
             if( player_id_1 == id() ) {
                 m_ship = make_spaceship1(this, p0_ss1);
@@ -670,7 +672,6 @@ class player_t : public idscore_t {
         }
 
     public:
-        bool cloak;
         static void collision(player_t& pl, player_t& pr) noexcept {
             if( nullptr != pl.m_ship && nullptr != pr.m_ship && pl.m_ship->intersects(*pr.m_ship)) {
                 pl.ship_dtor();
@@ -680,7 +681,7 @@ class player_t : public idscore_t {
 
         player_t(const int id) noexcept
         : idscore_t(id), m_respawn_timer(0),
-          m_ship(nullptr), cloak(false)
+          m_ship(nullptr), m_cloak(false)
         { respawn_ship(); }
 
         void reset() noexcept {
@@ -693,7 +694,8 @@ class player_t : public idscore_t {
 
         int peng_inventory() const noexcept { return nullptr != m_ship ? m_ship->peng_inventory : 0; }
 
-        void set_tarnung( bool tarnung ) { cloak = tarnung; }
+        bool cloak() const noexcept { return m_cloak; }
+        void set_cloak( bool v ) noexcept { m_cloak = cloak_enabled && v; }
 
         pixel::f2::point_t center() {
             if(m_ship != nullptr){
@@ -719,7 +721,7 @@ class player_t : public idscore_t {
             return true;
         }
         void draw() const noexcept {
-            if( m_ship != nullptr && !cloak ) {
+            if( m_ship != nullptr && !m_cloak ) {
                 m_ship->draw();
             }
         }
@@ -769,12 +771,21 @@ void mainloop() {
     float fps = pixel::get_gpu_fps();
     const pixel::f2::point_t p1_c = p1.center(), p2_c = p2.center();
 
-    hud_text = pixel::make_text(tl_text, 0, vec4_white, text_high,
-          "%s s, fps %4.2f - S1 %4d (%4d pengs, %4.2f m/s, %6.2f / %6.2f) - "
-          "S2 %4d (%4d pengs, %.2f m/s, %6.2f / %6.2f)",
-          pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-          fps, p1.score(), p1.peng_inventory(), p1.velocity(), p1_c.x, p1_c.y,
-               p2.score(), p2.peng_inventory(), p2.velocity(), p2_c.x, p2_c.y);
+    if( cloak_enabled ) {
+        hud_text = pixel::make_text(tl_text, 0, vec4_white, text_high,
+              "%s s, fps %4.2f, S1 %4d (%4d pengs, %4.2f m/s, %6.2f / %6.2f), "
+              "S2 %4d (%4d pengs, %.2f m/s, %6.2f / %6.2f)",
+              pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
+              fps, p1.score(), p1.peng_inventory(), p1.velocity(), p1_c.x, p1_c.y,
+                   p2.score(), p2.peng_inventory(), p2.velocity(), p2_c.x, p2_c.y);
+    } else {
+        hud_text = pixel::make_text(tl_text, 0, vec4_white, text_high,
+              "%s s, fps %4.2f, S1 %4d (%4d pengs, %4.2f m/s), "
+              "S2 %4d (%4d pengs, %.2f m/s)",
+              pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
+              fps, p1.score(), p1.peng_inventory(), p1.velocity(),
+                   p2.score(), p2.peng_inventory(), p2.velocity());
+    }
 
     if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
         pengs.clear();
@@ -801,7 +812,7 @@ void mainloop() {
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
                 ship1->set_orbit_velocity();
             } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION3) ) {
-                p1.cloak = !p1.cloak;
+                p1.set_cloak(!p1.cloak());
             }
         }
         p1.tick(dt);
@@ -821,7 +832,7 @@ void mainloop() {
                 } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
                     ship2->set_orbit_velocity();
                 } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION3) ){
-                    p2.cloak = !p2.cloak;
+                    p2.set_cloak(!p2.cloak());
                 }
             }
             p2.tick(dt);
@@ -936,6 +947,8 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-sung_ships", argv[i]) && i+1<argc) {
                 sun_gravity_scale_ships = atoi(argv[i+1]);
                 ++i;
+            } else if( 0 == strcmp("-with_cloak", argv[i]) ) {
+                cloak_enabled = true;
             }
         }
     }
@@ -954,6 +967,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(elapsed_ms, "- asteroid_count %d\n", asteroid_count);
         pixel::log_printf(elapsed_ms, "- sun_gravity_scale_env %d -> %f [m/s^2]\n", sun_gravity_scale_env, sun_gravity * sun_gravity_scale_env);
         pixel::log_printf(elapsed_ms, "- sun_gravity_scale_ships %d -> %f [m/s^2]\n", sun_gravity_scale_ships, sun_gravity * sun_gravity_scale_ships);
+        pixel::log_printf(elapsed_ms, "- cloak enabled %d\n", cloak_enabled);
     }
 
     {
