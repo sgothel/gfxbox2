@@ -188,7 +188,9 @@ void pixel::swap_gpu_buffer(int fps) noexcept {
         int64_t td_ns = int64_t( ms_per_frame - ms_this_frame ) * pixel::NanoPerMilli;
         if( td_ns > fudge_ns ) {
             const int64_t td_ns_0 = td_ns%pixel::NanoPerOne;
-            struct timespec ts { td_ns/pixel::NanoPerOne, td_ns_0 - fudge_ns };
+            struct timespec ts;
+            ts.tv_sec = static_cast<decltype(ts.tv_sec)>(td_ns/pixel::NanoPerOne); // signed 32- or 64-bit integer
+            ts.tv_nsec = td_ns_0 - fudge_ns;
             nanosleep( &ts, NULL );
             // pixel::log_printf("soft-sync [exp %zd > has %zd]ms, delay %" PRIi64 "ms (%lds, %ldns)\n",
             //         ms_per_frame, ms_this_frame, td_ns/pixel::NanoPerMilli, ts.tv_sec, ts.tv_nsec);

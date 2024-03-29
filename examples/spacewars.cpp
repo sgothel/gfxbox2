@@ -458,7 +458,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
             rotate(pixel::adeg_to_rad(da_adeg));
         }
 
-        bool tick(const float dt) noexcept {
+        bool tick(const float dt) noexcept override {
             pixel::f2::vec_t g = sun->gravity_ships(p_center);
             velocity += g * dt;
             move(velocity * dt);
