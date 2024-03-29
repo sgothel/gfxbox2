@@ -3,12 +3,24 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Emscripten-Generated Code</title>
+    <title>Jausoft - Spacewars</title>
+    <link href="/style.css" rel="stylesheet" type="text/css"/>
+    <link href="/style-alt1.css" rel="alternate stylesheet" title="default sans-serif font" type="text/css"/>
+    <link href="/images/favicon.ico" rel="shortcut icon"/>
     <style>
-      body {
-        font-family: arial;
-        margin: 0;
-        padding: none;
+      table {
+        border-collapse: collapse;
+        border-spacing: 1em;
+      }
+      th, td {
+        text-align: left;
+        padding: 0.25em;
+      }
+      /* tr:nth-child(even) {
+        background-color: #D6EEEE;
+      } */
+      td:nth-child(even), th:nth-child(even) {
+        background-color: #D6EEEE;
       }
 
       .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
@@ -20,29 +32,6 @@
       #emscripten_logo {
         display: inline-block;
         margin: 0;
-      }
-
-      .spinner {
-        height: 30px;
-        width: 30px;
-        margin: 0;
-        margin-top: 20px;
-        margin-left: 20px;
-        display: inline-block;
-        vertical-align: top;
-
-        -webkit-animation: rotation .8s linear infinite;
-        -moz-animation: rotation .8s linear infinite;
-        -o-animation: rotation .8s linear infinite;
-        animation: rotation 0.8s linear infinite;
-
-        border-left: 5px solid rgb(235, 235, 235);
-        border-right: 5px solid rgb(235, 235, 235);
-        border-bottom: 5px solid rgb(235, 235, 235);
-        border-top: 5px solid rgb(120, 120, 120);
-        
-        border-radius: 100%;
-        background-color: rgb(189, 215, 46);
       }
 
       @-webkit-keyframes rotation {
@@ -102,16 +91,15 @@
     </style>
   </head>
   <body>
-    <a href="https://jausoft.com">Jausoft</a>
+    <a href="https://jausoft.com"><img src="/images/jaugsweklogo-hp-220x80.png" alt="Jausoft"/></a>
+    <span style="padding:1em; font-size:2em;"><span class="acap">S</span>pacewars</span>
 
     <div class="spinner" id='spinner'></div>
     <div class="emscripten" id="status">Downloading...</div>
 
 <span id='controls'>
-  <span><input type="checkbox" id="resize">Resize canvas</span>
-  <span><input type="checkbox" id="pointerLock" checked>Lock/hide mouse pointer &nbsp;&nbsp;&nbsp;</span>
-  <span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(document.getElementById('pointerLock').checked, 
-                                                                            document.getElementById('resize').checked)">
+  <span>
+    <input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <!-- pointerLock, resize -->
   </span>
 </span>
 
@@ -119,11 +107,45 @@
       <progress value="0" max="100" id="progress" hidden=1></progress>
     </div>
 
-    
     <div class="emscripten_border">
       <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
     </div>
     <textarea id="output" rows="8"></textarea>
+
+    <div>
+        <table>
+        <tr>
+            <th>Actor</th>
+            <th>Accelerate</th>
+            <th>Left-Turn</th>
+            <th>Right-Turn</th>
+            <th>Shoot</th>
+            <th>To Orbit</th>
+            <th>Reset</th>
+            <th>Pause</th>
+        </tr>
+        <tr>
+            <td>Ship 1</td>
+            <td>Cursor-Up</td>
+            <td>Cursor-Left</td>
+            <td>Cursor-Right</td>
+            <td>Right-Shift</td>
+            <td>Enter</td>
+            <td>R</td>
+            <td>P</td>
+        </tr>
+        <tr>
+            <td>Ship 2</td>
+            <td>W</td>
+            <td>A</td>
+            <td>D</td>
+            <td>Left-Shift</td>
+            <td>Left-Control</td>
+            <td>R</td>
+            <td>P</td>
+        </tr>
+        </table>
+    </div>
 
     <script type='text/javascript'>
       var statusElement = document.getElementById('status');
@@ -138,11 +160,6 @@
           if (element) element.value = ''; // clear browser cache
           return function(text) {
             if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-            // These replacements are necessary if you render to raw HTML
-            //text = text.replace(/&/g, "&amp;");
-            //text = text.replace(/</g, "&lt;");
-            //text = text.replace(/>/g, "&gt;");
-            //text = text.replace('\n', '<br>', 'g');
             console.log(text);
             if (element) {
               element.value += text + "\n";
@@ -152,7 +169,6 @@
         })(),
         canvas: (function() {
           var canvas = document.getElementById('canvas');
-
           // As a default initial behavior, pop up an alert when webgl context is lost. To make your
           // application robust, you may want to override this behavior before shipping!
           // See http://www.khronos.org/registry/webgl/specs/latest/1.0/#5.15.2

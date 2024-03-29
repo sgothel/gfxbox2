@@ -14,6 +14,9 @@ Its examples demonstrate basic usage and physics simulations.
 C++20 and better where the [SDL2 library](https://www.libsdl.org/) is supported, 
 optionally SDL2 with [emscripten](https://emscripten.org/) or [SFML library](https://www.sfml-dev.org/).
 
+## Online WebAssembly Examples
+* [spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
+
 ## Building Binaries
 
 ### Build Dependencies
@@ -22,7 +25,7 @@ optionally SDL2 with [emscripten](https://emscripten.org/) or [SFML library](htt
   - gcc >= 10
   - clang >= 15
 - [SDL2 library](https://www.libsdl.org/) 
-- [emscripten](https://emscripten.org/) **optional**
+- [emscripten](https://emscripten.org/) **optional** for WebAssembly
 - [SFML library](https://www.sfml-dev.org/) **optional**
 - Example funcdraw
     - Parser generator
