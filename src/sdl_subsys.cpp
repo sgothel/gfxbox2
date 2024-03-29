@@ -26,8 +26,10 @@
 #include <thread>
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+#if !defined(__EMSCRIPTEN__)
+    #include <SDL2/SDL_image.h>
+#endif
 
 using namespace pixel;
 
@@ -112,14 +114,16 @@ static void on_window_resized() noexcept {
 }
 
 void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2], bool enable_vsync) {
-    if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+    if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) { // SDL_INIT_EVERYTHING
         printf("SDL: Error initializing: %s\n", SDL_GetError());
         exit(1);
     }
-    if ( ( IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG ) != IMG_INIT_PNG ) {
-        printf("SDL_image: Error initializing: %s\n", SDL_GetError());
-        exit(1);
-    }
+    #if !defined(__EMSCRIPTEN__)
+        if ( ( IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG ) != IMG_INIT_PNG ) {
+            printf("SDL_image: Error initializing: %s\n", SDL_GetError());
+            exit(1);
+        }
+    #endif
     if( 0 != TTF_Init() ) {
         printf("SDL_TTF: Error initializing: %s\n", SDL_GetError());
         exit(1);
@@ -354,26 +358,28 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
     }
 }
 
-static std::atomic<int> active_threads = 0;
+#if !defined(__EMSCRIPTEN__)
+    static std::atomic<int> active_threads = 0;
 
-static void store_surface(SDL_Surface *sshot, char* fname) noexcept {
-    active_threads++;
-    if( false ) {
-        fprintf(stderr, "XXX: %d: %s\n", active_threads.load(), fname);
+    static void store_surface(SDL_Surface *sshot, char* fname) noexcept {
+        active_threads++;
+        if( false ) {
+            fprintf(stderr, "XXX: %d: %s\n", active_threads.load(), fname);
+        }
+        SDL_SaveBMP(sshot, fname);
+        free(fname);
+        SDL_UnlockSurface(sshot);
+        SDL_FreeSurface(sshot);
+        active_threads--;
     }
-    SDL_SaveBMP(sshot, fname);
-    free(fname);
-    SDL_UnlockSurface(sshot);
-    SDL_FreeSurface(sshot);
-    active_threads--;
-}
 
-void pixel::save_snapshot(const std::string& fname) noexcept {
-    SDL_Surface *sshot = SDL_CreateRGBSurface(0, fb_width, fb_height, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
-    SDL_LockSurface(sshot);
-    SDL_RenderReadPixels(sdl_rend, NULL, SDL_PIXELFORMAT_ARGB8888, sshot->pixels, sshot->pitch);
-    char * fname2 = strdup(fname.c_str());
-    std::thread t(&store_surface, sshot, fname2);
-    t.detach();
-}
+    void pixel::save_snapshot(const std::string& fname) noexcept {
+        SDL_Surface *sshot = SDL_CreateRGBSurface(0, fb_width, fb_height, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
+        SDL_LockSurface(sshot);
+        SDL_RenderReadPixels(sdl_rend, NULL, SDL_PIXELFORMAT_ARGB8888, sshot->pixels, sshot->pitch);
+        char * fname2 = strdup(fname.c_str());
+        std::thread t(&store_surface, sshot, fname2);
+        t.detach();
+    }
+#endif
 
