@@ -151,9 +151,9 @@ int main(int argc, char *argv[])
     int a1 = 0;
     int a2 = 0;
     pixel::input_event_t event;
-    const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
 
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
         // bool resize = false;
             if( pixel::handle_events(event) ) {
                 // std::cout << "Event " << pixel::to_string(event) << std::endl;
