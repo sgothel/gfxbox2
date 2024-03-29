@@ -63,7 +63,7 @@ void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t&
     b = ( ui32 & 0x000000ffU );
 }
 
-static void on_window_resized(int win_width, int win_height) noexcept {
+static void on_window_resized(const int win_width, const int win_height) noexcept {
     SDL_GetRendererOutputSize(sdl_rend, &fb_width, &fb_height);
 
     SDL_RendererInfo sdi;
@@ -73,13 +73,6 @@ static void on_window_resized(int win_width, int win_height) noexcept {
 
     cart_coord.set_origin(fb_origin_norm[0], fb_origin_norm[1]);
 
-    printf("Renderer %s\n", sdi.name);
-    printf("FB Size %d x %d, min 0 / 0, max %d / %d \n",
-            fb_width, fb_height, fb_max_x, fb_max_y);
-    printf("Win Size %d x %d, FB/Win %f x %f \n",
-            win_width, win_height, (float)fb_width/(float)win_width, (float)fb_height/(float)win_height);
-    printf("%s\n", cart_coord.toString().c_str());
-
     {
         SDL_DisplayMode mode;
         const int win_display_idx = SDL_GetWindowDisplayIndex(sdl_win);
@@ -88,6 +81,13 @@ static void on_window_resized(int win_width, int win_height) noexcept {
         printf("WindowDisplayMode: %d x %d @ %d Hz @ display %d\n", mode.w, mode.h, mode.refresh_rate, win_display_idx);
         frames_per_sec = mode.refresh_rate;
     }
+    printf("Renderer %s\n", sdi.name);
+    printf("FB Size %d x %d, min 0 / 0, max %d / %d \n",
+            fb_width, fb_height, fb_max_x, fb_max_y);
+    printf("Win Size %d x %d, FB/Win %f x %f \n",
+            win_width, win_height, (float)fb_width/(float)win_width, (float)fb_height/(float)win_height);
+    printf("%s\n", cart_coord.toString().c_str());
+
     fb_pixels_dim_size = (size_t)(fb_width * fb_height);
     fb_pixels_byte_size = fb_pixels_dim_size * 4;
     fb_pixels_byte_width = (size_t)(fb_width * 4);
@@ -95,6 +95,7 @@ static void on_window_resized(int win_width, int win_height) noexcept {
         SDL_DestroyTexture( fb_texture );
         fb_texture = nullptr;
     }
+    printf("Tex Size %d x %d x 4 = %zu bytes, width %zu bytes\n", fb_width, fb_height, fb_pixels_byte_size, fb_pixels_byte_width);
     fb_texture = SDL_CreateTexture(sdl_rend, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, fb_width, fb_height);
     fb_pixels.reserve(fb_pixels_dim_size);
     fb_pixels.resize(fb_pixels_dim_size);
