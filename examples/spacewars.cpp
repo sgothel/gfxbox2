@@ -475,6 +475,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
                 move(0.0f, pixel::cart_coord.min_y()-p_center.y);
             }
             if( sun->hit(p_center) ) {
+                m_owner->add_score(-m_owner->score_ship);
                 return false;
             }
             pixel::f2::aabbox_t b = box();
@@ -687,7 +688,15 @@ class player_t : public idscore_t {
 
         int peng_inventory() const noexcept { return nullptr != m_ship ? m_ship->peng_inventory : 0; }
 
-        void set_tarnung( bool tarnung_ ) { cloak = tarnung_; }
+        void set_tarnung( bool tarnung ) { cloak = tarnung; }
+
+        pixel::f2::point_t center() {
+            if(m_ship != nullptr){
+                return m_ship->p_center;
+            } else {
+                return pixel::f2::point_t(0, 0);
+            }
+        }
 
         bool tick(const float dt) noexcept {
             if( nullptr != m_ship ) {
@@ -713,6 +722,7 @@ class player_t : public idscore_t {
 
 int main(int argc, char *argv[])
 {
+    bool raster = false;
     int win_width = 1920, win_height = 1080;
     std::string record_bmpseq_basename;
     bool enable_vsync = true;
@@ -767,6 +777,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- show_ship_velo %d\n", show_ship_velo);
         pixel::log_printf(elapsed_ms, "- two_players %d\n", two_players);
+        pixel::log_printf(elapsed_ms, "- raster %d\n", raster);
         pixel::log_printf(elapsed_ms, "- asteroid_count %d\n", asteroid_count);
         pixel::log_printf(elapsed_ms, "- sun_gravity_scale_env %d -> %f [m/s^2]\n", sun_gravity_scale_env, sun_gravity * sun_gravity_scale_env);
         pixel::log_printf(elapsed_ms, "- sun_gravity_scale_ships %d -> %f [m/s^2]\n", sun_gravity_scale_ships, sun_gravity * sun_gravity_scale_ships);
@@ -790,14 +801,13 @@ int main(int argc, char *argv[])
 
     player_t p1(player_id_1);
     player_t p2(player_id_2);
-
     std::vector<pixel::texture_ref> texts;
-    pixel::texture_ref hud_text;
+    const float text_high = 24;
     uint64_t frame_count_total = 0;
     uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     pixel::input_event_t event;
-    int level = 1;
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
         pixel::handle_events(event);
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
@@ -811,16 +821,23 @@ int main(int argc, char *argv[])
         const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
         t_last = t1;
         float fps = pixel::get_gpu_fps();
+        pixel::f2::point_t p1_c = p1.center(), p2_c = p2.center();
+        if( raster ) {
+            pixel::draw_grid(50, 255, 0, 0, 0, 255, 0, 0, 0);
+        }
 
-        texts.push_back(pixel::make_text(tl_text1, 0, tc_white, 24,
-              "%s s, fps %.2f - S1 %d (%d pengs, %.2f m/s) - S2 %d (%d pengs, %.2f m/s)",
+        texts.push_back(pixel::make_text(tl_text, 0, tc_white, text_high,
+              "%s s, fps %.4f - Ship1 %d (%d pengs, %.4f m/s) - "
+              "Ship2 %d (%d pengs, %.4f m/s) - "
+              "Koordinaten: Ship1 %f / %f, Ship2 %f / %f",
               pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
               fps, p1.score(), p1.peng_inventory(), p1.velocity(),
-                   p2.score(), p2.peng_inventory(), p2.velocity()));
+                   p2.score(), p2.peng_inventory(), p2.velocity(),
+                   p1_c.x, p1_c.y,
+                   p2_c.x, p2_c.y));
 
         if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
             pengs.clear();
-            level = 1;
             reset_asteroids(asteroid_count);
             p1.reset();
             if(two_players){
@@ -845,24 +862,14 @@ int main(int argc, char *argv[])
                     ship1->set_orbit_velocity();
                 } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION3) ) {
                     p1.cloak = !p1.cloak;
-                } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION4) ) {
-                    texts.push_back(pixel::make_text(tl_text2, 0, tc_white, 20,
-                          "KOORDINATEN"));
-                    if(nullptr != ship1){
-                    texts.push_back(pixel::make_text(tl_text2, 1, tc_white, 20,
-                          "ship1: "+ship1->p_center.toString()));
-                    } else {
-                        texts.push_back(pixel::make_text(tl_text2, 1, tc_white, 20,
-                              "ship1: KAPUTT"));
-                    }
                 }
             }
             p1.tick(dt);
 
             // ship2 tick
             if( two_players ) {
-                spaceship_ref_t ship2 = p2.ship();
-                if( nullptr != ship2 && event.has_any_p2() ) {
+                if( nullptr != p2.ship() && event.has_any_p2() ) {
+                    spaceship_ref_t ship2 = p2.ship();
                     if( event.pressed(pixel::input_event_type_t::P2_UP) ) {
                         ship2->velo_up(spaceship_t::vel_step);
                     } else if( event.pressed(pixel::input_event_type_t::P2_LEFT) ){
@@ -875,16 +882,6 @@ int main(int argc, char *argv[])
                         ship2->set_orbit_velocity();
                     } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION3) ){
                         p2.cloak = !p2.cloak;
-                    } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION4) ) {
-                        texts.push_back(pixel::make_text(tl_text2, 0, tc_white, 20,
-                              "KOORDINATEN"));
-                        if(nullptr != ship2){
-                            texts.push_back(pixel::make_text(tl_text2, 2, tc_white, 20,
-                                  "ship2: "+ship2->p_center.toString()));
-                        } else {
-                            texts.push_back(pixel::make_text(tl_text2, 2, tc_white, 20,
-                                  "ship2: KAPUTT"));
-                        }
                     }
                 }
                 p2.tick(dt);
@@ -922,11 +919,9 @@ int main(int argc, char *argv[])
             }
             if( 0 == fragments.size() ) {
                 reset_asteroids(asteroid_count);
-                ++level;
             }
             sun->tick(dt);
         }
-
         // Draw all objects
         pixel::set_pixel_color(rgba_white);
         p1.draw();
