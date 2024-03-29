@@ -718,7 +718,7 @@ class player_t : public idscore_t {
 
 static bool two_players = true;
 static int asteroid_count = 6;
-static pixel::f2::point_t tl_text1, tl_text2;
+static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
 static int forced_fps = 30;
 
@@ -747,8 +747,7 @@ void mainloop() {
     }
     const bool animating = !event.paused();
 
-    tl_text1.set(pixel::cart_coord.min_x() + pixel::cart_coord.width()/3, pixel::cart_coord.max_y());
-    tl_text2.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
+    tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
 
     // black background
     pixel::clear_pixel_fb(0, 0, 0, 255);
@@ -758,7 +757,7 @@ void mainloop() {
     t_last = t1;
     float fps = pixel::get_gpu_fps();
 
-    texts.push_back(pixel::make_text(tl_text1, 0, vec4_white, 24,
+    texts.push_back(pixel::make_text(tl_text, 0, vec4_white, 24,
           "%s s, fps %.2f - S1 %d (%d pengs, %.2f m/s) - S2 %d (%d pengs, %.2f m/s)",
           pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
           fps, p1.score(), p1.peng_inventory(), p1.velocity(),
@@ -792,13 +791,13 @@ void mainloop() {
             } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION3) ) {
                 p1.cloak = !p1.cloak;
             } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION4) ) {
-                texts.push_back(pixel::make_text(tl_text2, 0, vec4_white, 20,
+                texts.push_back(pixel::make_text(tl_text, 0, vec4_white, 20,
                       "KOORDINATEN"));
                 if(nullptr != ship1){
-                texts.push_back(pixel::make_text(tl_text2, 1, vec4_white, 20,
+                texts.push_back(pixel::make_text(tl_text, 1, vec4_white, 20,
                       "ship1: "+ship1->p_center.toString()));
                 } else {
-                    texts.push_back(pixel::make_text(tl_text2, 1, vec4_white, 20,
+                    texts.push_back(pixel::make_text(tl_text, 1, vec4_white, 20,
                           "ship1: KAPUTT"));
                 }
             }
@@ -822,13 +821,13 @@ void mainloop() {
                 } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION3) ){
                     p2.cloak = !p2.cloak;
                 } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION4) ) {
-                    texts.push_back(pixel::make_text(tl_text2, 0, vec4_white, 20,
+                    texts.push_back(pixel::make_text(tl_text, 0, vec4_white, 20,
                           "KOORDINATEN"));
                     if(nullptr != ship2){
-                        texts.push_back(pixel::make_text(tl_text2, 2, vec4_white, 20,
+                        texts.push_back(pixel::make_text(tl_text, 2, vec4_white, 20,
                               "ship2: "+ship2->p_center.toString()));
                     } else {
-                        texts.push_back(pixel::make_text(tl_text2, 2, vec4_white, 20,
+                        texts.push_back(pixel::make_text(tl_text, 2, vec4_white, 20,
                               "ship2: KAPUTT"));
                     }
                 }
@@ -889,7 +888,8 @@ void mainloop() {
 
     pixel::swap_pixel_fb(false);
     for(pixel::texture_ref tex : texts) {
-        tex->draw(0, 0);
+        const int dx = ( pixel::fb_width - pixel::round_to_int(tex->width*tex->dest_sx) ) / 2;
+        tex->draw(dx, 0);
     }
     texts.clear();
     pixel::swap_gpu_buffer(forced_fps);
@@ -906,12 +906,13 @@ void mainloop() {
 
 int main(int argc, char *argv[])
 {
-    int win_width = 1920, win_height = 1080;
+    int win_width = 1920, win_height = 1080; // 16:9
     bool enable_vsync = true;
     int sun_gravity_scale_env = 20;    //  20 x 280 =  5600
     int sun_gravity_scale_ships = 200; // 200 x 280 = 56000
     #if defined(__EMSCRIPTEN__)
-    win_width = 800, win_height = 600;
+        win_width = 1024, win_height = 576; // 16:9
+        // win_width = 720, win_height = 400; // 16:9
     #endif
     {
         for(int i=1; i<argc; ++i) {
