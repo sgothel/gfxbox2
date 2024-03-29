@@ -492,7 +492,7 @@ namespace pixel::f2 {
 
         bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override;
 
-        bool on_screen() const noexcept {
+        bool on_screen() const noexcept override {
             const int x0 = pixel::cart_coord.to_fb_x( bl.x );
             const int y0 = pixel::cart_coord.to_fb_y( tr.y );
             const int x1 = pixel::cart_coord.to_fb_x( tr.x );
@@ -505,9 +505,9 @@ namespace pixel::f2 {
                    0 <= y1 && y1 <= pixel::fb_max_y;
         }
 
-        void draw() const noexcept;
+        void draw() const noexcept override;
 
-        std::string toString() const noexcept {
+        std::string toString() const noexcept override {
             return "aabb[bl " + bl.toString() +
                     ", tr " + tr.toString() +
                     "]"; }
@@ -568,9 +568,9 @@ namespace pixel::f2 {
             p1 += l_move_diff;
         }
 
-        std::string toString() const noexcept { return "L[" + p0.toString() + ", " + p1.toString() + "]"; }
+        std::string toString() const noexcept override { return "L[" + p0.toString() + ", " + p1.toString() + "]"; }
 
-        bool on_screen() const noexcept {
+        bool on_screen() const noexcept override {
             return p0.on_screen() && p1.on_screen();
         }
 
@@ -639,7 +639,7 @@ namespace pixel::f2 {
                 }
             }
         }
-        void draw() const noexcept {
+        void draw() const noexcept override {
             draw(p0, p1);
         }
 

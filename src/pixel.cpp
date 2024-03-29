@@ -63,7 +63,9 @@ uint64_t pixel::getElapsedMillisecond() noexcept {
 
 void pixel::milli_sleep(uint64_t td_ms) noexcept {
     const int64_t td_ns_0 = (int64_t)( (td_ms * (uint64_t)NanoPerMilli) % (uint64_t)NanoPerOne );
-    struct timespec ts { (int64_t)(td_ms/(uint64_t)MilliPerOne), td_ns_0 };
+    struct timespec ts;
+    ts.tv_sec = static_cast<decltype(ts.tv_sec)>(td_ms/(uint64_t)MilliPerOne); // signed 32- or 64-bit integer
+    ts.tv_nsec = td_ns_0;
     ::nanosleep( &ts, nullptr );
 }
 
