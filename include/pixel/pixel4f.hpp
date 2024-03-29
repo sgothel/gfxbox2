@@ -31,7 +31,7 @@
  */
 namespace pixel::f4 {
 
-    struct vec_t {
+    class vec_t {
         public:
             float x;
             float y;

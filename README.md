@@ -11,7 +11,8 @@ This project provides a C++ sandbox for computer graphics for our computer scien
 Its examples demonstrate basic usage and physics simulations.
 
 ## Supported Platforms
-C++20 and better where the [SDL2 library](https://www.libsdl.org/) and [SFML library](https://www.sfml-dev.org/) is supported.
+C++20 and better where the [SDL2 library](https://www.libsdl.org/) is supported, 
+optionally SDL2 with [emscripten](https://emscripten.org/) or [SFML library](https://www.sfml-dev.org/).
 
 ## Building Binaries
 
@@ -21,6 +22,7 @@ C++20 and better where the [SDL2 library](https://www.libsdl.org/) and [SFML lib
   - gcc >= 10
   - clang >= 15
 - [SDL2 library](https://www.libsdl.org/) 
+- [emscripten](https://emscripten.org/) **optional**
 - [SFML library](https://www.sfml-dev.org/) **optional**
 - Example funcdraw
     - Parser generator
@@ -45,6 +47,7 @@ apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev
 apt install libsfml-dev
 apt install bison flex
 apt install doxygen graphviz
+apt install emscripten
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Perhaps change the clang version-suffix of above clang install line to the appropriate version.
