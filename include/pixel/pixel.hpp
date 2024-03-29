@@ -447,7 +447,6 @@ namespace pixel {
         P1_ACTION1,
         P1_ACTION2,
         P1_ACTION3,
-        P1_ACTION4,
         PAUSE, // 11
         P2_UP,
         P2_DOWN,
@@ -456,7 +455,6 @@ namespace pixel {
         P2_ACTION1,
         P2_ACTION2,
         P2_ACTION3,
-        P2_ACTION4,
         RESET, // 18
         /** Request to close window, which then should be closed by caller */
         WINDOW_CLOSE_REQ,
@@ -481,8 +479,7 @@ namespace pixel {
                     bitmask(input_event_type_t::P1_LEFT) |
                     bitmask(input_event_type_t::P1_ACTION1) |
                     bitmask(input_event_type_t::P1_ACTION2) |
-                    bitmask(input_event_type_t::P1_ACTION3) |
-                    bitmask(input_event_type_t::P1_ACTION4);
+                    bitmask(input_event_type_t::P1_ACTION3);
 
             constexpr static const uint32_t p2_mask =
                     bitmask(input_event_type_t::P2_UP) |
@@ -491,8 +488,7 @@ namespace pixel {
                     bitmask(input_event_type_t::P2_LEFT) |
                     bitmask(input_event_type_t::P2_ACTION1) |
                     bitmask(input_event_type_t::P2_ACTION2) |
-                    bitmask(input_event_type_t::P2_ACTION3) |
-                    bitmask(input_event_type_t::P1_ACTION4);
+                    bitmask(input_event_type_t::P2_ACTION3);
             uint32_t m_pressed; // [P1_UP..RESET]
             uint32_t m_lifted; // [P1_UP..RESET]
             bool m_paused;
