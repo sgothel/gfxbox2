@@ -63,7 +63,7 @@ void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t&
     b = ( ui32 & 0x000000ffU );
 }
 
-static void on_window_resized() noexcept {
+static void on_window_resized(int win_width, int win_height) noexcept {
     SDL_GetRendererOutputSize(sdl_rend, &fb_width, &fb_height);
 
     SDL_RendererInfo sdi;
@@ -74,8 +74,10 @@ static void on_window_resized() noexcept {
     cart_coord.set_origin(fb_origin_norm[0], fb_origin_norm[1]);
 
     printf("Renderer %s\n", sdi.name);
-    printf("Screen size %d x %d, min 0 / 0, max %d / %d \n",
+    printf("FB Size %d x %d, min 0 / 0, max %d / %d \n",
             fb_width, fb_height, fb_max_x, fb_max_y);
+    printf("Win Size %d x %d, FB/Win %f x %f \n",
+            win_width, win_height, (float)fb_width/(float)win_width, (float)fb_height/(float)win_height);
     printf("%s\n", cart_coord.toString().c_str());
 
     {
@@ -137,14 +139,16 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
     fb_origin_norm[0] = origin_norm[0];
     fb_origin_norm[1] = origin_norm[1];
 
+    const Uint32 win_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE;
+    const Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+
     sdl_win = SDL_CreateWindow(title,
             SDL_WINDOWPOS_UNDEFINED,
             SDL_WINDOWPOS_UNDEFINED,
             (int)win_width,
             (int)win_height,
-            SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
+            win_flags);
 
-    const Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
     sdl_rend = SDL_CreateRenderer(sdl_win, -1, render_flags);
 
     gpu_fps = 0.0f;
@@ -153,7 +157,7 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
     gpu_swap_t1 = gpu_fps_t0;
     gpu_frame_count = 0;
 
-    on_window_resized();
+    on_window_resized(win_width, win_height);
 }
 
 void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
@@ -327,7 +331,7 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
                     case SDL_WINDOWEVENT_RESIZED:
                         printf("Window Resized: %d x %d\n", sdl_event.window.data1, sdl_event.window.data2);
                         event.set(input_event_type_t::WINDOW_RESIZED);
-                        on_window_resized();
+                        on_window_resized(sdl_event.window.data1, sdl_event.window.data2);
                         break;
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
                         // printf("Window SizeChanged: %d x %d\n", event.window.data1, event.window.data2);
