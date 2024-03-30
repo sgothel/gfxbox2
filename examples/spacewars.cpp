@@ -744,7 +744,7 @@ void mainloop() {
     static uint64_t frame_count_total = 0;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
-    static const int text_high = 24;
+    static const int text_height = 24;
 
     pixel::handle_events(event);
     if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -773,14 +773,14 @@ void mainloop() {
     const pixel::f2::point_t p1_c = p1.center(), p2_c = p2.center();
 
     if( cloak_enabled ) {
-        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_high,
+        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
               "%s s, fps %4.2f, S1 %4d (%4d pengs, %4.2f m/s, %6.2f / %6.2f), "
               "S2 %4d (%4d pengs, %.2f m/s, %6.2f / %6.2f)",
               pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
               fps, p1.score(), p1.peng_inventory(), p1.velocity(), p1_c.x, p1_c.y,
                    p2.score(), p2.peng_inventory(), p2.velocity(), p2_c.x, p2_c.y);
     } else {
-        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_high,
+        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
               "%s s, fps %4.2f, S1 %4d (%4d pengs, %4.2f m/s), "
               "S2 %4d (%4d pengs, %.2f m/s)",
               pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit

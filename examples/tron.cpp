@@ -117,7 +117,7 @@ void mainloop() {
     static const float ax1 = pixel::cart_coord.min_x() + 3 * pixel::cart_coord.width() / 4;
     static const float ax2 = pixel::cart_coord.min_x() + pixel::cart_coord.width() / 4;
     static const float ay1 = pixel::cart_coord.min_y() + 100;
-    static const int text_high = 24;
+    static const int text_height = 24;
 
     static Tron p1(pixel::f2::point_t(ax1, ay1));
     static Tron p2(pixel::f2::point_t(ax2, ay1));
@@ -140,8 +140,7 @@ void mainloop() {
     const bool animating = !event.paused();
 
     const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
-
-    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, text_color, text_high,
+    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, text_color, text_height,
             "Tron %4d (%.2f m/s), MCP %4d (%.2f m/s), fps %5.2f, %s",
             a1, p1.velo, a2, p2.velo, pixel::get_gpu_fps(), animating?"animating":"paused");
 
