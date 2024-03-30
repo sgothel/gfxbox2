@@ -409,6 +409,7 @@ void mainloop() {
     static int a2 = 0;
     static pixel::input_event_t event;
 
+    pixel::handle_events(event);
     if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
         printf("Exit Application\n");
         #if defined(__EMSCRIPTEN__)
@@ -417,8 +418,6 @@ void mainloop() {
             exit(0);
         #endif
     }
-
-    pixel::handle_events(event);
     const bool animating = !event.paused();
 
     const float plot_inc = pixel::cart_coord.width() / ( ticks_per_circle * circles_per_plot );

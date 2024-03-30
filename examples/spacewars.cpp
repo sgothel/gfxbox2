@@ -745,6 +745,7 @@ void mainloop() {
     static pixel::input_event_t event;
     const int text_high = 24;
 
+    pixel::handle_events(event);
     if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
         printf("Exit Application\n");
         #if defined(__EMSCRIPTEN__)
@@ -752,10 +753,7 @@ void mainloop() {
         #else
             exit(0);
         #endif
-    }
-
-    pixel::handle_events(event);
-    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+    } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
         pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
     }
     const bool animating = !event.paused();
