@@ -90,7 +90,10 @@ static void on_window_resized(bool set_view) noexcept {
     fb_sbuffer = std::make_shared<sf::Sprite>(fb_tbuffer);
 }
 
-void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2], bool enable_vsync) {
+void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2],
+                               bool enable_vsync, bool use_subsys_primitives) {
+    pixel::use_subsys_primitives_val = false; // FIXME use_subsys_primitives
+    (void)use_subsys_primitives;
     (void)enable_vsync;
 
     fb_origin_norm[0] = origin_norm[0];
@@ -173,6 +176,19 @@ pixel::texture_ref pixel::make_text_texture(const std::string&) noexcept
 {
     return std::make_shared<texture_t>(nullptr, 0, 0, 0, 0);
 }
+
+void pixel::subsys_set_pixel_color(uint8_t, uint8_t, uint8_t, uint8_t) noexcept {
+    // FIXME
+}
+
+void pixel::subsys_draw_pixel(int x, int y) noexcept {
+    fb_pixels[ y * fb_width + x ] = draw_color; // FIXME
+}
+
+void pixel::subsys_draw_line(int, int, int, int) noexcept {
+    // FIXME
+}
+
 
 static input_event_type_t to_event_type(sf::Keyboard::Key scancode) {
     switch ( scancode ) {

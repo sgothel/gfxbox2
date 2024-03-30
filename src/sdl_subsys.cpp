@@ -95,10 +95,14 @@ static void on_window_resized(const int win_width, const int win_height) noexcep
         SDL_DestroyTexture( fb_texture );
         fb_texture = nullptr;
     }
-    printf("Tex Size %d x %d x 4 = %zu bytes, width %zu bytes\n", fb_width, fb_height, fb_pixels_byte_size, fb_pixels_byte_width);
-    fb_texture = SDL_CreateTexture(sdl_rend, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, fb_width, fb_height);
-    fb_pixels.reserve(fb_pixels_dim_size);
-    fb_pixels.resize(fb_pixels_dim_size);
+    if( use_subsys_primitives_val ) {
+        printf("SDL-Primitives\n");
+    } else {
+        printf("Soft-Primitives: Tex Size %d x %d x 4 = %zu bytes, width %zu bytes\n", fb_width, fb_height, fb_pixels_byte_size, fb_pixels_byte_width);
+        fb_texture = SDL_CreateTexture(sdl_rend, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, fb_width, fb_height);
+        fb_pixels.reserve(fb_pixels_dim_size);
+        fb_pixels.resize(fb_pixels_dim_size);
+    }
 
     {
         if( nullptr != sdl_font ) {
@@ -116,7 +120,10 @@ static void on_window_resized(const int win_width, const int win_height) noexcep
     }
 }
 
-void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2], bool enable_vsync) {
+void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2],
+                               bool enable_vsync, bool use_subsys_primitives) {
+    pixel::use_subsys_primitives_val = use_subsys_primitives;
+
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) { // SDL_INIT_EVERYTHING
         printf("SDL: Error initializing: %s\n", SDL_GetError());
         exit(1);
@@ -165,17 +172,21 @@ void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept 
     SDL_SetRenderDrawColor(sdl_rend, r, g, b, a);
     SDL_RenderClear(sdl_rend);
 
-    const uint32_t c = rgba_to_uint32(r, g, b, a);
-    size_t count = fb_pixels_dim_size;
-    uint32_t* p = fb_pixels.data();
-    while(count--) { *p++ = c; }
-    // std::fill(p, p+count, c);
-    // ::memset(fb_pixels.data(), 0, fb_pixels_byte_size);
+    if( !use_subsys_primitives_val ) {
+        const uint32_t c = rgba_to_uint32(r, g, b, a);
+        size_t count = fb_pixels_dim_size;
+        uint32_t* p = fb_pixels.data();
+        while(count--) { *p++ = c; }
+        // std::fill(p, p+count, c);
+        // ::memset(fb_pixels.data(), 0, fb_pixels_byte_size);
+    }
 }
 
 void pixel::swap_pixel_fb(const bool swap_buffer) noexcept {
-    SDL_UpdateTexture(fb_texture, nullptr, fb_pixels.data(), (int)fb_pixels_byte_width);
-    SDL_RenderCopy(sdl_rend, fb_texture, nullptr, nullptr);
+    if( !use_subsys_primitives_val ) {
+        SDL_UpdateTexture(fb_texture, nullptr, fb_pixels.data(), (int)fb_pixels_byte_width);
+        SDL_RenderCopy(sdl_rend, fb_texture, nullptr, nullptr);
+    }
     if( swap_buffer ) {
         pixel::swap_gpu_buffer();
     }
@@ -254,6 +265,18 @@ pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
     return tex;
 }
 
+void pixel::subsys_set_pixel_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
+    SDL_SetRenderDrawColor(sdl_rend, r, g, b, a);
+}
+
+void pixel::subsys_draw_pixel(int x, int y) noexcept {
+    SDL_RenderDrawPoint(sdl_rend, x, y);
+}
+
+void pixel::subsys_draw_line(int x1, int y1, int x2, int y2) noexcept {
+    SDL_RenderDrawLine(sdl_rend, x1, y1, x2, y2);
+}
+
 static input_event_type_t to_event_type(SDL_Scancode scancode) {
     switch ( scancode ) {
         case SDL_SCANCODE_ESCAPE:
@@ -319,6 +342,7 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
         switch (sdl_event.type) {
             case SDL_QUIT:
                 event.set( input_event_type_t::WINDOW_CLOSE_REQ );
+                printf("Window Close Requested\n");
                 break;
 
             case SDL_WINDOWEVENT:

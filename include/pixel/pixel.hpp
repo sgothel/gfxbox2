@@ -138,7 +138,6 @@ namespace pixel {
     extern int frames_per_sec;
     extern int font_height;
 
-
     /**
      * Cartesian coordinate system within the framebuffer space in pixels.
      */
@@ -280,6 +279,18 @@ namespace pixel {
     extern cart_coord_t cart_coord;
 
     //
+    // Pixel write
+    //
+    extern bool use_subsys_primitives_val;
+
+    inline bool use_subsys_primitives() noexcept {
+        return use_subsys_primitives_val;
+    }
+    void subsys_set_pixel_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
+    void subsys_draw_pixel(int x, int y) noexcept;
+    void subsys_draw_line(int x1, int y1, int x2, int y2) noexcept;
+
+    //
     // Pixel color
     //
 
@@ -298,7 +309,11 @@ namespace pixel {
      */
     inline void set_pixel_fbcoord(int x, int y) noexcept {
         if( 0 <= x && x <= fb_max_x && 0 <= y && y <= fb_max_y ) {
-            fb_pixels[ y * fb_width + x ] = draw_color;
+            if( use_subsys_primitives_val ) {
+                subsys_draw_pixel(x, y);
+            } else {
+                fb_pixels[ y * fb_width + x ] = draw_color;
+            }
         }
     }
 
@@ -310,9 +325,7 @@ namespace pixel {
     inline void set_pixel(int x_, int y_) noexcept {
         const int x = cart_coord.to_fb_x( (float)x_ );
         const int y = cart_coord.to_fb_y( (float)y_ );
-        if( 0 <= x && x <= fb_max_x && 0 <= y && y <= fb_max_y ) {
-            fb_pixels[ y * fb_width + x ] = draw_color;
-        }
+        set_pixel_fbcoord(x, y);
     }
 
     /**
@@ -337,10 +350,16 @@ namespace pixel {
     /** Set current pixel draw color */
     inline void set_pixel_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
         draw_color = pixel::rgba_to_uint32(r, g, b, a);
+        if( use_subsys_primitives_val ) {
+            subsys_set_pixel_color(r, g, b, a);
+        }
     }
     /** Set current pixel draw color */
     inline void set_pixel_color(const uint8_t rgba[/*4*/]) noexcept {
         draw_color = pixel::rgba_to_uint32(rgba[0], rgba[1], rgba[2], rgba[3]);
+        if( use_subsys_primitives_val ) {
+            subsys_set_pixel_color(rgba[0], rgba[1], rgba[2], rgba[3]);
+        }
     }
     inline float clip_byte(float v) { return std::max<float>(0.0f, std::min(255.0f, v)); }
     inline void set_pixel_color4f(float r, float g, float b, float a) noexcept {
@@ -400,7 +419,8 @@ namespace pixel {
     //
 
     /** GFX Toolkit: Initialize a window of given size with a usable framebuffer. */
-    void init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2], bool enable_vsync=true);
+    void init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2],
+                            bool enable_vsync=true, bool use_subsys_primitives=true);
     /** GFX Toolkit: Clear the soft-framebuffer. */
     void clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
     /** GFX Toolkit: Copy the soft-framebuffer to the GPU back-buffer, if swap_buffer is true (default) also swap_gpu_buffer(). */

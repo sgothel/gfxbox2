@@ -28,6 +28,7 @@
 #include <cstdint>
 #include <ctime>
 
+bool pixel::use_subsys_primitives_val = true;
 int pixel::fb_width=0;
 int pixel::fb_height=0;
 int pixel::fb_max_x=0;
@@ -185,7 +186,157 @@ pixel::texture_ref pixel::make_text(const pixel::f2::point_t& tl, const int line
 }
 
 //
-// pixel::f2
+// pixel::f2::*::draw(..)
+//
+
+void pixel::f2::vec_t::draw() const noexcept {
+    const int x_ = cart_coord.to_fb_x( x );
+    const int y_ = cart_coord.to_fb_y( y );
+    pixel::set_pixel_fbcoord(x_, y_);
+}
+
+void pixel::f2::lineseg_t::draw(const point_t& p0, const point_t& p1) noexcept {
+    if constexpr ( false ) {
+        for_all_points(p0, p1, [](const point_t& p) -> bool { p.draw(); return true; });
+    } else if( use_subsys_primitives_val ) {
+        const int p0_x = cart_coord.to_fb_x( p0.x );
+        const int p0_y = cart_coord.to_fb_y( p0.y );
+        const int p1_x = cart_coord.to_fb_x( p1.x );
+        const int p1_y = cart_coord.to_fb_y( p1.y );
+        subsys_draw_line(p0_x, p0_y, p1_x, p1_y);
+    } else {
+        const int p0_x = cart_coord.to_fb_x( p0.x );
+        const int p0_y = fb_height - cart_coord.to_fb_y( p0.y );
+        const int p1_x = cart_coord.to_fb_x( p1.x );
+        const int p1_y = fb_height - cart_coord.to_fb_y( p1.y );
+        const int dx = p1_x - p0_x;
+        const int dy = p1_y - p0_y;
+        const int dx_abs = std::abs(dx);
+        const int dy_abs = std::abs(dy);
+        float p_x = p0_x, p_y = p0_y;
+        if( dy_abs > dx_abs ) {
+            const float a = (float)dx / (float)dy_abs; // [0..1), dy_abs > 0
+            const int step_h = dy / dy_abs; // +1 or -1
+            for(int i = 0; i <= dy_abs; ++i) {
+                pixel::set_pixel_fbcoord( p_x, (int)(fb_height - p_y) );
+                p_y += step_h; // = p0.y + i * step_h
+                p_x += a;
+            }
+        } else if( dx_abs > 0 ) {
+            const float a = (float)dy / (float)dx_abs; // [0..1], dx_abs > 0
+            const int step_w = dx / dx_abs; // +1 or -1
+            for(int i = 0; i <= dx_abs; ++i) {
+                pixel::set_pixel_fbcoord( p_x, (int)(fb_height - p_y) );
+                p_x += step_w; // = p0.x + i * step_w
+                p_y += a;
+            }
+        }
+    }
+}
+
+void pixel::f2::disk_t::draw(const bool filled) const noexcept {
+    const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
+    const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
+    const float ival2 = 1.0f*std::min(x_ival, y_ival);
+    const aabbox_t b = box();
+    for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) {
+        for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
+            const point_t p { x, y };
+            const float cp = center.dist(p);
+            if( ( filled && cp <= radius ) ||
+                ( !filled && std::abs(cp - radius) <= ival2 ) ) {
+                p.draw();
+            }
+        }
+    }
+}
+
+void pixel::f2::rect_t::draw(const bool filled) const noexcept {
+    if(filled) {
+        constexpr bool debug = false;
+        vec_t ac = p_c - p_a;
+        ac.normalize();
+        vec_t vunit_per_pixel(pixel::cart_coord.from_fb_dx( 1 ), pixel::cart_coord.from_fb_dy( 1 ));
+        if( debug ) {
+            printf("unit_per_pixel real %s\n", vunit_per_pixel.toString().c_str());
+        }
+        vunit_per_pixel.normalize();
+        float unit_per_pixel = vunit_per_pixel.length();
+        /**
+         * Problem mit rotation, wo step breite und linien-loop zu luecken fuehrt!
+         */
+        vec_t step = ac * unit_per_pixel * 1.0f;
+        vec_t i(p_a), j(p_b);
+        if( debug ) {
+            printf("%s\n", toString().c_str());
+            printf("ac %s\n", ac.toString().c_str());
+            printf("unit_per_pixel norm %s, %f\n", vunit_per_pixel.toString().c_str(), unit_per_pixel);
+            printf("step %s\n", step.toString().c_str());
+            printf("i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
+        }
+        if( 0.0f == step.length_sq() ){
+            lineseg_t::draw(i, j);
+            if( debug ) {
+                printf("z: i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
+            }
+        } else if(p_a.y < p_c.y){
+            for(; /*i.x > p_c.x ||*/ i.y <= p_c.y; i+=step, j+=step) {
+                lineseg_t::draw(i, j);
+                if( debug ) {
+                    printf("a: i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
+                }
+            }
+        }else{
+            for(; /*i.x > p_c.x ||*/ i.y >= p_c.y; i+=step, j+=step) {
+                lineseg_t::draw(i, j);
+                if( debug ) {
+                    printf("b: i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
+                }
+            }
+        }
+
+    } else {
+        lineseg_t::draw(p_a, p_b);
+        lineseg_t::draw(p_b, p_d);
+        lineseg_t::draw(p_d, p_c);
+        lineseg_t::draw(p_c, p_a);
+    }
+}
+
+void pixel::f2::triangle_t::draw(const bool filled) const noexcept {
+    if(!filled) {
+        lineseg_t::draw(p_a, p_b);
+        lineseg_t::draw(p_b, p_c);
+        lineseg_t::draw(p_c, p_a);
+    } else {
+        const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
+        const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
+        const aabbox_t b = box();
+        for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) {
+            for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
+                const point_t p { x, y };
+                if( contains(p) ){
+                    p.draw();
+                }
+            }
+        }
+    }
+}
+
+void pixel::f2::linestrip_t::draw() const noexcept {
+    if( p_list.size() < 2 ) {
+        return;
+    }
+    point_t p0 = p_list[0];
+    for(size_t i=1; i<p_list.size(); ++i) {
+        const point_t& p1 = p_list[i];
+        lineseg_t::draw(p0, p1);
+        p0 = p1;
+    }
+}
+
+//
+// pixel::f2::*
 //
 
 pixel::f2::geom_list_t& pixel::f2::gobjects() {

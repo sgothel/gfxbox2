@@ -745,6 +745,7 @@ void mainloop() {
     const int text_high = 24;
 
     if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        printf("Exit Application\n");
         #if defined(__EMSCRIPTEN__)
             emscripten_cancel_main_loop();
         #else
@@ -911,11 +912,12 @@ int main(int argc, char *argv[])
     bool enable_vsync = true;
     int sun_gravity_scale_env = 20;    //  20 x 280 =  5600
     int sun_gravity_scale_ships = 200; // 200 x 280 = 56000
+    bool use_subsys_primitives = true;
     #if defined(__EMSCRIPTEN__)
         win_width = 1024, win_height = 576; // 16:9
-        // win_width = 720, win_height = 400; // 16:9
     #endif
     {
+        bool fps_set = false;
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-1p", argv[i]) ) {
                 two_players = false;
@@ -929,6 +931,7 @@ int main(int argc, char *argv[])
                 record_bmpseq_basename = argv[i+1];
                 ++i;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
+                fps_set = true;
                 forced_fps = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-no_vsync", argv[i]) ) {
@@ -949,6 +952,15 @@ int main(int argc, char *argv[])
                 ++i;
             } else if( 0 == strcmp("-with_cloak", argv[i]) ) {
                 cloak_enabled = true;
+            } else if( 0 == strcmp("-soft_prim", argv[i]) ) {
+                use_subsys_primitives = false;
+            }
+        }
+        if( !fps_set ) {
+            if( use_subsys_primitives ) {
+                forced_fps = 0;
+            } else {
+                forced_fps = 30;
             }
         }
     }
@@ -958,6 +970,7 @@ int main(int argc, char *argv[])
                                       " -debug_gfx -show_velo -asteroids <int> -sung_env <int> -sung_ships <int>\n", argv[0]);
         pixel::log_printf(elapsed_ms, "- win size %d x %d\n", win_width, win_height);
         pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
+        pixel::log_printf(elapsed_ms, "- subsys_primitives %d\n", use_subsys_primitives);
         pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
         pixel::log_printf(elapsed_ms, "- forced_fps %d\n", forced_fps);
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
@@ -972,7 +985,7 @@ int main(int argc, char *argv[])
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("spacewars", win_width, win_height, origin_norm, enable_vsync);
+        pixel::init_gfx_subsystem("spacewars", win_width, win_height, origin_norm, enable_vsync, use_subsys_primitives);
     }
     pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
 
