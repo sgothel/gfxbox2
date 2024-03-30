@@ -236,64 +236,22 @@ class ball_t : public pixel::f2::disk_t {
         }
 };
 
-int main(int argc, char *argv[])
-{
-    float rho = rho_default;
-    int win_width = 1920, win_height = 1080;
-    std::string record_bmpseq_basename;
-    bool enable_vsync = true;
-    int forced_fps = -1;
-    {
-        for(int i=1; i<argc; ++i) {
-            if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
-                win_width = atoi(argv[i+1]);
-                ++i;
-            } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
-                win_height = atoi(argv[i+1]);
-                ++i;
-            } else if( 0 == strcmp("-record", argv[i]) && i+1<argc) {
-                record_bmpseq_basename = argv[i+1];
-                ++i;
-            } else if( 0 == strcmp("-debug_gfx", argv[i]) ) {
-                debug_gfx = true;
-            } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
-                forced_fps = atoi(argv[i+1]);
-                enable_vsync = false;
-                ++i;
-            } else if( 0 == strcmp("-rho", argv[i]) && i+1<argc) {
-                rho = atof(argv[i+1]);
-                ++i;
-            }
-        }
-    }
-    {
-        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        pixel::log_printf(elapsed_ms, "Usage %s -width <int> -height <int> -record <bmp-files-basename> -debug_gfx -fps <int>\n", argv[0]);
-        pixel::log_printf(elapsed_ms, "- win size %d x %d\n", win_width, win_height);
-        pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
-        pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
-        pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
-        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", forced_fps);
-        pixel::log_printf(elapsed_ms, "- rho %f\n", rho);
-    }
+static const float ball_height = 0.05f; // [m] .. diameter
+static const float ball_radius = ball_height/2.0f; // [m]
+static const float small_gap = ball_radius;
+static const float thickness = 1.0f * ball_height;
 
-    {
-        const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("freefall01", win_width, win_height, origin_norm, enable_vsync);
-    }
+static float rho = rho_default;
+static int forced_fps = -1;
+static std::string record_bmpseq_basename;
 
-    const float ball_height = 0.05f; // [m] .. diameter
-    const float ball_radius = ball_height/2.0f; // [m]
-    const float thickness = 1.0f * ball_height;
-    const float small_gap = ball_radius;
+void mainloop() {
 
-    pixel::cart_coord.set_height(0.0f, drop_height+6.0f*thickness);
-
-    std::shared_ptr<ball_t> ball_1 = std::make_shared<ball_t>( "one", rho, -4.0f*ball_height, drop_height-ball_radius, ball_radius,
+    static std::shared_ptr<ball_t> ball_1 = std::make_shared<ball_t>( "one", rho, -4.0f*ball_height, drop_height-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-    std::shared_ptr<ball_t> ball_2 = std::make_shared<ball_t>( "two", rho, +2.0f*ball_height, drop_height-ball_radius, ball_radius,
+    static std::shared_ptr<ball_t> ball_2 = std::make_shared<ball_t>( "two", rho, +2.0f*ball_height, drop_height-ball_radius, ball_radius,
                     0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-    std::shared_ptr<ball_t> ball_3 = std::make_shared<ball_t>( "can", rho, pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
+    static std::shared_ptr<ball_t> ball_3 = std::make_shared<ball_t>( "can", rho, pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
                     6.8f /* [m/s] */, pixel::adeg_to_rad(64));
                     // 6.1f /* [m/s] */, pixel::adeg_to_rad(78));
     {
@@ -343,28 +301,39 @@ int main(int argc, char *argv[])
         }
     }
 
-    pixel::texture_ref hud_text;
-    uint64_t frame_count_total = 0;
+    static pixel::texture_ref hud_text;
+    static uint64_t frame_count_total = 0;
 
-    uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
-    pixel::input_event_t event;
-    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        if( pixel::handle_events(event) ) {
-            // std::cout << "Event " << pixel::to_string(event) << std::endl;
-        }
-        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
-            pixel::cart_coord.set_height(0.0f, drop_height+2.0f*thickness);
-        }
+    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static pixel::input_event_t event;
 
-        // white background
-        pixel::clear_pixel_fb(255, 255, 255, 255);
+    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        printf("Exit Application\n");
+        #if defined(__EMSCRIPTEN__)
+            emscripten_cancel_main_loop();
+        #else
+            exit(0);
+        #endif
+    }
 
-        const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
-        const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
-        t_last = t1;
+    pixel::handle_events(event);
+    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+        pixel::cart_coord.set_height(0.0f, drop_height+6.0f*thickness);
+    }
+    const bool animating = !event.paused();
 
-        hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+", fps "+std::to_string(pixel::get_gpu_fps()));
+    // while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
 
+    // white background
+    pixel::clear_pixel_fb(255, 255, 255, 255);
+
+    const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
+    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
+    t_last = t1;
+
+    hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+", fps "+std::to_string(pixel::get_gpu_fps()));
+
+    if( animating ) {
         // move ball_1
         ball_1->tick(dt);
 
@@ -373,42 +342,97 @@ int main(int argc, char *argv[])
 
         // move ball_3
         ball_3->tick(dt);
+    }
 
-        pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-        {
-            pixel::f2::geom_list_t& list = pixel::f2::gobjects();
-            if( debug_gfx ) {
-                for(pixel::f2::geom_ref_t g : list) {
-                    if( g.get() != ball_1.get() &&
-                        g.get() != ball_2.get() &&
-                        g.get() != ball_3.get() )
-                    {
-                        g->draw();
-                    }
-                }
-            } else {
-                for(pixel::f2::geom_ref_t g : list) {
+    pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+    {
+        pixel::f2::geom_list_t& list = pixel::f2::gobjects();
+        if( debug_gfx ) {
+            for(pixel::f2::geom_ref_t g : list) {
+                if( g.get() != ball_1.get() &&
+                    g.get() != ball_2.get() &&
+                    g.get() != ball_3.get() )
+                {
                     g->draw();
                 }
             }
-        }
-
-        fflush(nullptr);
-        pixel::swap_pixel_fb(false);
-        if( nullptr != hud_text ) {
-            const int thickness_pixel = pixel::cart_coord.to_fb_dy(thickness);
-            const int small_gap_pixel = pixel::cart_coord.to_fb_dy(small_gap);
-            const int text_height = thickness_pixel - 2;
-            const float sy = (float)text_height / (float)hud_text->height;
-            hud_text->draw(small_gap_pixel*2.0f, small_gap_pixel+1, sy, sy);
-        }
-        pixel::swap_gpu_buffer(forced_fps);
-        if( record_bmpseq_basename.size() > 0 ) {
-            std::string snap_fname(128, '\0');
-            const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
-            snap_fname.resize(written);
-            pixel::save_snapshot(snap_fname);
+        } else {
+            for(pixel::f2::geom_ref_t g : list) {
+                g->draw();
+            }
         }
     }
-    exit(0);
+
+    fflush(nullptr);
+    pixel::swap_pixel_fb(false);
+    if( nullptr != hud_text ) {
+        const int thickness_pixel = pixel::cart_coord.to_fb_dy(thickness);
+        const int small_gap_pixel = pixel::cart_coord.to_fb_dy(small_gap);
+        const int text_height = thickness_pixel - 2;
+        const float sy = (float)text_height / (float)hud_text->height;
+        hud_text->draw(small_gap_pixel*2.0f, small_gap_pixel+1, sy, sy);
+    }
+    pixel::swap_gpu_buffer(forced_fps);
+    if( record_bmpseq_basename.size() > 0 ) {
+        std::string snap_fname(128, '\0');
+        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
+        snap_fname.resize(written);
+        pixel::save_snapshot(snap_fname);
+    }
+
+}
+
+int main(int argc, char *argv[])
+{
+    int win_width = 1920, win_height = 1080;
+    bool enable_vsync = true;
+    #if defined(__EMSCRIPTEN__)
+        win_width = 1024, win_height = 576; // 16:9
+    #endif
+    {
+        for(int i=1; i<argc; ++i) {
+            if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
+                win_width = atoi(argv[i+1]);
+                ++i;
+            } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
+                win_height = atoi(argv[i+1]);
+                ++i;
+            } else if( 0 == strcmp("-record", argv[i]) && i+1<argc) {
+                record_bmpseq_basename = argv[i+1];
+                ++i;
+            } else if( 0 == strcmp("-debug_gfx", argv[i]) ) {
+                debug_gfx = true;
+            } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
+                forced_fps = atoi(argv[i+1]);
+                enable_vsync = false;
+                ++i;
+            } else if( 0 == strcmp("-rho", argv[i]) && i+1<argc) {
+                rho = atof(argv[i+1]);
+                ++i;
+            }
+        }
+    }
+    {
+        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
+        pixel::log_printf(elapsed_ms, "Usage %s -width <int> -height <int> -record <bmp-files-basename> -debug_gfx -fps <int>\n", argv[0]);
+        pixel::log_printf(elapsed_ms, "- win size %d x %d\n", win_width, win_height);
+        pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
+        pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
+        pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
+        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", forced_fps);
+        pixel::log_printf(elapsed_ms, "- rho %f\n", rho);
+    }
+
+    {
+        const float origin_norm[] = { 0.5f, 0.5f };
+        pixel::init_gfx_subsystem("freefall01", win_width, win_height, origin_norm, enable_vsync, true /* subsys primitives */);
+    }
+
+    pixel::cart_coord.set_height(0.0f, drop_height+6.0f*thickness);
+
+    #if defined(__EMSCRIPTEN__)
+        emscripten_set_main_loop(mainloop, 0, 1);
+    #else
+        while( true ) { mainloop(); }
+    #endif
 }

@@ -30,10 +30,6 @@
 #include <algorithm>
 #include <random>
 
-#if defined(__EMSCRIPTEN__)
-    #include <emscripten.h>
-#endif
-
 constexpr static const int player_id_1 = 1;
 constexpr static const int player_id_2 = 2;
 constexpr static const float spaceship_height = 10.0f; // [m]
@@ -900,14 +896,12 @@ void mainloop() {
         hud_text->draw(dx, 0);
     }
     pixel::swap_gpu_buffer(forced_fps);
-    #if !defined(__EMSCRIPTEN__)
-        if( record_bmpseq_basename.size() > 0 ) {
-            std::string snap_fname(128, '\0');
-            const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
-            snap_fname.resize(written);
-            pixel::save_snapshot(snap_fname);
-        }
-    #endif
+    if( record_bmpseq_basename.size() > 0 ) {
+        std::string snap_fname(128, '\0');
+        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
+        snap_fname.resize(written);
+        pixel::save_snapshot(snap_fname);
+    }
     ++frame_count_total;
 }
 
@@ -963,7 +957,7 @@ int main(int argc, char *argv[])
         }
         if( !fps_set ) {
             if( use_subsys_primitives ) {
-                forced_fps = 0;
+                forced_fps = -1;
             } else {
                 forced_fps = 30;
             }

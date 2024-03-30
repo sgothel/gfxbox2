@@ -38,6 +38,10 @@
 #include <vector>
 #include <iostream>
 
+#if defined(__EMSCRIPTEN__)
+    #include <emscripten.h>
+#endif
+
 namespace pixel::f2 {
     class vec_t; // fwd
     typedef vec_t point_t;

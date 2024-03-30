@@ -15,6 +15,7 @@ C++20 and better where the [SDL2 library](https://www.libsdl.org/) is supported,
 optionally SDL2 with [emscripten](https://emscripten.org/) or [SFML library](https://www.sfml-dev.org/).
 
 ## Online WebAssembly Examples
+* [freefall01](https://jausoft.com/projects/gfxbox2/freefall01.html)
 * [piviz](https://jausoft.com/projects/gfxbox2/piviz.html)
 * [spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
 

@@ -387,7 +387,10 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
     }
 }
 
-#if !defined(__EMSCRIPTEN__)
+#if defined(__EMSCRIPTEN__)
+    void pixel::save_snapshot(const std::string&) noexcept {
+    }
+#else
     static std::atomic<int> active_threads = 0;
 
     static void store_surface(SDL_Surface *sshot, char* fname) noexcept {

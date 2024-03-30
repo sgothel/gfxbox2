@@ -30,10 +30,6 @@
 #include <cmath>
 #include <iostream>
 
-#if defined(__EMSCRIPTEN__)
-    #include <emscripten.h>
-#endif
-
 using namespace std;
 using namespace pixel::f2;
 
@@ -617,9 +613,9 @@ int main(int argc, char *argv[])
 {
     unsigned int win_width = 1920, win_height = 1000;
     bool use_subsys_primitives = true;
-#if defined(__EMSCRIPTEN__)
-    win_width = 1024, win_height = 576; // 16:9
-#endif
+    #if defined(__EMSCRIPTEN__)
+        win_width = 1024, win_height = 576; // 16:9
+    #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
@@ -632,12 +628,11 @@ int main(int argc, char *argv[])
         }
     }
     if( use_subsys_primitives ) {
-        forced_fps = 0;
+        forced_fps = -1;
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("piviz", win_width, win_height, origin_norm);
-        pixel::init_gfx_subsystem("spacewars", win_width, win_height, origin_norm, true /* enable_vsync */, use_subsys_primitives);
+        pixel::init_gfx_subsystem("piviz", win_width, win_height, origin_norm, true /* enable_vsync */, use_subsys_primitives);
     }
 
     pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
