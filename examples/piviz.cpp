@@ -30,6 +30,10 @@
 #include <cmath>
 #include <iostream>
 
+#if defined(__EMSCRIPTEN__)
+    #include <emscripten.h>
+#endif
+
 using namespace std;
 using namespace pixel::f2;
 
@@ -370,50 +374,24 @@ void draw_sin_cos_graph(const float r, const float alpha_max, const float angrad
     disk_t(psin, thickness*2).draw();
 }
 
-int main(int argc, char *argv[])
-{
-    unsigned int win_width = 1920, win_height = 1000;
-    {
-        for(int i=1; i<argc; ++i) {
-            if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
-                win_width = atoi(argv[i+1]);
-                ++i;
-            } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
-                win_height = atoi(argv[i+1]);
-                ++i;
-            }
-        }
-    }
-    {
-        const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("gfxbox example01", win_width, win_height, origin_norm);
-    }
+static int forced_fps = 30;
 
-    vector<pixel::texture_ref> texts;
-    point_t origin(0, 0);
-    pixel::f4::vec_t text_color(0, 0, 0, 1);
+void mainloop() {
+    static vector<pixel::texture_ref> texts;
+    static const point_t origin(0, 0);
+    static const pixel::f4::vec_t text_color(0, 0, 0, 1);
 
-    pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
-    {
-        float w = pixel::cart_coord.width();
-        float h = pixel::cart_coord.height();
-        float r01 = h/w;
-        float a = w / h;
-        printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]", w, h, r01, a);
-    }
-    printf("Pre-Loop\n");
-
-    const int circles_per_plot = 2;
+    static const int circles_per_plot = 2;
     const float ticks_per_circle = 12.0f * 60.0f; // one circle in 12s @ 60Hz, [s] * [1/s] = [1]
     const float angrad_inc = ( 2.0f * M_PI ) / ticks_per_circle;
-    float ang_rad = 0.0f, ang_grad = 0.0f;
-    float an = -0.35f;
-    float off_pct = an;
-    int demo_index = 0;
-    const int DEMO_MAX_IDX = 3;
-    const float grid_gap = 50;
-    //float max_radius = pixel::cart_coord.max_y() * 0.9f;
-    int circum_corners = 3;
+    static float ang_rad = 0.0f, ang_grad = 0.0f;
+    static float an = -0.35f;
+    static float off_pct = an;
+    static int demo_index = 0;
+    static const int DEMO_MAX_IDX = 3;
+    static const float grid_gap = 50;
+    //static float max_radius = pixel::cart_coord.max_y() * 0.9f;
+    static int circum_corners = 3;
     /*
     {
         const int decimalAccuracy = 10;
@@ -425,205 +403,254 @@ int main(int argc, char *argv[])
     }
      */
 
-    bool manual = false;
-    bool m1 = false;
-    bool m2 = false;
+    static bool manual = false;
+    static bool m1 = false;
+    static bool m2 = false;
 
-    bool anim1 = true;
-    bool anim2 = true;
-    int a1 = 0;
-    int a2 = 0;
-    pixel::input_event_t event;
-    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        const float plot_inc = pixel::cart_coord.width() / ( ticks_per_circle * circles_per_plot );
-        pixel::handle_events(event);
-        const bool animating = !event.paused();
-        manual = manual && animating;
-        m1 = m1 && anim1;
-        m2 = m2 && anim2;
-        anim1 = animating && demo_index == 1;
-        anim2 = animating && demo_index == 2;
-        float fps = pixel::get_gpu_fps();
-        texts.push_back( pixel::make_text(
-                point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), 0, text_color,
-                "fps "+std::to_string(fps)) );
+    static bool anim1 = true;
+    static bool anim2 = true;
+    static int a1 = 0;
+    static int a2 = 0;
+    static pixel::input_event_t event;
 
-        const float max_radius = pixel::cart_coord.max_y() * 0.9f;
-
-        // white background
-        pixel::clear_pixel_fb(255, 255, 255, 255);
-        pixel::draw_grid(grid_gap,
-                225 /* r */, 225 /* g */, 225 /* b */, 255 /* a */,
-                200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
-
-        if( event.has_any_p1() ) {
-            if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) ) {
-                manual = true;
-                if( circum_corners < 128 && demo_index == 3 ) {
-                    circum_corners += 1;
-                } else if( demo_index == 2 ){
-                    ang_rad += angrad_inc / 2;
-                    m2 = true;
-                } else if(demo_index == 1){
-                    off_pct += 0.0025;
-                    m1 = true;
-                }
-            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
-                manual = true;
-                if( circum_corners > 3 && demo_index == 3 ) {
-                    circum_corners -= 1;
-                } else if( demo_index == 2 ){
-                    ang_rad -= angrad_inc / 2;
-                    m2 = true;
-                } else if(demo_index == 1){
-                    off_pct -= 0.0025;
-                    m1 = true;
-                }
-            } else if( event.released_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
-                demo_index -= 1;
-                if( demo_index < 0 ) {
-                    demo_index = DEMO_MAX_IDX;
-                }
-            } else if( event.released_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
-                demo_index += 1;
-                if( demo_index > DEMO_MAX_IDX ) {
-                    demo_index = 0;
-                }
-            } else if( !animating ) {
-                if( demo_index == 1 ) {
-                    ++a1;
-                } else if( demo_index == 2) {
-                    ++a2;
-                }
-            }
-        }
-        // rect_t(point_t(0, 0), max_radius, 100).draw(true);
-        if( false ) {
-            rect_t r1(point_t(0, 0), max_radius, max_radius);
-            r1.rotate(M_PI/4.0f);
-            // r1.rotate(M_PI);
-            r1.draw(true);
-        } else {
-            float enter = pixel::cart_coord.height() / -35;
-            point_t text_pos1(pixel::cart_coord.min_x()+pixel::cart_coord.width()*3.0f/4.0f,
-                    pixel::cart_coord.max_y());
-            point_t text_pos2(pixel::cart_coord.min_x() + 50,
-                    pixel::cart_coord.min_y() + pixel::cart_coord.height() / 4);
-            point_t text_pos3(pixel::cart_coord.min_x(), pixel::cart_coord.max_y() + enter * 1.5f);
-            const float font_height = max<float>(24, pixel::cart_coord.height() / 35);
-            point_t text_pos4(pixel::cart_coord.min_x() + pixel::cart_coord.width() * 3.0f / 4.0f -
-                    (font_height * 5),
-                    pixel::cart_coord.max_y());
-            switch( demo_index ) {
-            case 0: {
-                point_t text_pos(-200, pixel::cart_coord.max_y());
-                int a = 6;
-                texts.push_back( pixel::make_text(text_pos, 0, text_color, "INNHALTSVERZEICHNIS"));
-                text_pos.add(-230, enter * a);
-                texts.push_back( pixel::make_text(text_pos, 0, text_color, "1. . . . . . . . . . . . . . . . . . . . ."
-                        " . . . . . . . . . . . . . . . . . . . . 2*PI*r Ausgerollt"));
-                text_pos.add(0, enter * a);
-                texts.push_back( pixel::make_text(text_pos, 0, text_color, "2. . . . . . . . . . . . . . . . . . . . ."
-                        "  . . . Einheitskreis 2*PI Sinus & Cosinus"));
-                text_pos.add(0, enter * a);
-                texts.push_back( pixel::make_text(text_pos, 0, text_color, "3. . . . . . . . . . . . . . . . . . . . ."
-                        " . . . . . .PI Annaehrung nach Archimedes"));
-            }
-            break;
-            case 1: {
-                float radius = max_radius / 2.0f;
-                float Umfang = 2 * M_PI * radius;
-                float PI = Umfang / (2 * radius);
-                draw_circle_unroll(point_t(pixel::cart_coord.min_x() + radius, 0),
-                        radius, 10, off_pct);
-                point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
-                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "2*PI*r Ausgerollt") );
-                text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "u = umfang, r = radius, d = durchmesser") );
-                text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "u = 2 * PI * Radius") );
-                text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "PI = u / 2 * r") );
-                text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "d = 2 * r") );
-                texts.push_back( pixel::make_text(text_pos2, 0, text_color, "PI = "+std::to_string(PI)) );
-                text_pos2.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos2, 0, text_color, "u = "+std::to_string(Umfang)) );
-                text_pos2.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos2, 0, text_color, "r = "+std::to_string(radius)) );
-                text_pos2.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos2, 0, text_color, "d = "+std::to_string(radius * 2)) );
-                if( anim1 && !m1/*&& !manual*/ ) {
-                    if(off_pct < 1.3f){
-                        off_pct += 0.005f;
-                    } else {
-                        off_pct = an;
-                    }
-                }
-            }
-            break;
-            case 2: {
-                draw_sin_cos_graph(max_radius, ang_rad, angrad_inc, plot_inc);
-                draw_sin_cos(origin, max_radius, ang_rad, 5);
-                point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
-                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Einheitskreis 2*PI Sinus & Cosinus") );
-                float cosval = cos(ang_rad);
-                float sinval = sin(ang_rad);
-                text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Cosinus = "+std::to_string(cosval)) );
-                text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Sinus = "+std::to_string(sinval)) );
-                text_pos4.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Winkel (Grad) = "+std::to_string(ang_grad)) );
-                if( anim2 && !m2/*&& !manual*/ ){
-                    ang_rad += angrad_inc;
-                }
-            }
-            break;
-            case 3: {
-                pixel::set_pixel_color(0 /* r */, 0 /* g */, 255 /* b */, 255 /* a */);
-                draw_circle(origin, max_radius, 1, circle_t::line);
-                pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-                draw_circumferenceInner(origin, max_radius, circum_corners);
-                draw_circumferenceOutter(origin, max_radius, circum_corners);
-                point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
-                texts.push_back( pixel::make_text(text_pos3, 0, text_color, "PI Annaehrung nach Archimedes") );
-                const double d = 2.0f*max_radius;
-                const double ci = circumferenceInner(max_radius, circum_corners);
-                const double co = circumferenceOutter(max_radius, circum_corners);
-                const double pi_i = ci/d;
-                const double pi_o = co/d;
-                text_pos3.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos3, 0, text_color, "Ecken "+std::to_string(circum_corners)+
-                        ", d "+std::to_string(d)) );
-                text_pos3.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos3, 0, text_color, "Innen : U "+std::to_string(ci)+
-                        ", PI "+std::to_string(pi_i)) );
-                text_pos3.add(0, enter);
-                texts.push_back( pixel::make_text(text_pos3, 0, text_color, "Aussen : U "+std::to_string(co)+
-                        ", PI "+std::to_string(pi_o)) );
-            }
-            [[fallthrough]];
-            default:
-                break;
-            }
-        }
-        if(ang_rad > circles_per_plot * 2 * M_PI){
-            ang_rad = 0.0f;
-        }
-        ang_grad = pixel::rad_to_adeg(ang_rad);
-        if(ang_rad > 2 * M_PI) {
-            const int n = (int)( ang_grad / 360.0f );
-            ang_grad -= n * 360.0f;
-        }
-
-        pixel::swap_pixel_fb(false);
-        for(pixel::texture_ref tex : texts) {
-            tex->draw(0, 0);
-        }
-        texts.clear();
-        pixel::swap_gpu_buffer(30);
+    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        printf("Exit Application\n");
+        #if defined(__EMSCRIPTEN__)
+            emscripten_cancel_main_loop();
+        #else
+            exit(0);
+        #endif
     }
-    printf("Exit\n");
-    exit(0);
+
+    pixel::handle_events(event);
+    const bool animating = !event.paused();
+
+    const float plot_inc = pixel::cart_coord.width() / ( ticks_per_circle * circles_per_plot );
+    manual = manual && animating;
+    m1 = m1 && anim1;
+    m2 = m2 && anim2;
+    anim1 = animating && demo_index == 1;
+    anim2 = animating && demo_index == 2;
+    float fps = pixel::get_gpu_fps();
+    texts.push_back( pixel::make_text(
+            point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), 0, text_color,
+            "fps "+std::to_string(fps)) );
+
+    const float max_radius = pixel::cart_coord.max_y() * 0.9f;
+
+    // white background
+    pixel::clear_pixel_fb(255, 255, 255, 255);
+    pixel::draw_grid(grid_gap,
+            225 /* r */, 225 /* g */, 225 /* b */, 255 /* a */,
+            200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
+
+    if( event.has_any_p1() ) {
+        if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) ) {
+            manual = true;
+            if( circum_corners < 128 && demo_index == 3 ) {
+                circum_corners += 1;
+            } else if( demo_index == 2 ){
+                ang_rad += angrad_inc / 2;
+                m2 = true;
+            } else if(demo_index == 1){
+                off_pct += 0.0025;
+                m1 = true;
+            }
+        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
+            manual = true;
+            if( circum_corners > 3 && demo_index == 3 ) {
+                circum_corners -= 1;
+            } else if( demo_index == 2 ){
+                ang_rad -= angrad_inc / 2;
+                m2 = true;
+            } else if(demo_index == 1){
+                off_pct -= 0.0025;
+                m1 = true;
+            }
+        } else if( event.released_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
+            demo_index -= 1;
+            if( demo_index < 0 ) {
+                demo_index = DEMO_MAX_IDX;
+            }
+        } else if( event.released_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
+            demo_index += 1;
+            if( demo_index > DEMO_MAX_IDX ) {
+                demo_index = 0;
+            }
+        } else if( !animating ) {
+            if( demo_index == 1 ) {
+                ++a1;
+            } else if( demo_index == 2) {
+                ++a2;
+            }
+        }
+    }
+    // rect_t(point_t(0, 0), max_radius, 100).draw(true);
+    if( false ) {
+        rect_t r1(point_t(0, 0), max_radius, max_radius);
+        r1.rotate(M_PI/4.0f);
+        // r1.rotate(M_PI);
+        r1.draw(true);
+    } else {
+        float enter = pixel::cart_coord.height() / -35;
+        point_t text_pos1(pixel::cart_coord.min_x()+pixel::cart_coord.width()*3.0f/4.0f,
+                pixel::cart_coord.max_y());
+        point_t text_pos2(pixel::cart_coord.min_x() + 50,
+                pixel::cart_coord.min_y() + pixel::cart_coord.height() / 4);
+        point_t text_pos3(pixel::cart_coord.min_x(), pixel::cart_coord.max_y() + enter * 1.5f);
+        const float font_height = max<float>(24, pixel::cart_coord.height() / 35);
+        point_t text_pos4(pixel::cart_coord.min_x() + pixel::cart_coord.width() * 3.0f / 4.0f -
+                (font_height * 5),
+                pixel::cart_coord.max_y());
+        switch( demo_index ) {
+        case 0: {
+            point_t text_pos(-200, pixel::cart_coord.max_y());
+            int a = 6;
+            texts.push_back( pixel::make_text(text_pos, 0, text_color, "INNHALTSVERZEICHNIS"));
+            text_pos.add(-230, enter * a);
+            texts.push_back( pixel::make_text(text_pos, 0, text_color, "1. . . . . . . . . . . . . . . . . . . . ."
+                    " . . . . . . . . . . . . . . . . . . . . 2*PI*r Ausgerollt"));
+            text_pos.add(0, enter * a);
+            texts.push_back( pixel::make_text(text_pos, 0, text_color, "2. . . . . . . . . . . . . . . . . . . . ."
+                    "  . . . Einheitskreis 2*PI Sinus & Cosinus"));
+            text_pos.add(0, enter * a);
+            texts.push_back( pixel::make_text(text_pos, 0, text_color, "3. . . . . . . . . . . . . . . . . . . . ."
+                    " . . . . . .PI Annaehrung nach Archimedes"));
+        }
+        break;
+        case 1: {
+            float radius = max_radius / 2.0f;
+            float Umfang = 2 * M_PI * radius;
+            float PI = Umfang / (2 * radius);
+            draw_circle_unroll(point_t(pixel::cart_coord.min_x() + radius, 0), radius, 6, off_pct);
+            point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
+            texts.push_back( pixel::make_text(text_pos4, 0, text_color, "2*PI*r Ausgerollt") );
+            text_pos4.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos4, 0, text_color, "u = umfang, r = radius, d = durchmesser") );
+            text_pos4.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos4, 0, text_color, "u = 2 * PI * Radius") );
+            text_pos4.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos4, 0, text_color, "PI = u / 2 * r") );
+            text_pos4.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos4, 0, text_color, "d = 2 * r") );
+            texts.push_back( pixel::make_text(text_pos2, 0, text_color, "PI = "+std::to_string(PI)) );
+            text_pos2.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos2, 0, text_color, "u = "+std::to_string(Umfang)) );
+            text_pos2.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos2, 0, text_color, "r = "+std::to_string(radius)) );
+            text_pos2.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos2, 0, text_color, "d = "+std::to_string(radius * 2)) );
+            if( anim1 && !m1/*&& !manual*/ ) {
+                if(off_pct < 1.3f){
+                    off_pct += 0.005f;
+                } else {
+                    off_pct = an;
+                }
+            }
+        }
+        break;
+        case 2: {
+            draw_sin_cos_graph(max_radius, ang_rad, angrad_inc, plot_inc);
+            draw_sin_cos(origin, max_radius, ang_rad, 5);
+            point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
+            texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Einheitskreis 2*PI Sinus & Cosinus") );
+            float cosval = cos(ang_rad);
+            float sinval = sin(ang_rad);
+            text_pos4.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Cosinus = "+std::to_string(cosval)) );
+            text_pos4.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Sinus = "+std::to_string(sinval)) );
+            text_pos4.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos4, 0, text_color, "Winkel (Grad) = "+std::to_string(ang_grad)) );
+            if( anim2 && !m2/*&& !manual*/ ){
+                ang_rad += angrad_inc;
+            }
+        }
+        break;
+        case 3: {
+            pixel::set_pixel_color(0 /* r */, 0 /* g */, 255 /* b */, 255 /* a */);
+            draw_circle(origin, max_radius, 1, circle_t::line);
+            pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+            draw_circumferenceInner(origin, max_radius, circum_corners);
+            draw_circumferenceOutter(origin, max_radius, circum_corners);
+            point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
+            texts.push_back( pixel::make_text(text_pos3, 0, text_color, "PI Annaehrung nach Archimedes") );
+            const double d = 2.0f*max_radius;
+            const double ci = circumferenceInner(max_radius, circum_corners);
+            const double co = circumferenceOutter(max_radius, circum_corners);
+            const double pi_i = ci/d;
+            const double pi_o = co/d;
+            text_pos3.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos3, 0, text_color, "Ecken "+std::to_string(circum_corners)+
+                    ", d "+std::to_string(d)) );
+            text_pos3.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos3, 0, text_color, "Innen : U "+std::to_string(ci)+
+                    ", PI "+std::to_string(pi_i)) );
+            text_pos3.add(0, enter);
+            texts.push_back( pixel::make_text(text_pos3, 0, text_color, "Aussen : U "+std::to_string(co)+
+                    ", PI "+std::to_string(pi_o)) );
+        }
+        [[fallthrough]];
+        default:
+            break;
+        }
+    }
+    if(ang_rad > circles_per_plot * 2 * M_PI){
+        ang_rad = 0.0f;
+    }
+    ang_grad = pixel::rad_to_adeg(ang_rad);
+    if(ang_rad > 2 * M_PI) {
+        const int n = (int)( ang_grad / 360.0f );
+        ang_grad -= n * 360.0f;
+    }
+
+    pixel::swap_pixel_fb(false);
+    for(pixel::texture_ref tex : texts) {
+        tex->draw(0, 0);
+    }
+    texts.clear();
+    pixel::swap_gpu_buffer( forced_fps );
+
+}
+
+int main(int argc, char *argv[])
+{
+    unsigned int win_width = 1920, win_height = 1000;
+    bool use_subsys_primitives = true;
+#if defined(__EMSCRIPTEN__)
+    win_width = 1024, win_height = 576; // 16:9
+#endif
+    {
+        for(int i=1; i<argc; ++i) {
+            if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
+                win_width = atoi(argv[i+1]);
+                ++i;
+            } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
+                win_height = atoi(argv[i+1]);
+                ++i;
+            }
+        }
+    }
+    if( use_subsys_primitives ) {
+        forced_fps = 0;
+    }
+    {
+        const float origin_norm[] = { 0.5f, 0.5f };
+        pixel::init_gfx_subsystem("piviz", win_width, win_height, origin_norm);
+        pixel::init_gfx_subsystem("spacewars", win_width, win_height, origin_norm, true /* enable_vsync */, use_subsys_primitives);
+    }
+
+    pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
+    {
+        float w = pixel::cart_coord.width();
+        float h = pixel::cart_coord.height();
+        float r01 = h/w;
+        float a = w / h;
+        printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]\n", w, h, r01, a);
+    }
+    #if defined(__EMSCRIPTEN__)
+        emscripten_set_main_loop(mainloop, 0, 1);
+    #else
+        while( true ) { mainloop(); }
+    #endif
 }
