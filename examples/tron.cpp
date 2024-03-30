@@ -113,7 +113,7 @@ private:
 static int forced_fps = -1;
 
 void mainloop() {
-    static const pixel::f4::vec_t text_color(0, 0, 0, 1);
+    static const pixel::f4::vec_t text_color(0.5f, 0.5f, 0.5f, 1.0f);
     static const float ax1 = pixel::cart_coord.min_x() + 3 * pixel::cart_coord.width() / 4;
     static const float ax2 = pixel::cart_coord.min_x() + pixel::cart_coord.width() / 4;
     static const float ay1 = pixel::cart_coord.min_y() + 100;

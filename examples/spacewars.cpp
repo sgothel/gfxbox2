@@ -40,7 +40,8 @@ static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
 static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
 static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
 // static const uint8_t rgba_blue[/*4*/] = { 0, 0, 255, 255 };
-static const pixel::f4::vec_t vec4_white(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
+static const float text_lum = 0.75f;
+static const pixel::f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f);
 static bool debug_gfx = false;
 static bool show_ship_velo= false;
 static bool cloak_enabled = false;
@@ -772,14 +773,14 @@ void mainloop() {
     const pixel::f2::point_t p1_c = p1.center(), p2_c = p2.center();
 
     if( cloak_enabled ) {
-        hud_text = pixel::make_text(tl_text, 0, vec4_white, text_high,
+        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_high,
               "%s s, fps %4.2f, S1 %4d (%4d pengs, %4.2f m/s, %6.2f / %6.2f), "
               "S2 %4d (%4d pengs, %.2f m/s, %6.2f / %6.2f)",
               pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
               fps, p1.score(), p1.peng_inventory(), p1.velocity(), p1_c.x, p1_c.y,
                    p2.score(), p2.peng_inventory(), p2.velocity(), p2_c.x, p2_c.y);
     } else {
-        hud_text = pixel::make_text(tl_text, 0, vec4_white, text_high,
+        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_high,
               "%s s, fps %4.2f, S1 %4d (%4d pengs, %4.2f m/s), "
               "S2 %4d (%4d pengs, %.2f m/s)",
               pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
