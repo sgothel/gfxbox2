@@ -152,9 +152,17 @@ if(${OS_NAME} STREQUAL "linux")
 endif()
 
 if (DEFINED EMSCRIPTEN)
+    # See https://emscripten.org/docs/tools_reference/settings_reference.html
+    #
     # set(EMS_FLAGS "--use-port=sdl2 --use-port=sdl2_image --use-port=sdl2_ttf")
-    set(EMS_FLAGS "-s USE_SDL=2 -s USE_SDL_IMAGE=2 -s USE_SDL_TTF=2 -Wno-unused-command-line-argument -s ALLOW_MEMORY_GROWTH=1")
+    set(EMS_FLAGS "-s USE_SDL=2 -s USE_SDL_IMAGE=2 -s USE_SDL_TTF=2 -Wno-unused-command-line-argument")
+    set(EMS_FLAGS "${EMS_FLAGS} -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s LZ4=1")
+    # set(EMS_FLAGS "${EMS_FLAGS} -s MEMORY64=1") # wasm64 end-to-end: wasm32 object file can't be linked in wasm64 mode
+    set(EMS_FLAGS "${EMS_FLAGS} -s FULL_ES2=1") # or even FULL_ES3 ?
     # set(EMS_FLAGS "${EMS_FLAGS} -s ASSERTIONS=1")
+    set(EMS_FLAGS "${EMS_FLAGS} -s STACK_OVERFLOW_CHECK=1") # cheap cockie magic, enables CHECK_NULL_WRITES
+    # set(EMS_EXE_FLAGS "-s SIDE_MODULE=1")
+    set(EMS_EXE_FLAGS "")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EMS_FLAGS}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${EMS_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${EMS_FLAGS}")
