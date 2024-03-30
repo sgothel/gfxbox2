@@ -148,28 +148,31 @@ namespace pixel {
      */
     class cart_coord_t {
         private:
-            float x1;
-            float y1;
-            float x2;
-            float y2;
-            float w_to_fbw;
-            float h_to_fbh;
+            float m_x1;
+            float m_y1;
+            float m_x2;
+            float m_y2;
+            float m_w_to_fbw;
+            float m_h_to_fbh;
+            float m_sx_win_to_fb;
+            float m_sy_win_to_fb;
         public:
             cart_coord_t() noexcept { set_one(0.0f, 0.0f); }
             cart_coord_t(float x1_, float y1_) noexcept { set_one(x1_, y1_); }
             cart_coord_t(float x1_, float y1_, float x2_, float y2_) noexcept { set_free(x1_, y1_, x2_, y2_); }
 
             std::string toString() const noexcept {
-                const int fx1 = to_fb_x(x1);
-                const int fy1 = to_fb_y(y1);
-                const int fx2 = to_fb_x(x2);
-                const int fy2 = to_fb_y(y2);
+                const int fx1 = to_fb_x(m_x1);
+                const int fy1 = to_fb_y(m_y1);
+                const int fx2 = to_fb_x(m_x2);
+                const int fy2 = to_fb_y(m_y2);
                 const int fxO = to_fb_x(0.0f);
                 const int fyO = to_fb_y(0.0f);
-                return "cart[min "+std::to_string(x1)+"/"+std::to_string(y1)+", max "+std::to_string(x2)+"/"+std::to_string(y2)+
-                        ", size "+std::to_string(width())+"x"+std::to_string(height())+", scale x "+std::to_string(w_to_fbw)+", y "+std::to_string(h_to_fbh)
+                return "cart[min "+std::to_string(m_x1)+"/"+std::to_string(m_y1)+", max "+std::to_string(m_x2)+"/"+std::to_string(m_y2)+
+                        ", size "+std::to_string(width())+"x"+std::to_string(height())+", scale x "+std::to_string(m_w_to_fbw)+", y "+std::to_string(m_h_to_fbh)
                         +"], fb[min "+std::to_string(fx1)+"/"+std::to_string(fy1)+", max "+std::to_string(fx2)+"/"+std::to_string(fy2)+
-                        ", origin "+std::to_string(fxO)+"/"+std::to_string(fyO)+", size "+std::to_string(fb_width)+"x"+std::to_string(fb_height)+"]";
+                        ", origin "+std::to_string(fxO)+"/"+std::to_string(fyO)+", size "+std::to_string(fb_width)+"x"+std::to_string(fb_height)+
+                        ", scale "+std::to_string(m_sx_win_to_fb)+" x "+std::to_string(m_sy_win_to_fb)+" fb/win]";
             }
 
             /**
@@ -189,13 +192,21 @@ namespace pixel {
              * The x-axis and y-axis minimum determine the origin.
              */
             void set_one(float x1_, float y1_) noexcept {
-                x1 = x1_;
-                y1 = y1_;
-                w_to_fbw = 1.0f;
-                h_to_fbh = 1.0f;
-                x2 = x1 + (float)fb_max_x * w_to_fbw;
-                y2 = y1 + (float)fb_max_y * h_to_fbh;
+                m_x1 = x1_;
+                m_y1 = y1_;
+                m_w_to_fbw = 1.0f;
+                m_h_to_fbh = 1.0f;
+                m_x2 = m_x1 + (float)fb_max_x * m_w_to_fbw;
+                m_y2 = m_y1 + (float)fb_max_y * m_h_to_fbh;
+                m_sx_win_to_fb = 1;
+                m_sy_win_to_fb = 1;
                 printf("set_one: %s\n", toString().c_str());
+            }
+
+            void set_sxy_win_to_fb(float sx, float sy) noexcept {
+                m_sx_win_to_fb = sx;
+                m_sy_win_to_fb = sy;
+                printf("set_sxy: %s\n", toString().c_str());
             }
 
             /**
@@ -205,13 +216,13 @@ namespace pixel {
              * The x-axis and y-axis minimum determine the origin.
              */
             void set_width(float x1_, float x2_) noexcept {
-                x1 = x1_;
-                x2 = x2_;
-                w_to_fbw = width() / fb_width;
-                h_to_fbh = w_to_fbw;
-                const float h = (float)fb_max_y * h_to_fbh;
-                y1 = h / -2.0f;
-                y2 = y1 + h;
+                m_x1 = x1_;
+                m_x2 = x2_;
+                m_w_to_fbw = width() / fb_width;
+                m_h_to_fbh = m_w_to_fbw;
+                const float h = (float)fb_max_y * m_h_to_fbh;
+                m_y1 = h / -2.0f;
+                m_y2 = m_y1 + h;
                 printf("coord.set_width: %s\n", toString().c_str());
             }
 
@@ -222,13 +233,13 @@ namespace pixel {
              * The x-axis and y-axis minimum determine the origin.
              */
             void set_height(float y1_, float y2_) noexcept {
-                y1 = y1_;
-                y2 = y2_;
-                h_to_fbh = height() / (float)fb_height;
-                w_to_fbw = h_to_fbh;
-                const float w = (float)fb_max_x * w_to_fbw;
-                x1 = w / -2.0f;
-                x2 = x1 + w;
+                m_y1 = y1_;
+                m_y2 = y2_;
+                m_h_to_fbh = height() / (float)fb_height;
+                m_w_to_fbw = m_h_to_fbh;
+                const float w = (float)fb_max_x * m_w_to_fbw;
+                m_x1 = w / -2.0f;
+                m_x2 = m_x1 + w;
                 printf("coord.set_height: %s\n", toString().c_str());
             }
 
@@ -238,48 +249,63 @@ namespace pixel {
              * The x-axis and y-axis minimum determine the origin.
              */
             void set_free(float x1_, float y1_, float x2_, float y2_) noexcept {
-                x1 = x1_;
-                y1 = y1_;
-                x2 = x2_;
-                y2 = y2_;
-                w_to_fbw = width() / fb_width;
-                h_to_fbh = height() / fb_height;
+                m_x1 = x1_;
+                m_y1 = y1_;
+                m_x2 = x2_;
+                m_y2 = y2_;
+                m_w_to_fbw = width() / fb_width;
+                m_h_to_fbh = height() / fb_height;
                 printf("coord.set_free: %s\n", toString().c_str());
             }
 
             /** x-axis minimum of the cartesian coordinate system within the framebuffer space. */
-            constexpr float min_x() const noexcept { return x1; }
+            constexpr float min_x() const noexcept { return m_x1; }
             /** y-axis minimum of the cartesian coordinate system within the framebuffer space. */
-            constexpr float min_y() const noexcept { return y1; }
+            constexpr float min_y() const noexcept { return m_y1; }
             /** x-axis maximum of the cartesian coordinate system within the framebuffer space. */
-            constexpr float max_x() const noexcept { return x2; }
+            constexpr float max_x() const noexcept { return m_x2; }
             /** y-axis maximum of the cartesian coordinate system within the framebuffer space. */
-            constexpr float max_y() const noexcept { return y2; }
+            constexpr float max_y() const noexcept { return m_y2; }
+
+            /** scale x-axis window to fb due to high-dpi. */
+            constexpr float sx_win_to_fb() const noexcept { return m_sx_win_to_fb; }
+            /** scale y-axis window to fb due to high-dpi. */
+            constexpr float sy_win_to_fb() const noexcept { return m_sy_win_to_fb; }
+
+            /** scale x-axis window to fb due to high-dpi. */
+            constexpr float sx_win_to_fb(int x) const noexcept { return m_sx_win_to_fb * x; }
+            /** scale y-axis window to fb due to high-dpi. */
+            constexpr float sy_win_to_fb(int y) const noexcept { return m_sy_win_to_fb * y; }
 
             /** x-axis width of the cartesian coordinate system. */
-            constexpr float width() const noexcept { return x2 - x1; }
+            constexpr float width() const noexcept { return m_x2 - m_x1; }
             /** y-axis height of the cartesian coordinate system. */
-            constexpr float height() const noexcept { return y2 - y1; }
+            constexpr float height() const noexcept { return m_y2 - m_y1; }
 
             /** Convert cartesian x-axis value to framebuffer pixel value. */
-            int to_fb_dx(const float dx) const noexcept { return round_to_int( dx / w_to_fbw ); }
+            int to_fb_dx(const float dx) const noexcept { return round_to_int( dx / m_w_to_fbw ); }
             /** Convert cartesian y-axis value to framebuffer pixel value. */
-            int to_fb_dy(const float dy) const noexcept { return round_to_int( dy / h_to_fbh ); }
+            int to_fb_dy(const float dy) const noexcept { return round_to_int( dy / m_h_to_fbh ); }
 
             /** Convert framebuffer x-axis value in pixels to cartesian pixel value. */
-            int from_fb_dx(const int dx) const noexcept { return (float)dx * w_to_fbw; }
+            int from_fb_dx(const int dx) const noexcept { return (float)dx * m_w_to_fbw; }
             /** Convert framebuffer y-axis value in pixels to cartesian pixel value. */
-            int from_fb_dy(const int dy) const noexcept { return (float)dy * h_to_fbh; }
+            int from_fb_dy(const int dy) const noexcept { return (float)dy * m_h_to_fbh; }
 
             /** Convert cartesian x-axis coordinate to framebuffer coordinate in pixels. */
-            int to_fb_x(const float x) const noexcept { return round_to_int( ( x - x1 ) / w_to_fbw ); }
+            int to_fb_x(const float x) const noexcept { return round_to_int( ( x - m_x1 ) / m_w_to_fbw ); }
             /** Convert cartesian y-axis coordinate in pixels to framebuffer coordinate in pixels. */
-            int to_fb_y(const float y) const noexcept { return fb_height - round_to_int( ( y - y1 ) / h_to_fbh ); }
+            int to_fb_y(const float y) const noexcept { return fb_height - round_to_int( ( y - m_y1 ) / m_h_to_fbh ); }
 
             /** Convert framebuffer x-axis coordinate in pixels to cartesian coordinate. */
-            float from_fb_x(const int x) const noexcept { return (float)x * w_to_fbw + x1; }
+            float from_fb_x(const int x) const noexcept { return (float)x * m_w_to_fbw + m_x1; }
             /** Convert framebuffer y-axis coordinate in pixels to cartesian coordinate. */
-            float from_fb_y(const int y) const noexcept { return (float)(fb_height-y) * h_to_fbh + y1; }
+            float from_fb_y(const int y) const noexcept { return (float)(fb_height-y) * m_h_to_fbh + m_y1; }
+
+            /** Convert win x-axis coordinate in pixels to cartesian coordinate. */
+            float from_win_x(const int x) const noexcept { return sx_win_to_fb(x) * m_w_to_fbw + m_x1; }
+            /** Convert win y-axis coordinate in pixels to cartesian coordinate. */
+            float from_win_y(const int y) const noexcept { return (float)(fb_height-sy_win_to_fb(y)) * m_h_to_fbh + m_y1; }
     };
     extern cart_coord_t cart_coord;
 

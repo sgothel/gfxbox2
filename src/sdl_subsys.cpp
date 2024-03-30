@@ -72,6 +72,7 @@ static void on_window_resized(const int win_width, const int win_height) noexcep
     fb_max_y = fb_height - 1;
 
     cart_coord.set_origin(fb_origin_norm[0], fb_origin_norm[1]);
+    cart_coord.set_sxy_win_to_fb( (float)fb_width/(float)win_width, (float)fb_height/(float)win_height );
 
     {
         SDL_DisplayMode mode;
@@ -85,7 +86,7 @@ static void on_window_resized(const int win_width, const int win_height) noexcep
     printf("FB Size %d x %d, min 0 / 0, max %d / %d \n",
             fb_width, fb_height, fb_max_x, fb_max_y);
     printf("Win Size %d x %d, FB/Win %f x %f \n",
-            win_width, win_height, (float)fb_width/(float)win_width, (float)fb_height/(float)win_height);
+            win_width, win_height, cart_coord.sx_win_to_fb(), cart_coord.sy_win_to_fb());
     printf("%s\n", cart_coord.toString().c_str());
 
     fb_pixels_dim_size = (size_t)(fb_width * fb_height);
