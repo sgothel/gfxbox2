@@ -16,6 +16,7 @@ optionally SDL2 with [emscripten](https://emscripten.org/) or [SFML library](htt
 
 ## Online WebAssembly Examples
 * [freefall01](https://jausoft.com/projects/gfxbox2/freefall01.html)
+* [pong01](https://jausoft.com/projects/gfxbox2/pong01.html)
 * [piviz](https://jausoft.com/projects/gfxbox2/piviz.html)
 * [spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
 

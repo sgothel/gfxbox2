@@ -3,13 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Jausoft - Freefall01</title>
+    <title>Jausoft - Pong01</title>
     <link href="/style.css" rel="stylesheet" type="text/css"/>
     <link href="/style-alt1.css" rel="alternate stylesheet" title="default sans-serif font" type="text/css"/>
     <link href="/images/favicon.ico" rel="shortcut icon"/>
     <style>
-      html {padding:0; margin:0; color:#000000; background: #ffffff; }
-      a { color:#000000; }
+      html {padding:0; margin:0; color:#dddddd; background: #303030; }
+      a { color:#dddddd; }
+      a:hover { color:#ffffff; }
 
       table {
         border-collapse: collapse;
@@ -20,17 +21,17 @@
         padding: 0.25em;
       }
       /* tr:nth-child(even) {
-        background-color: #c0c0c0;
+        background-color: #404040;
       } */
       td:nth-child(even), th:nth-child(even) {
-        background-color: #c0c0c0;
+        background-color: #404040;
       }
 
       .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
       div.emscripten { text-align: center; }      
       div.emscripten_border { border: 1px solid black; }
       /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
-      canvas.emscripten { border: 0px none; background-color: white; }
+      canvas.emscripten { border: 0px none; background-color: black; }
 
       #emscripten_logo {
         display: inline-block;
@@ -86,16 +87,16 @@
         padding-left: 0px;
         padding-right: 0px;
         display: block;
-        background-color: white;
-        color: black;
+        background-color: black;
+        color: white;
         font-family: 'Lucida Console', Monaco, monospace;
         outline: none;
       }
     </style>
   </head>
   <body>
-    <a href="https://jausoft.com"><img src="/images/jaugsweklogo-hp-220x80.png" alt="Jausoft"/></a>
-    <span style="padding:1em; font-size:2em;"><span class="acap">F</span>reefall01</span>... a <a href="https://jausoft.com/cgit/cs_class/gfxbox2.git/about/">gfxbox2 example</a>.
+    <a href="https://jausoft.com"><img src="/images/jaugsweklogo-hp-220x80.png" alt="Jausoft" style="background-color: #555555"/></a>
+    <span style="padding:1em; font-size:2em;"><span class="acap">P</span>ong01</span>... a <a href="https://jausoft.com/cgit/cs_class/gfxbox2.git/about/">gfxbox2 example</a>.
 
     <div class="spinner" id='spinner'></div>
     <div class="emscripten" id="status">Downloading...</div>
@@ -118,14 +119,28 @@
     <div>
         <table>
         <tr>
-            <th>Toggle Manual / Auto</th>
-            <th>Time Up</th>
-            <th>Time Down</th>
+            <th>Actor</th>
+            <th>Move Up</th>
+            <th>Move Down</th>
+            <th>Rotate-Right</th>
+            <th>Rotate-Left</th>
+            <th>Pause</th>
         </tr>
         <tr>
-            <td>P</td>
+            <td>Player 1</td>
+            <td>Cursor-Up</td>
+            <td>Cursor-Down</td>
             <td>Cursor-Right</td>
             <td>Cursor-Left</td>
+            <td>P</td>
+        </tr>
+        <tr>
+            <td>Player 2</td>
+            <td>W</td>
+            <td>S</td>
+            <td>D</td>
+            <td>A</td>
+            <td>P</td>
         </tr>
         </table>
     </div>
@@ -197,7 +212,7 @@
         };
       };
     </script>
-    <script async type="text/javascript" src="freefall01.js"></script>
+    <script async type="text/javascript" src="pong01.js"></script>
   </body>
 </html>
 

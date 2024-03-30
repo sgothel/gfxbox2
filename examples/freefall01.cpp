@@ -250,7 +250,6 @@ typedef std::vector<ball_ref_t> ball_list_t;
 static ball_list_t ball_list;
 
 void mainloop() {
-    static pixel::texture_ref hud_text;
     static uint64_t frame_count_total = 0;
 
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
@@ -276,7 +275,8 @@ void mainloop() {
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
 
-    hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+", fps "+std::to_string(pixel::get_gpu_fps()));
+    pixel::texture_ref hud_text = pixel::make_text_texture("td %s, fps %2.2f",
+            pixel::to_decstring(t1, ',', 9).c_str(), pixel::get_gpu_fps());
 
     if( animating ) {
         for(ball_ref_t g : ball_list) {
