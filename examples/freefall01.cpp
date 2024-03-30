@@ -245,68 +245,18 @@ static float rho = rho_default;
 static int forced_fps = -1;
 static std::string record_bmpseq_basename;
 
+typedef std::shared_ptr<ball_t> ball_ref_t;
+typedef std::vector<ball_ref_t> ball_list_t;
+static ball_list_t ball_list;
+
 void mainloop() {
-
-    static std::shared_ptr<ball_t> ball_1 = std::make_shared<ball_t>( "one", rho, -4.0f*ball_height, drop_height-ball_radius, ball_radius,
-                    0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-    static std::shared_ptr<ball_t> ball_2 = std::make_shared<ball_t>( "two", rho, +2.0f*ball_height, drop_height-ball_radius, ball_radius,
-                    0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-    static std::shared_ptr<ball_t> ball_3 = std::make_shared<ball_t>( "can", rho, pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
-                    6.8f /* [m/s] */, pixel::adeg_to_rad(64));
-                    // 6.1f /* [m/s] */, pixel::adeg_to_rad(78));
-    {
-        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        if( debug_gfx ) {
-            pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
-        }
-        pixel::f2::geom_list_t& list = pixel::f2::gobjects();
-        list.push_back(ball_1);
-        list.push_back(ball_2);
-        list.push_back(ball_3);
-        {
-            // top horizontal bounds
-            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-small_gap };
-            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
-            list.push_back(r);
-            if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RT %s\n", r->toString().c_str());
-            }
-        }
-        {
-            // bottom horizontal bounds
-            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.min_y()+small_gap+thickness };
-            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
-            list.push_back(r);
-            if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
-            }
-        }
-        if(true) {
-            // left vertical bounds
-            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
-            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
-            list.push_back(r);
-            if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RL %s\n", r->toString().c_str());
-            }
-        }
-        if(true) {
-            // right vertical bounds
-            pixel::f2::point_t tl = { pixel::cart_coord.max_x()-small_gap-thickness, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
-            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
-            list.push_back(r);
-            if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RR %s\n", r->toString().c_str());
-            }
-        }
-    }
-
     static pixel::texture_ref hud_text;
     static uint64_t frame_count_total = 0;
 
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
 
+    pixel::handle_events(event);
     if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
         printf("Exit Application\n");
         #if defined(__EMSCRIPTEN__)
@@ -314,15 +264,10 @@ void mainloop() {
         #else
             exit(0);
         #endif
-    }
-
-    pixel::handle_events(event);
-    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+    } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
         pixel::cart_coord.set_height(0.0f, drop_height+6.0f*thickness);
     }
     const bool animating = !event.paused();
-
-    // while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
 
     // white background
     pixel::clear_pixel_fb(255, 255, 255, 255);
@@ -334,14 +279,9 @@ void mainloop() {
     hud_text = pixel::make_text_texture("td "+pixel::to_decstring(t1, ',', 9)+", fps "+std::to_string(pixel::get_gpu_fps()));
 
     if( animating ) {
-        // move ball_1
-        ball_1->tick(dt);
-
-        // move ball_2
-        ball_2->tick(dt);
-
-        // move ball_3
-        ball_3->tick(dt);
+        for(ball_ref_t g : ball_list) {
+            g->tick(dt);
+        }
     }
 
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
@@ -349,9 +289,9 @@ void mainloop() {
         pixel::f2::geom_list_t& list = pixel::f2::gobjects();
         if( debug_gfx ) {
             for(pixel::f2::geom_ref_t g : list) {
-                if( g.get() != ball_1.get() &&
-                    g.get() != ball_2.get() &&
-                    g.get() != ball_3.get() )
+                if( g.get() != ball_list[0].get() &&
+                    g.get() != ball_list[1].get() &&
+                    g.get() != ball_list[2].get() )
                 {
                     g->draw();
                 }
@@ -404,8 +344,9 @@ int main(int argc, char *argv[])
                 debug_gfx = true;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
                 forced_fps = atoi(argv[i+1]);
-                enable_vsync = false;
                 ++i;
+            } else if( 0 == strcmp("-no_vsync", argv[i]) ) {
+                enable_vsync = false;
             } else if( 0 == strcmp("-rho", argv[i]) && i+1<argc) {
                 rho = atof(argv[i+1]);
                 ++i;
@@ -429,6 +370,63 @@ int main(int argc, char *argv[])
     }
 
     pixel::cart_coord.set_height(0.0f, drop_height+6.0f*thickness);
+
+    {
+        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
+        if( debug_gfx ) {
+            pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
+        }
+        std::shared_ptr<ball_t> ball_1 = std::make_shared<ball_t>( "one", rho, -4.0f*ball_height, drop_height-ball_radius, ball_radius,
+                        0.0f /* [m/s] */, pixel::adeg_to_rad(90));
+        std::shared_ptr<ball_t> ball_2 = std::make_shared<ball_t>( "two", rho, +2.0f*ball_height, drop_height-ball_radius, ball_radius,
+                        0.0f /* [m/s] */, pixel::adeg_to_rad(90));
+        std::shared_ptr<ball_t> ball_3 = std::make_shared<ball_t>( "can", rho, pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
+                        6.8f /* [m/s] */, pixel::adeg_to_rad(64));
+                        // 6.1f /* [m/s] */, pixel::adeg_to_rad(78));
+        pixel::f2::geom_list_t& list = pixel::f2::gobjects();
+        ball_list.push_back(ball_1);
+        ball_list.push_back(ball_2);
+        ball_list.push_back(ball_3);
+        list.push_back(ball_1);
+        list.push_back(ball_2);
+        list.push_back(ball_3);
+        {
+            // top horizontal bounds
+            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-small_gap };
+            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
+            list.push_back(r);
+            if( debug_gfx ) {
+                pixel::log_printf(elapsed_ms, "XX RT %s\n", r->toString().c_str());
+            }
+        }
+        {
+            // bottom horizontal bounds
+            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.min_y()+small_gap+thickness };
+            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
+            list.push_back(r);
+            if( debug_gfx ) {
+                pixel::log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
+            }
+        }
+        if(true) {
+            // left vertical bounds
+            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
+            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
+            list.push_back(r);
+            if( debug_gfx ) {
+                pixel::log_printf(elapsed_ms, "XX RL %s\n", r->toString().c_str());
+            }
+        }
+        if(true) {
+            // right vertical bounds
+            pixel::f2::point_t tl = { pixel::cart_coord.max_x()-small_gap-thickness, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
+            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
+            list.push_back(r);
+            if( debug_gfx ) {
+                pixel::log_printf(elapsed_ms, "XX RR %s\n", r->toString().c_str());
+            }
+        }
+    }
 
     #if defined(__EMSCRIPTEN__)
         emscripten_set_main_loop(mainloop, 0, 1);
