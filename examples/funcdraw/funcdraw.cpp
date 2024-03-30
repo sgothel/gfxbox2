@@ -155,6 +155,7 @@ void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::f2::lineseg_t l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
     static pixel::f2::lineseg_t l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
+    static float grid_gap = std::floor( std::min(pixel::cart_coord.width(), pixel::cart_coord.height()) / 10.0f );
     static pixel::input_event_t event;
     static std::string input_text;
     {
@@ -195,6 +196,7 @@ void mainloop() {
         cart_coord_setup();
         l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
         l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
+        grid_gap = std::floor( std::min(pixel::cart_coord.width(), pixel::cart_coord.height()) / 10.0f );
         printf("x-axis: %s\n", l_x.toString().c_str());
         printf("y-axis: %s\n", l_y.toString().c_str());
         fprintf(stdout, "> ");
@@ -204,9 +206,16 @@ void mainloop() {
 
     const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, text_color, text_height,
-            "fps %5.2f, %4d / %4d: type > %s", pixel::get_gpu_fps(), event.pointer_x, event.pointer_y, input_text.c_str());
+            "fps %5.2f, %.2f / %.2f: grid %.1f, type > %s", pixel::get_gpu_fps(),
+            pixel::cart_coord.from_win_x(event.pointer_x),
+            pixel::cart_coord.from_win_y(event.pointer_y),
+            grid_gap, input_text.c_str());
 
     pixel::clear_pixel_fb(255, 255, 255, 255);
+    pixel::draw_grid(grid_gap,
+            225 /* r */, 225 /* g */, 225 /* b */, 255 /* a */,
+            200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
+
     const uint64_t t = pixel::getElapsedMillisecond(); // [ms]
     const float dt = (float)( t - t_last ) / 1000.0f; // [s]
     const float dt_exp = 1.0f / (float)pixel::frames_per_sec; // [s]
