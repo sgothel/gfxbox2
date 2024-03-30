@@ -49,6 +49,7 @@ set (GCC_FLAGS_WARNING_FORMAT "-Wformat=2 -Wformat-overflow=2 -Wformat-nonlitera
 set (GCC_FLAGS_WARNING "-Wall -Wextra -Wshadow -Wtype-limits -Wsign-compare -Wcast-align=strict -Wnull-dereference -Winit-self ${GCC_FLAGS_WARNING_FORMAT} -Werror")
 # causes issues in jau::get_int8(..): "-Wnull-dereference"
 set (GCC_FLAGS_WARNING_NO_ERROR "-Wno-error=array-bounds -Wno-error=null-dereference -Wno-multichar")
+set (CLANG_FLAGS_WARNING_NO_ERROR "-Wno-overloaded-virtual")
 
 # too pedantic, but nice to check once in a while
 # set (DISABLED_CC_FLAGS_WARNING "-Wsign-conversion")
@@ -66,7 +67,7 @@ if(CMAKE_COMPILER_IS_GNUCC)
     # shorten __FILE__ string and the like ..
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GCC_FLAGS_WARNING} ${GCC_FLAGS_WARNING_NO_ERROR} -fmacro-prefix-map=${CMAKE_SOURCE_DIR}/=/")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CC_FLAGS_WARNING}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CC_FLAGS_WARNING} ${CLANG_FLAGS_WARNING_NO_ERROR}")
 endif(CMAKE_COMPILER_IS_GNUCC)
 
 message(STATUS "${PROJECT_NAME} USE_STRIP = ${USE_STRIP} (pre-set)")

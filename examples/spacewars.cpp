@@ -743,7 +743,7 @@ void mainloop() {
     static uint64_t frame_count_total = 0;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
-    const int text_high = 24;
+    static const int text_high = 24;
 
     pixel::handle_events(event);
     if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
