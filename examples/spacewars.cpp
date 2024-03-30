@@ -82,10 +82,15 @@ class star_t {
             const float dr_min = r0 * 0.95f;
             const float dr_max = r0 * 1.05f;
             const float r = body.radius + r0 * 0.1f * dt * dr_dir;
-            if( dr_min > r || r > dr_max ) {
-                dr_dir *= -1;
+            if( r <= dr_min ) {
+                dr_dir = 1;
+                body.radius = dr_min;
+            } else if( r >= dr_max ) {
+                dr_dir = -1;
+                body.radius = dr_max;
+            } else {
+                body.radius = r;
             }
-            body.radius = r;
             return true;
         }
         void draw() {
