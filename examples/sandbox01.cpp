@@ -29,9 +29,54 @@
 #include <cmath>
 #include <iostream>
 
+static int forced_fps = -1;
+
+void mainloop() {
+    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static pixel::input_event_t event;
+
+    const float grid_gap = 50;
+
+    pixel::handle_events(event);
+    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+        printf("Exit Application\n");
+        #if defined(__EMSCRIPTEN__)
+            emscripten_cancel_main_loop();
+        #else
+            exit(0);
+        #endif
+    } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+        // nop for this demo, resize already performed
+    }
+    const bool animating = !event.paused();
+
+    const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
+    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
+    t_last = t1;
+
+    pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+    pixel::texture_ref hud_text = pixel::make_text_texture("td %s, fps %2.2f, dt %d ms, %s",
+            pixel::to_decstring(t1, ',', 9).c_str(), pixel::get_gpu_fps(), (int)(dt*1000), animating?"animating":"paused");
+
+    // white background
+    pixel::clear_pixel_fb(255, 255, 255, 255);
+    pixel::draw_grid(grid_gap,
+            225 /* r */, 225 /* g */, 225 /* b */, 255 /* a */,
+            200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
+
+    pixel::swap_pixel_fb(false);
+    if( nullptr != hud_text ) {
+        hud_text->draw(0, 0);
+    }
+    pixel::swap_gpu_buffer(forced_fps);
+}
+
 int main(int argc, char *argv[])
 {
     unsigned int win_width = 1920, win_height = 1000;
+    #if defined(__EMSCRIPTEN__)
+        win_width = 1024, win_height = 576; // 16:9
+    #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
@@ -45,11 +90,8 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("gfxbox example01", win_width, win_height, origin_norm);
+        pixel::init_gfx_subsystem("gfxbox example01", win_width, win_height, origin_norm, true /* subsys primitives */);
     }
-
-    pixel::texture_ref hud_text;
-    float last_fps = -1.0f;
 
     pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
     {
@@ -57,38 +99,12 @@ int main(int argc, char *argv[])
         float h = pixel::cart_coord.height();
         float r01 = h/w;
         float a = w / h;
-        printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]", w, h, r01, a);
+        printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]\n", w, h, r01, a);
     }
-    printf("Pre-Loop\n");
 
-    const float grid_gap = 50;
-
-    pixel::f2::point_t center(0, 0);
-    pixel::input_event_t event;
-    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        pixel::handle_events(event);
-        const bool animating = !event.paused();
-
-        float fps = pixel::get_gpu_fps();
-        {
-            pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-            hud_text = pixel::make_text_texture("fps "+std::to_string(fps)+", "+(animating?"animating":"paused"));
-            last_fps = fps;
-            (void)last_fps;
-        }
-
-        // white background
-        pixel::clear_pixel_fb(255, 255, 255, 255);
-        pixel::draw_grid(grid_gap,
-                225 /* r */, 225 /* g */, 225 /* b */, 255 /* a */,
-                200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
-
-        pixel::swap_pixel_fb(false);
-        if( nullptr != hud_text ) {
-            hud_text->draw(0, 0);
-        }
-        pixel::swap_gpu_buffer(30);
-    }
-    printf("Exit\n");
-    exit(0);
+    #if defined(__EMSCRIPTEN__)
+        emscripten_set_main_loop(mainloop, 0, 1);
+    #else
+        while( true ) { mainloop(); }
+    #endif
 }
