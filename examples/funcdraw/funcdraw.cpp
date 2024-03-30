@@ -6,11 +6,13 @@
 #include <cstring>
 #include <iostream>
 #include <ostream>
+#include <sstream>
 #include <thread>
 
 #include "rpn_calc.hpp"
 #include "infix_calc.hpp"
 
+#include <pixel/pixel4f.hpp>
 #include <pixel/pixel2i.hpp>
 #include <pixel/pixel2f.hpp>
 #include "pixel/pixel.hpp"
@@ -89,26 +91,52 @@ void exit_app() {
 }
 
 void commandline_proc() {
-    infix_calc::compiler cc;
-    std::string line;
+    #if 0
+        infix_calc::compiler cc;
+        std::string line;
 
-    std::cout << "> ";
-    while( !exit_raised && std::getline(std::cin, line) ) {
-        if( line.length() > 0 ) {
-            const bool pok = cc.parse (line.c_str(), line.length());
-            if( !pok ) {
-                std::cerr << "Error occurred @ parsing: " << cc.location() << std::endl;
-            }
+        FILE* c_in = fopen("/dev/stdin", "rb");
+        if( nullptr == c_in ) {
+            printf("Error opening stdin\n");
+            exit_raised = true;
         }
-        std::cout << "> ";
-    }
+        char* c_line = NULL;
+        size_t c_len = 0;
+        ssize_t c_nread;
+
+        while( !exit_raised && (c_nread = ::getline(&c_line, &c_len, c_in)) != -1 ) {
+            if( c_nread > 0 ) {
+                printf("%s", c_line);
+                const bool pok = cc.parse (c_line, c_nread);
+                if( !pok ) {
+                    std::ostringstream ss;
+                    ss << cc.location();
+                    printf("Error occurred @ parsing: %s\n", ss.str().c_str());
+                }
+            }
+            printf("> ");
+        }
+    #else
+        infix_calc::compiler cc;
+        std::string line;
+
+        while( !exit_raised && std::getline(std::cin, line) ) {
+            if( line.length() > 0 ) {
+                const bool pok = cc.parse (line.c_str(), line.length());
+                if( !pok ) {
+                    std::cerr << "Error occurred @ parsing: " << cc.location() << std::endl;
+                }
+            }
+            std::cout << "> ";
+        }
+    #endif
 }
 
 void print_usage() {
     printf("Usage:\n");
     printf("\tdraw sin(x);\n");
     printf("\t\tunary functions: abs, sin, cos, tan, asin, acos, atan, sqrt, ln, log, exp\n");
-    printf("\t\tbinary operations: +, -, *, /, %%, ^\n");
+    printf("\t\tbinary operations: +, -, *, /, modulo: '%%' or 'mod', pow: '^' or '**'\n");
     printf("\t\tbraces: (, )\n");
     printf("\tclear;\n");
     printf("\tset_width x1, x2;\n");
@@ -117,10 +145,106 @@ void print_usage() {
     printf("\texit;\n");
 }
 
+static int forced_fps = -1;
+
+void mainloop() {
+    static infix_calc::compiler cc;
+    static const pixel::f4::vec_t text_color(0.4f, 0.4f, 0.4f, 1.0f);
+    static const int text_height = 28;
+
+    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static pixel::f2::lineseg_t l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
+    static pixel::f2::lineseg_t l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
+    static pixel::input_event_t event;
+    static std::string input_text;
+    {
+        while( pixel::handle_one_event(event) ) {
+            if( 0 != event.last_key_code && pixel::is_ascii_code(event.last_key_code) ) {
+                const int key_code = event.last_key_code;
+                event.last_key_code = 0;
+                fprintf(stdout, "%c", (char)key_code);
+                fflush(stdout);
+                input_text = event.text;
+                if( 0x08 == key_code ) {
+                    fprintf(stdout, "%c%c", ' ', (char)0x08);
+                    fflush(stdout);
+                } else if( '\n' == key_code ) {
+                    input_text.pop_back();
+                    const bool pok = cc.parse (event.text.c_str(), event.text.length());
+                    if( !pok ) {
+                        std::ostringstream ss;
+                        ss << cc.location();
+                        printf("Error occurred @ parsing: %s: %s\n", ss.str().c_str(), event.text.c_str());
+                    }
+                    fprintf(stdout, "> ");
+                    fflush(stdout);
+                }
+            }
+        }
+    }
+    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) || exit_raised ) {
+        exit_raised = true;
+        printf("Exit Application\n");
+        #if defined(__EMSCRIPTEN__)
+            emscripten_cancel_main_loop();
+        #else
+            exit(0);
+        #endif
+    } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) || resized_ext ) {
+        resized_ext = false;
+        cart_coord_setup();
+        l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
+        l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
+        printf("x-axis: %s\n", l_x.toString().c_str());
+        printf("y-axis: %s\n", l_y.toString().c_str());
+        fprintf(stdout, "> ");
+        fflush(stdout);
+    }
+    // const bool animating = !event.paused();
+
+    const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
+    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, text_color, text_height,
+            "fps %5.2f, %4d / %4d: type > %s", pixel::get_gpu_fps(), event.pointer_x, event.pointer_y, input_text.c_str());
+
+    pixel::clear_pixel_fb(255, 255, 255, 255);
+    const uint64_t t = pixel::getElapsedMillisecond(); // [ms]
+    const float dt = (float)( t - t_last ) / 1000.0f; // [s]
+    const float dt_exp = 1.0f / (float)pixel::frames_per_sec; // [s]
+    const float dt_diff = (float)( dt_exp - dt ) * 1000.0f; // [ms]
+    t_last = t;
+
+    pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+    l_x.draw();
+    l_y.draw();
+
+    if( false ) {
+        bool expected = true;
+        if( rpn_funcs_dirty.compare_exchange_strong(expected, false) ||
+            event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+            pixel::clear_pixel_fb(255, 255, 255, 255);
+            draw_funcs();
+        }
+    }
+    draw_funcs();
+
+    if( dt_diff > 1.0f ) {
+        pixel::milli_sleep( (uint64_t)dt_diff );
+    }
+    pixel::swap_pixel_fb(false);
+    if( nullptr != hud_text ) {
+        hud_text->draw(0, 0);
+    }
+    pixel::swap_gpu_buffer(forced_fps);
+}
+
 int main(int argc, char *argv[])
 {
     int win_width = 1920, win_height = 1080;
+    bool enable_vsync = true;
     std::string commandfile;
+    #if defined(__EMSCRIPTEN__)
+        win_width = 1024, win_height = 576; // 16:9
+    #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
@@ -137,21 +261,12 @@ int main(int argc, char *argv[])
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("funcdraw", win_width, win_height, origin_norm);
+        pixel::init_gfx_subsystem("funcdraw", win_width, win_height, origin_norm, enable_vsync, true /* subsys primitives */);
     }
-
-    pixel::f2::vec_t pointer_pos;
-    pixel::texture_ref hud_text;
 
     cart_coord_setup();
 
-    uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
-    pixel::f2::lineseg_t l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
-    pixel::f2::lineseg_t l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
-    printf("x-axis: %s\n", l_x.toString().c_str());
-    printf("y-axis: %s\n", l_y.toString().c_str());
     print_usage();
-    pixel::clear_pixel_fb(255, 255, 255, 255);
 
     if( !commandfile.empty() ) {
         infix_calc::compiler cc;
@@ -162,58 +277,19 @@ int main(int argc, char *argv[])
         }
     }
 
-    std::thread commandline_thread(&commandline_proc);
-    commandline_thread.detach();
-    pixel::input_event_t event;
+    printf("> ");
 
-    while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) && !exit_raised) {
-        bool pointer = false;
-        if( pixel::handle_events(event) ) {
-            // std::cout << "Event " << pixel::to_string(event) << std::endl;
-        }
-        // const bool animating = pixel::input_event_type_t::PAUSE != event.type;
-        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) || resized_ext ) {
-            resized_ext = false;
-            cart_coord_setup();
-            l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
-            l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
-            printf("x-axis: %s\n", l_x.toString().c_str());
-            printf("y-axis: %s\n", l_y.toString().c_str());
-        }
-        if( pointer ) {
-            hud_text = pixel::make_text_texture("fps "+std::to_string(pixel::get_gpu_fps())+", "+
-                                    pointer_pos.toString());
-        }
+    #if !defined(__EMSCRIPTEN__)
+        std::thread commandline_thread(&commandline_proc);
+        commandline_thread.detach();
+    #endif
 
-        const uint64_t t = pixel::getElapsedMillisecond(); // [ms]
-        const float dt = (float)( t - t_last ) / 1000.0f; // [s]
-        const float dt_exp = 1.0f / (float)pixel::frames_per_sec; // [s]
-        const float dt_diff = (float)( dt_exp - dt ) * 1000.0f; // [ms]
-        t_last = t;
+    #if defined(__EMSCRIPTEN__)
+        emscripten_set_main_loop(mainloop, 0, 1);
+    #else
+        while( true ) { mainloop(); }
+    #endif
 
-        pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-        l_x.draw();
-        l_y.draw();
-
-        {
-            bool expected = true;
-            if( rpn_funcs_dirty.compare_exchange_strong(expected, false) ||
-                event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
-                pixel::clear_pixel_fb(255, 255, 255, 255);
-                draw_funcs();
-            }
-        }
-
-        if( dt_diff > 1.0f ) {
-            pixel::milli_sleep( (uint64_t)dt_diff );
-        }
-        pixel::swap_pixel_fb(false);
-        if( nullptr != hud_text ) {
-            hud_text->draw(0, 0);
-        }
-        pixel::swap_gpu_buffer();
-    }
     exit_raised = true;
     // commandline_thread.join();
-    exit(0);
 }

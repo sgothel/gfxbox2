@@ -86,9 +86,9 @@
 %left DRAW CLEAR SET_WIDTH SET_HEIGHT HELP EXIT
 
 %left SUB ADD
-%left MUL DIV MOD
+%left MUL DIV MOD MOD2
 %left ABS SIN COS TAN ARCSIN ARCCOS ARCTAN
-%left POW LOG LOG10 EXP
+%left POW POW2 LOG LOG10 EXP
 %left SQRT
 %left NEG
 
@@ -115,8 +115,10 @@ expression    : product
 product     : operand
               | product MUL operand { cc.put_rpn(rpn_calc::rpn_token_t::MUL); }
               | product DIV operand { cc.put_rpn(rpn_calc::rpn_token_t::DIV); }
-              | product MOD operand { cc.put_rpn(rpn_calc::rpn_token_t::MOD); }
-              | product POW operand { cc.put_rpn(rpn_calc::rpn_token_t::POW); }
+              | product MOD  operand { cc.put_rpn(rpn_calc::rpn_token_t::MOD); }
+              | product MOD2 operand { cc.put_rpn(rpn_calc::rpn_token_t::MOD); }
+              | product POW  operand { cc.put_rpn(rpn_calc::rpn_token_t::POW); }
+              | product POW2 operand { cc.put_rpn(rpn_calc::rpn_token_t::POW); }
               ;
 
 operand     : IDENTIFIER { cc.put_rpn(std::move($1)); }

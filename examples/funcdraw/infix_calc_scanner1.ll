@@ -83,12 +83,14 @@ blank [ \t\r]
 "asin"      return infix_calc_yy::parser::make_ARCSIN(loc);
 "acos"      return infix_calc_yy::parser::make_ARCCOS(loc);
 "atan"      return infix_calc_yy::parser::make_ARCTAN(loc);
+"**"        return infix_calc_yy::parser::make_POW2(loc);
 "^"         return infix_calc_yy::parser::make_POW(loc);
 "sqrt"      return infix_calc_yy::parser::make_SQRT(loc);
 "ln"        return infix_calc_yy::parser::make_LOG(loc);
 "log"       return infix_calc_yy::parser::make_LOG10(loc);
 "exp"       return infix_calc_yy::parser::make_EXP(loc);
 "neg"       return infix_calc_yy::parser::make_NEG(loc);
+"mod"       return infix_calc_yy::parser::make_MOD(loc);
 
 {ureal}{pi} return infix_calc::make_UREAL (yytext, M_PI, loc);
 {ureal}[e]  return infix_calc::make_UREAL (yytext, M_E, loc);

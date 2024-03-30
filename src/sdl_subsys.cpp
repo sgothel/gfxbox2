@@ -325,13 +325,57 @@ static input_event_type_t to_event_type(SDL_Scancode scancode) {
 }
 static uint16_t to_ascii(SDL_Scancode scancode) {
     if(SDL_SCANCODE_A <= scancode && scancode <= SDL_SCANCODE_Z ) {
-        return 'A' + ( scancode - SDL_SCANCODE_A );
+        return 'a' + ( scancode - SDL_SCANCODE_A );
     }
     if(SDL_SCANCODE_1 <= scancode && scancode <= SDL_SCANCODE_9 ) {
         return '1' + ( scancode - SDL_SCANCODE_1 );
     }
     if(SDL_SCANCODE_0 == scancode ) {
         return '0' + ( scancode - SDL_SCANCODE_0 );
+    }
+    switch( scancode ) {
+        case SDL_SCANCODE_SEMICOLON: return ';';
+
+        case SDL_SCANCODE_MINUS:
+            [[fallthrough]];
+        case SDL_SCANCODE_KP_MINUS: return '-';
+
+        case SDL_SCANCODE_KP_PLUS: return '+';
+
+        case SDL_SCANCODE_KP_MULTIPLY: return '*';
+
+        case SDL_SCANCODE_SLASH:
+            [[fallthrough]];
+        case SDL_SCANCODE_KP_DIVIDE: return '/';
+
+        case SDL_SCANCODE_KP_PERCENT: return '%';
+
+        case SDL_SCANCODE_KP_LEFTPAREN:
+            [[fallthrough]];
+        case SDL_SCANCODE_KP_LEFTBRACE:
+            [[fallthrough]];
+        case SDL_SCANCODE_LEFTBRACKET: return '(';
+
+        case SDL_SCANCODE_KP_RIGHTPAREN:
+            [[fallthrough]];
+        case SDL_SCANCODE_KP_RIGHTBRACE:
+            [[fallthrough]];
+        case SDL_SCANCODE_RIGHTBRACKET: return ')';
+
+        case SDL_SCANCODE_PERIOD: return '.';
+
+        case SDL_SCANCODE_SPACE:
+            [[fallthrough]];
+        case SDL_SCANCODE_TAB: return ' ';
+
+        case SDL_SCANCODE_RETURN:
+            [[fallthrough]];
+        case SDL_SCANCODE_KP_ENTER: return '\n';
+
+        case SDL_SCANCODE_BACKSPACE: return 0x08;
+
+        default:
+            return 0;
     }
     return 0;
 }

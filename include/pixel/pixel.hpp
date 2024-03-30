@@ -37,6 +37,7 @@
 #include <type_traits>
 #include <vector>
 #include <iostream>
+#include <cctype>
 
 #if defined(__EMSCRIPTEN__)
     #include <emscripten.h>
@@ -494,6 +495,10 @@ namespace pixel {
         return 1U << bit;
     }
 
+    inline bool is_ascii_code(int c) noexcept {
+        return 0 != std::iscntrl(c) || 0 != std::isprint(c);
+    }
+
     class input_event_t {
         private:
             constexpr static const uint32_t p1_mask =
@@ -520,6 +525,7 @@ namespace pixel {
             input_event_type_t last;
             /** ASCII code, ANY_KEY_UP, ANY_KEY_DOWN key code */
             uint16_t last_key_code;
+            std::string text;
             int pointer_id;
             int pointer_x;
             int pointer_y;
@@ -549,6 +555,18 @@ namespace pixel {
                 }
                 this->last = e;
                 this->last_key_code = key_code;
+                if( this->text.length() > 0 && '\n' == this->text[this->text.length()-1] ) {
+                    this->text.clear();
+                }
+                if( 0 != key_code && is_ascii_code(key_code) ) {
+                    if( 0x08 == key_code ) {
+                        if( this->text.length() > 0 ) {
+                            this->text.pop_back();
+                        }
+                    } else {
+                        this->text.push_back( (char)key_code );
+                    }
+                }
             }
             void clear(input_event_type_t e, uint16_t key_code=0) noexcept {
                 (void)key_code;
@@ -557,6 +575,7 @@ namespace pixel {
                     const uint32_t m = bitmask(bit);
                     m_lifted |= m_pressed & m;
                     m_pressed &= ~m;
+                    this->last_key_code = 0;
                 }
                 if( input_event_type_t::PAUSE == e ) {
                     m_paused = !m_paused;

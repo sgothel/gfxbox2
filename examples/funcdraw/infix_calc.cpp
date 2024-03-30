@@ -81,7 +81,11 @@ bool compiler::scan_begin(const std::string& fname)
 {
     FILE* fin = nullptr;
     if (fname.empty () || fname == "-") {
-        fin = ::stdin;
+        #if defined(__EMSCRIPTEN__)
+            fin = nullptr; // FIXME
+        #else
+            fin = ::stdin;
+        #endif
     } else {
         fin = ::fopen(fname.c_str(), "r");
     }
@@ -144,9 +148,15 @@ void compiler::scan_end()
 #elif defined(SCANNER_FLEX)
     yyscan_t& scan = reinterpret_cast<backend_t*>(backend)->scan;
     FILE* fin = infix_calc_yyget_in(scan);
-    if( nullptr != fin && ::stdin != fin ) {
-        ::fclose(fin);
-    }
+    #if defined(__EMSCRIPTEN__)
+        if( nullptr != fin ) {
+            ::fclose(fin);
+        }
+    #else
+        if( nullptr != fin && ::stdin != fin ) {
+            ::fclose(fin);
+        }
+    #endif
     if( nullptr != reinterpret_cast<backend_t*>(backend)->buffer ) {
         infix_calc_yy_delete_buffer( reinterpret_cast<backend_t*>(backend)->buffer, scan );
         reinterpret_cast<backend_t*>(backend)->buffer = nullptr;
