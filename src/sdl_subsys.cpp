@@ -63,8 +63,14 @@ void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t&
     b = ( ui32 & 0x000000ffU );
 }
 
-static void on_window_resized(const int win_width, const int win_height) noexcept {
+static void on_window_resized(int wwidth, int wheight) noexcept {
+    const int old_fb_width = fb_width;
+    const int old_fb_height = fb_height;
     SDL_GetRendererOutputSize(sdl_rend, &fb_width, &fb_height);
+
+    if( 0 == wwidth || 0 == wheight ) {
+        SDL_GetWindowSize(sdl_win, &wwidth, &wheight);
+    }
 
     SDL_RendererInfo sdi;
     SDL_GetRendererInfo(sdl_rend, &sdi);
@@ -72,21 +78,23 @@ static void on_window_resized(const int win_width, const int win_height) noexcep
     fb_max_y = fb_height - 1;
 
     cart_coord.set_origin(fb_origin_norm[0], fb_origin_norm[1]);
-    cart_coord.set_sxy_win_to_fb( (float)fb_width/(float)win_width, (float)fb_height/(float)win_height );
+    cart_coord.set_sxy_win_to_fb( (float)fb_width/(float)wwidth, (float)fb_height/(float)wheight );
 
+    printf("Win Size %d x %d -> %d x %d, FB/Win %f x %f \n",
+            win_width, win_height, wwidth, wheight, cart_coord.sx_win_to_fb(), cart_coord.sy_win_to_fb());
+    printf("FB Size %d x %d -> %d x %d, min 0 / 0, max %d / %d \n",
+            old_fb_width, old_fb_height, fb_width, fb_height, fb_max_x, fb_max_y);
+    win_width = wwidth;
+    win_height = wheight;
     {
         SDL_DisplayMode mode;
         const int win_display_idx = SDL_GetWindowDisplayIndex(sdl_win);
         bzero(&mode, sizeof(mode));
         SDL_GetCurrentDisplayMode(win_display_idx, &mode); // SDL_GetWindowDisplayMode(..) fails on some systems (wrong refresh_rate and logical size
         printf("WindowDisplayMode: %d x %d @ %d Hz @ display %d\n", mode.w, mode.h, mode.refresh_rate, win_display_idx);
-        frames_per_sec = mode.refresh_rate;
+        display_frames_per_sec = mode.refresh_rate;
     }
     printf("Renderer %s\n", sdi.name);
-    printf("FB Size %d x %d, min 0 / 0, max %d / %d \n",
-            fb_width, fb_height, fb_max_x, fb_max_y);
-    printf("Win Size %d x %d, FB/Win %f x %f \n",
-            win_width, win_height, cart_coord.sx_win_to_fb(), cart_coord.sy_win_to_fb());
     printf("%s\n", cart_coord.toString().c_str());
 
     fb_pixels_dim_size = (size_t)(fb_width * fb_height);
@@ -121,7 +129,7 @@ static void on_window_resized(const int win_width, const int win_height) noexcep
     }
 }
 
-void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2],
+void pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const float origin_norm[2],
                                bool enable_vsync, bool use_subsys_primitives) {
     pixel::use_subsys_primitives_val = use_subsys_primitives;
 
@@ -151,11 +159,14 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
     const Uint32 win_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE;
     const Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
 
+    if( 0 != win_width && 0 != win_height ) {
+        // override using pre-set default, i.e. set_window_size(..)
+        wwidth = win_width, wheight = win_height;
+    }
     sdl_win = SDL_CreateWindow(title,
             SDL_WINDOWPOS_UNDEFINED,
             SDL_WINDOWPOS_UNDEFINED,
-            (int)win_width,
-            (int)win_height,
+            wwidth, wheight,
             win_flags);
 
     sdl_rend = SDL_CreateRenderer(sdl_win, -1, render_flags);
@@ -166,7 +177,34 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
     gpu_swap_t1 = gpu_fps_t0;
     gpu_frame_count = 0;
 
-    on_window_resized(win_width, win_height);
+    on_window_resized(wwidth, wheight);
+}
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_forced_fps(int v) noexcept { forced_fps = v; }
+
+    EMSCRIPTEN_KEEPALIVE int get_forced_fps() noexcept { return forced_fps; }
+
+    EMSCRIPTEN_KEEPALIVE void set_window_size(int ww, int wh) noexcept {
+        static bool warn_once = true;
+        if( win_width != ww || win_height != wh ) {
+            if( std::abs(win_width - ww) > 1 || std::abs(win_height - wh) > 1 ) {
+                if( 0 == win_width || 0 == win_height ) {
+                    printf("JS Window Initial Size: Win %d x %d -> %d x %d\n", win_width, win_height, ww, wh);
+                    win_width = ww;
+                    win_height = wh;
+                } else {
+                    printf("JS Window Resized: Win %d x %d -> %d x %d\n", win_width, win_height, ww, wh);
+                    SDL_SetWindowSize( sdl_win, ww, wh );
+                    warn_once = true;
+                    on_window_resized(ww, wh);
+                }
+            } else if( warn_once ) {
+                warn_once = false;
+                printf("JS Window Resize Ignored: Win %d x %d -> %d x %d\n", win_width, win_height, ww, wh);
+            }
+        }
+    }
 }
 
 void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
@@ -183,13 +221,13 @@ void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept 
     }
 }
 
-void pixel::swap_pixel_fb(const bool swap_buffer) noexcept {
+void pixel::swap_pixel_fb(const bool swap_buffer, int fps) noexcept {
     if( !use_subsys_primitives_val ) {
         SDL_UpdateTexture(fb_texture, nullptr, fb_pixels.data(), (int)fb_pixels_byte_width);
         SDL_RenderCopy(sdl_rend, fb_texture, nullptr, nullptr);
     }
     if( swap_buffer ) {
-        pixel::swap_gpu_buffer();
+        pixel::swap_gpu_buffer(fps);
     }
 }
 void pixel::swap_gpu_buffer(int fps) noexcept {
@@ -383,6 +421,7 @@ static uint16_t to_ascii(SDL_Scancode scancode) {
 
 bool pixel::handle_one_event(input_event_t& event) noexcept {
     SDL_Event sdl_event;
+
     if( SDL_PollEvent(&sdl_event) ) {
         switch (sdl_event.type) {
             case SDL_QUIT:
@@ -404,7 +443,7 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
                         on_window_resized(sdl_event.window.data1, sdl_event.window.data2);
                         break;
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
-                        // printf("Window SizeChanged: %d x %d\n", event.window.data1, event.window.data2);
+                        printf("Window SizeChanged: %d x %d\n", sdl_event.window.data1, sdl_event.window.data2);
                         break;
                 }
                 break;

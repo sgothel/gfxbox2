@@ -733,8 +733,11 @@ static bool two_players = true;
 static int asteroid_count = 6;
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
-static int forced_fps = 30;
 static bool raster = false;
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_showvelo(bool v) noexcept { show_ship_velo = v; }
+}
 
 void mainloop() {
     static player_t p1(player_id_1);
@@ -894,7 +897,7 @@ void mainloop() {
         const int dx = ( pixel::fb_width - pixel::round_to_int(hud_text->width*hud_text->dest_sx) ) / 2;
         hud_text->draw(dx, 0);
     }
-    pixel::swap_gpu_buffer(forced_fps);
+    pixel::swap_gpu_buffer();
     if( record_bmpseq_basename.size() > 0 ) {
         std::string snap_fname(128, '\0');
         const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
@@ -906,13 +909,13 @@ void mainloop() {
 
 int main(int argc, char *argv[])
 {
-    int win_width = 1920, win_height = 1080; // 16:9
+    int window_width = 1920, window_height = 1080; // 16:9
     bool enable_vsync = true;
     int sun_gravity_scale_env = 20;    //  20 x 280 =  5600
     int sun_gravity_scale_ships = 200; // 200 x 280 = 56000
     bool use_subsys_primitives = true;
     #if defined(__EMSCRIPTEN__)
-        win_width = 1024, win_height = 576; // 16:9
+        window_width = 1024, window_height = 576; // 16:9
     #endif
     {
         bool fps_set = false;
@@ -920,17 +923,17 @@ int main(int argc, char *argv[])
             if( 0 == strcmp("-1p", argv[i]) ) {
                 two_players = false;
             } else if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
-                win_width = atoi(argv[i+1]);
+                window_width = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
-                win_height = atoi(argv[i+1]);
+                window_height = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-record", argv[i]) && i+1<argc) {
                 record_bmpseq_basename = argv[i+1];
                 ++i;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
                 fps_set = true;
-                forced_fps = atoi(argv[i+1]);
+                pixel::forced_fps = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-no_vsync", argv[i]) ) {
                 enable_vsync = false;
@@ -954,23 +957,19 @@ int main(int argc, char *argv[])
                 use_subsys_primitives = false;
             }
         }
-        if( !fps_set ) {
-            if( use_subsys_primitives ) {
-                forced_fps = -1;
-            } else {
-                forced_fps = 30;
-            }
+        if( !fps_set && !use_subsys_primitives ) {
+            pixel::forced_fps = 30;
         }
     }
     {
         const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
         pixel::log_printf(elapsed_ms, "Usage %s -1p -width <int> -height <int> -record <bmp-files-basename> -fps <int> -no_vsync"
                                       " -debug_gfx -show_velo -asteroids <int> -sung_env <int> -sung_ships <int>\n", argv[0]);
-        pixel::log_printf(elapsed_ms, "- win size %d x %d\n", win_width, win_height);
+        pixel::log_printf(elapsed_ms, "- win size %d x %d\n", window_width, window_height);
         pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
         pixel::log_printf(elapsed_ms, "- subsys_primitives %d\n", use_subsys_primitives);
         pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
-        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", forced_fps);
+        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::forced_fps);
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- show_ship_velo %d\n", show_ship_velo);
         pixel::log_printf(elapsed_ms, "- two_players %d\n", two_players);
@@ -983,7 +982,7 @@ int main(int argc, char *argv[])
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("spacewars", win_width, win_height, origin_norm, enable_vsync, use_subsys_primitives);
+        pixel::init_gfx_subsystem("spacewars", window_width, window_height, origin_norm, enable_vsync, use_subsys_primitives);
     }
     pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
 

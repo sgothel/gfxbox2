@@ -57,7 +57,7 @@ void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t&
     r = ( ui32 & 0x000000ffU );
 }
 
-static void on_window_resized(bool set_view) noexcept {
+static void on_window_resized(bool set_view, int wwidth, int wheight) noexcept {
     sf::Vector2u size = window->getSize();
     fb_width = (int)size.x;
     fb_height = (int)size.y;
@@ -74,9 +74,11 @@ static void on_window_resized(bool set_view) noexcept {
     printf("Screen size %d x %d, min 0 / 0, max %d / %d \n",
             fb_width, fb_height, fb_max_x, fb_max_y);
     printf("%s\n", cart_coord.toString().c_str());
+    win_width = wwidth;
+    win_height = wheight;
 
-    frames_per_sec = 60;
-    window->setFramerateLimit(frames_per_sec);
+    display_frames_per_sec = 60;
+    window->setFramerateLimit(display_frames_per_sec);
 
     fb_pixels_dim_size = (size_t)(fb_width * fb_height);
     fb_pixels_byte_size = fb_pixels_dim_size * 4;
@@ -90,7 +92,7 @@ static void on_window_resized(bool set_view) noexcept {
     fb_sbuffer = std::make_shared<sf::Sprite>(fb_tbuffer);
 }
 
-void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2],
+void pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const float origin_norm[2],
                                bool enable_vsync, bool use_subsys_primitives) {
     pixel::use_subsys_primitives_val = false; // FIXME use_subsys_primitives
     (void)use_subsys_primitives;
@@ -99,7 +101,7 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
     fb_origin_norm[0] = origin_norm[0];
     fb_origin_norm[1] = origin_norm[1];
 
-    window = std::make_shared<sf::RenderWindow>(sf::VideoMode(win_width, win_height), "Freefall01b");
+    window = std::make_shared<sf::RenderWindow>(sf::VideoMode((unsigned int)wwidth, (unsigned int)wheight), "Freefall01b");
     window->setTitle(std::string(title));
     window->setVerticalSyncEnabled(true);
 
@@ -107,7 +109,7 @@ void pixel::init_gfx_subsystem(const char* title, unsigned int win_width, unsign
     gpu_fps_t0 = getCurrentMilliseconds();
     gpu_frame_count = 0;
 
-    on_window_resized(false /* set_view */);
+    on_window_resized(false /* set_view */, wwidth, wheight);
 }
 
 void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
@@ -121,11 +123,11 @@ void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept 
     // ::memset(fb_pixels.data(), 0, fb_pixels_byte_size);
 }
 
-void pixel::swap_pixel_fb(const bool swap_buffer) noexcept {
+void pixel::swap_pixel_fb(const bool swap_buffer, int fps) noexcept {
     fb_tbuffer.update((uint8_t*)fb_pixels.data());
     window->draw(*fb_sbuffer);
     if( swap_buffer ) {
-        pixel::swap_gpu_buffer();
+        pixel::swap_gpu_buffer(fps);
     }
 }
 void pixel::swap_gpu_buffer(int fps) noexcept {
@@ -252,7 +254,7 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
         } else if (sf_event.type == sf::Event::Resized) {
             printf("Window Resized: %u x %u\n", sf_event.size.width, sf_event.size.height);
             event.set(input_event_type_t::WINDOW_RESIZED);
-            on_window_resized(true /* set_view */);
+            on_window_resized(true /* set_view */, sf_event.size.width, sf_event.size.height);
         } else if (sf_event.type == sf::Event::MouseMoved) {
             event.pointer_motion((int)1 /* FIXME */,
                                  (int)sf_event.mouseMove.x, (int)sf_event.mouseMove.y);

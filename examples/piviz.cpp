@@ -370,8 +370,6 @@ void draw_sin_cos_graph(const float r, const float alpha_max, const float angrad
     disk_t(psin, thickness*2).draw();
 }
 
-static int forced_fps = 30;
-
 void mainloop() {
     static vector<pixel::texture_ref> texts;
     static const point_t origin(0, 0);
@@ -604,7 +602,7 @@ void mainloop() {
         tex->draw(0, 0);
     }
     texts.clear();
-    pixel::swap_gpu_buffer( forced_fps );
+    pixel::swap_gpu_buffer();
 
 }
 
@@ -625,9 +623,6 @@ int main(int argc, char *argv[])
                 ++i;
             }
         }
-    }
-    if( use_subsys_primitives ) {
-        forced_fps = -1;
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };

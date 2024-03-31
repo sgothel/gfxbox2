@@ -41,6 +41,8 @@
 
 #if defined(__EMSCRIPTEN__)
     #include <emscripten.h>
+#else
+    #define EMSCRIPTEN_KEEPALIVE
 #endif
 
 namespace pixel::f2 {
@@ -126,6 +128,10 @@ namespace pixel {
         CCW
     };
 
+    /** Width of the window, coordinate in window units. */
+    extern int win_width;
+    /** Height of the window, coordinate in window units. */
+    extern int win_height;
     /**
      * Width of the framebuffer coordinate in pixels.
      *
@@ -140,7 +146,10 @@ namespace pixel {
     extern int fb_max_y;
     typedef std::vector<uint32_t> pixel_buffer_t; // 32-bit pixel
     extern pixel_buffer_t fb_pixels;
-    extern int frames_per_sec;
+    /** Display frames per seconds */
+    extern int display_frames_per_sec;
+    /** Optional custom forced frames per seconds, pass to swap_gpu_buffer() by default. */
+    extern int forced_fps;
     extern int font_height;
 
     /**
@@ -450,14 +459,14 @@ namespace pixel {
     //
 
     /** GFX Toolkit: Initialize a window of given size with a usable framebuffer. */
-    void init_gfx_subsystem(const char* title, unsigned int win_width, unsigned int win_height, const float origin_norm[2],
+    void init_gfx_subsystem(const char* title, int window_width, int window_height, const float origin_norm[2],
                             bool enable_vsync=true, bool use_subsys_primitives=true);
     /** GFX Toolkit: Clear the soft-framebuffer. */
     void clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
     /** GFX Toolkit: Copy the soft-framebuffer to the GPU back-buffer, if swap_buffer is true (default) also swap_gpu_buffer(). */
-    void swap_pixel_fb(const bool swap_buffer=true) noexcept;
+    void swap_pixel_fb(const bool swap_buffer=true, int fps=forced_fps) noexcept;
     /** GFX Toolkit: Swap GPU back to front framebuffer while maintaining vertical monitor synchronization if possible. */
-    void swap_gpu_buffer(int fps=0) noexcept;
+    void swap_gpu_buffer(int fps=forced_fps) noexcept;
     float get_gpu_fps() noexcept;
 
     texture_ref make_text_texture(const std::string& text) noexcept;

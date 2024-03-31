@@ -29,12 +29,15 @@
 #include <ctime>
 
 bool pixel::use_subsys_primitives_val = true;
+int pixel::win_width=0;
+int pixel::win_height=0;
 int pixel::fb_width=0;
 int pixel::fb_height=0;
 int pixel::fb_max_x=0;
 int pixel::fb_max_y=0;
 pixel::pixel_buffer_t pixel::fb_pixels;
-int pixel::frames_per_sec=60;
+int pixel::display_frames_per_sec=60;
+int pixel::forced_fps = -1;
 int pixel::font_height = 24;
 
 pixel::cart_coord_t pixel::cart_coord;

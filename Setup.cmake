@@ -157,7 +157,7 @@ if (DEFINED EMSCRIPTEN)
     #
     # set(EMS_FLAGS "--use-port=sdl2 --use-port=sdl2_image --use-port=sdl2_ttf")
     set(EMS_FLAGS "-s USE_SDL=2 -s USE_SDL_IMAGE=2 -s USE_SDL_TTF=2 -Wno-unused-command-line-argument")
-    set(EMS_FLAGS "${EMS_FLAGS} -s WASM=1 -s LZ4=1")
+    set(EMS_FLAGS "${EMS_FLAGS} -s WASM=1 -s LZ4=1 -s EXPORTED_RUNTIME_METHODS=cwrap")
     set(EMS_FLAGS "${EMS_FLAGS} -s FULL_ES2=1") # or even FULL_ES3 ?
     set(EMS_FLAGS "${EMS_FLAGS} -s ALLOW_MEMORY_GROWTH=1")
     # set(EMS_FLAGS "${EMS_FLAGS} -pthread") # fights w/ ALLOW_MEMORY_GROWTH

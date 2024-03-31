@@ -110,8 +110,6 @@ private:
 
 };
 
-static int forced_fps = -1;
-
 void mainloop() {
     static const pixel::f4::vec_t text_color(0.5f, 0.5f, 0.5f, 1.0f);
     static const float ax1 = pixel::cart_coord.min_x() + 3 * pixel::cart_coord.width() / 4;
@@ -233,7 +231,7 @@ void mainloop() {
         const int dx = ( pixel::fb_width - pixel::round_to_int(hud_text->width*hud_text->dest_sx) ) / 2;
         hud_text->draw(dx, 0);
     }
-    pixel::swap_gpu_buffer(forced_fps);
+    pixel::swap_gpu_buffer();
 }
 
 int main(int argc, char *argv[])

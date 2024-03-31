@@ -204,7 +204,6 @@ static const pixel::f2::vec_t pad_step_down(0.0f, -1.5f*ball_height); // [m]
 static const float pad_rot_step = 3.0f; // ang-degrees
 static const float pad_thickness = 0.07f; // [m]
 
-static int forced_fps = -1;
 static bool one_player = true;
 static std::string record_bmpseq_basename;
 static pixel::f2::rect_ref_t pad_l, pad_r;
@@ -293,7 +292,7 @@ void mainloop() {
         const float sy = (float)text_height / (float)hud_text->height;
         hud_text->draw(pixel::fb_width/2.0f-(hud_text->width*sy/2.0f), thickness_pixel, sy, sy);
     }
-    pixel::swap_gpu_buffer(forced_fps);
+    pixel::swap_gpu_buffer();
     if( record_bmpseq_basename.size() > 0 ) {
         std::string snap_fname(128, '\0');
         const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
@@ -327,7 +326,7 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-debug_gfx", argv[i]) ) {
                 debug_gfx = true;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
-                forced_fps = atoi(argv[i+1]);
+                pixel::forced_fps = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-no_vsync", argv[i]) ) {
                 enable_vsync = false;
@@ -341,7 +340,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
-        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", forced_fps);
+        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::forced_fps);
     }
 
     {

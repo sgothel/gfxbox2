@@ -1,7 +1,8 @@
 #!/bin/bash
 
+fps=10
 #fps=30
-fps=60
+#fps=60
 
 bname=$1
 

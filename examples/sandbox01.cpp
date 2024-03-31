@@ -29,8 +29,6 @@
 #include <cmath>
 #include <iostream>
 
-static int forced_fps = -1;
-
 void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
@@ -68,7 +66,7 @@ void mainloop() {
     if( nullptr != hud_text ) {
         hud_text->draw(0, 0);
     }
-    pixel::swap_gpu_buffer(forced_fps);
+    pixel::swap_gpu_buffer();
 }
 
 int main(int argc, char *argv[])

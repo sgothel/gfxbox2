@@ -145,8 +145,6 @@ void print_usage() {
     printf("\texit;\n");
 }
 
-static int forced_fps = -1;
-
 void mainloop() {
     static infix_calc::compiler cc;
     static const pixel::f4::vec_t text_color(0.4f, 0.4f, 0.4f, 1.0f);
@@ -218,7 +216,7 @@ void mainloop() {
 
     const uint64_t t = pixel::getElapsedMillisecond(); // [ms]
     const float dt = (float)( t - t_last ) / 1000.0f; // [s]
-    const float dt_exp = 1.0f / (float)pixel::frames_per_sec; // [s]
+    const float dt_exp = 1.0f / (float)pixel::display_frames_per_sec; // [s]
     const float dt_diff = (float)( dt_exp - dt ) * 1000.0f; // [ms]
     t_last = t;
 
@@ -243,7 +241,7 @@ void mainloop() {
     if( nullptr != hud_text ) {
         hud_text->draw(0, 0);
     }
-    pixel::swap_gpu_buffer(forced_fps);
+    pixel::swap_gpu_buffer();
 }
 
 int main(int argc, char *argv[])

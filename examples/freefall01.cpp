@@ -29,7 +29,14 @@
 const float rho_default = 0.75f;
 const float drop_height = 2.0f; // [m]
 const float earth_accel = 9.81f; // [m/s*s]
-bool debug_gfx = false;
+
+static float rho = rho_default;
+static bool debug_gfx = false;
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool v) noexcept { debug_gfx = v; }
+    EMSCRIPTEN_KEEPALIVE void set_rho(float v) noexcept { rho = v; }
+}
 
 /**
  * A bouncing ball w/ initial velocity in given direction plus gravity exposure (falling)
@@ -63,7 +70,6 @@ class ball_t : public pixel::f2::disk_t {
          *
          */
         std::string id;
-        float rho;
         float start_xpos; // [m]
         float start_ypos; // [m]
         float velocity_start; // [m/s] @ angle
@@ -77,9 +83,9 @@ class ball_t : public pixel::f2::disk_t {
          * @param y_m y position in [m] within coordinate system 0/0 center
          * @param r_m
          */
-        ball_t(std::string id_, float rho_, float x_m, float y_m, const float r_m, const float velocity_, const float v_angle_rad)
+        ball_t(std::string id_, float x_m, float y_m, const float r_m, const float velocity_, const float v_angle_rad)
         : pixel::f2::disk_t(x_m, y_m, r_m),
-          id(std::move(id_)), rho(rho_), start_xpos(x_m), start_ypos(y_m), velocity_start(velocity_), total_fall(drop_height),
+          id(std::move(id_)), start_xpos(x_m), start_ypos(y_m), velocity_start(velocity_), total_fall(drop_height),
           velocity_max(std::sqrt( 2 * earth_accel * total_fall )), velocity()
         {
             rotate(v_angle_rad); // direction of velocity
@@ -241,8 +247,6 @@ static const float ball_radius = ball_height/2.0f; // [m]
 static const float small_gap = ball_radius;
 static const float thickness = 1.0f * ball_height;
 
-static float rho = rho_default;
-static int forced_fps = -1;
 static std::string record_bmpseq_basename;
 
 typedef std::shared_ptr<ball_t> ball_ref_t;
@@ -275,8 +279,8 @@ void mainloop() {
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
 
-    pixel::texture_ref hud_text = pixel::make_text_texture("td %s, fps %2.2f",
-            pixel::to_decstring(t1, ',', 9).c_str(), pixel::get_gpu_fps());
+    pixel::texture_ref hud_text = pixel::make_text_texture("td %s, fps %2.2f, rho %.2f",
+            pixel::to_decstring(t1, ',', 9).c_str(), pixel::get_gpu_fps(), rho);
 
     if( animating ) {
         for(ball_ref_t g : ball_list) {
@@ -312,7 +316,7 @@ void mainloop() {
         const float sy = (float)text_height / (float)hud_text->height;
         hud_text->draw(small_gap_pixel*2.0f, small_gap_pixel+1, sy, sy);
     }
-    pixel::swap_gpu_buffer(forced_fps);
+    pixel::swap_gpu_buffer();
     if( record_bmpseq_basename.size() > 0 ) {
         std::string snap_fname(128, '\0');
         const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
@@ -343,7 +347,7 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-debug_gfx", argv[i]) ) {
                 debug_gfx = true;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
-                forced_fps = atoi(argv[i+1]);
+                pixel::forced_fps = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-no_vsync", argv[i]) ) {
                 enable_vsync = false;
@@ -360,7 +364,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
-        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", forced_fps);
+        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::forced_fps);
         pixel::log_printf(elapsed_ms, "- rho %f\n", rho);
     }
 
@@ -376,11 +380,11 @@ int main(int argc, char *argv[])
         if( debug_gfx ) {
             pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
         }
-        std::shared_ptr<ball_t> ball_1 = std::make_shared<ball_t>( "one", rho, -4.0f*ball_height, drop_height-ball_radius, ball_radius,
+        std::shared_ptr<ball_t> ball_1 = std::make_shared<ball_t>( "one", -4.0f*ball_height, drop_height-ball_radius, ball_radius,
                         0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-        std::shared_ptr<ball_t> ball_2 = std::make_shared<ball_t>( "two", rho, +2.0f*ball_height, drop_height-ball_radius, ball_radius,
+        std::shared_ptr<ball_t> ball_2 = std::make_shared<ball_t>( "two", +2.0f*ball_height, drop_height-ball_radius, ball_radius,
                         0.0f /* [m/s] */, pixel::adeg_to_rad(90));
-        std::shared_ptr<ball_t> ball_3 = std::make_shared<ball_t>( "can", rho, pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
+        std::shared_ptr<ball_t> ball_3 = std::make_shared<ball_t>( "can", pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height, ball_radius,
                         6.8f /* [m/s] */, pixel::adeg_to_rad(64));
                         // 6.1f /* [m/s] */, pixel::adeg_to_rad(78));
         pixel::f2::geom_list_t& list = pixel::f2::gobjects();

@@ -28,14 +28,9 @@
 
       .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
       div.emscripten { text-align: center; }      
-      div.emscripten_border { border: 1px solid black; }
+      div.emscripten_border { border: 0px none black; }
       /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
       canvas.emscripten { border: 0px none; background-color: white; }
-
-      #emscripten_logo {
-        display: inline-block;
-        margin: 0;
-      }
 
       @-webkit-keyframes rotation {
         from {-webkit-transform: rotate(0deg);}
@@ -59,7 +54,7 @@
         vertical-align: top;
         margin-top: 30px;
         margin-left: 20px;
-        font-weight: bold;
+        font-size: 0.75em;
         color: rgb(120, 120, 120);
       }
 
@@ -78,7 +73,8 @@
 
       #output {
         width: 100%;
-        height: 200px;
+        height: 16em;
+        font-size: 0.8em;
         margin: 0 auto;
         margin-top: 10px;
         border-left: 0px;
@@ -101,16 +97,15 @@
     <div class="emscripten" id="status">Downloading...</div>
 
 <span id='controls'>
-  <span>
-    <input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <!-- pointerLock, resize -->
-  </span>
+  <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
+  <span><input type="number" id="SetFPS" min="0" max="60" step="10" value="0" style="width: 3em;" onchange="setForcedFPS(this.value)"/>fps</span>
 </span>
 
     <div class="emscripten">
       <progress value="0" max="100" id="progress" hidden=1></progress>
     </div>
 
-    <div class="emscripten_border">
+    <div class="emscripten_border" id="canvas_border">
       <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
     </div>
     <textarea id="output" rows="8"></textarea>
@@ -148,8 +143,14 @@
       var statusElement = document.getElementById('status');
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
+      var wasm_set_forced_fps, wasm_set_window_size;
 
       var Module = {
+        onRuntimeInitialized: function() {
+            wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
+            wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
+            maximizeCanvas();
+        },
         preRun: [],
         postRun: [],
         print: (function() {
@@ -210,6 +211,17 @@
           if (text) Module.printErr('[post-exception status] ' + text);
         };
       };
+
+      function setForcedFPS(v) {
+          if( null != wasm_set_forced_fps ) {
+              wasm_set_forced_fps(v);
+          }
+      }
+      function maximizeCanvas() {
+        var ecr = document.getElementById('canvas_border').getBoundingClientRect();
+        var h = ecr.width*9/16; // ecr.height is not maxed-out
+        wasm_set_window_size(ecr.width, Math.min(h, window.innerHeight));
+      }
     </script>
     <script async type="text/javascript" src="tron.js"></script>
   </body>
