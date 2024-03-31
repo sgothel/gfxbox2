@@ -119,7 +119,9 @@ class ball_t : public pixel::f2::disk_t {
             this->move( ds_m_dir );
 
             // medium_deaccel after move
-            velocity = pixel::f2::vec_t::from_length_angle(velocity.length() + medium_accel * dt, a_move);
+            if( ds_m_dir.length_sq() > 0 ) {
+                velocity = pixel::f2::vec_t::from_length_angle(velocity.length() + medium_accel * dt, a_move);
+            }
 
             const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
 
@@ -159,11 +161,9 @@ class ball_t : public pixel::f2::disk_t {
                     pixel::set_pixel_color(255 /* r */, 255 /* g */, 0 /* b */, 255 /* a */);
                     pixel::f2::lineseg_t l_out(coll_point, coll_point+coll_out);
                     l_out.draw();
+
                     pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
-                }
-            }
-            if( nullptr != coll_obj ) {
-                if( debug_gfx ) {
+
                     pixel::log_printf(elapsed_ms, "\n");
                     pixel::log_printf(elapsed_ms, "Ball %s-e-a: v %s, |%f| m/s, ds %s [m/s], move[angle %f, len %f, %s]\n",
                             id.c_str(), velocity.toString().c_str(), velocity.length(), ds_m_dir.toString().c_str(),
@@ -173,6 +173,8 @@ class ball_t : public pixel::f2::disk_t {
                             coll_point.toString().c_str(), coll_out.toString().c_str(), pixel::rad_to_adeg(coll_out.angle()));
                     pixel::log_printf(elapsed_ms, "Ball %s-e-a: %s\n", id.c_str(), coll_obj->toString().c_str());
                 }
+            }
+            if( nullptr != coll_obj ) {
                 float accel_factor;
                 if( std::find(player_pads.begin(), player_pads.end(), coll_obj) != player_pads.end() ) {
                     accel_factor = pad_accel; // speedup
