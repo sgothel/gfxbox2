@@ -72,6 +72,7 @@ class ball_t : public pixel::f2::disk_t {
         std::string id;
         float start_xpos; // [m]
         float start_ypos; // [m]
+        float start_angle;
         float velocity_start; // [m/s] @ angle
         float total_fall; // [m]
         float velocity_max; // [m/s]
@@ -85,10 +86,11 @@ class ball_t : public pixel::f2::disk_t {
          */
         ball_t(std::string id_, float x_m, float y_m, const float r_m, const float velocity_, const float v_angle_rad)
         : pixel::f2::disk_t(x_m, y_m, r_m),
-          id(std::move(id_)), start_xpos(x_m), start_ypos(y_m), velocity_start(velocity_), total_fall(drop_height),
+          id(std::move(id_)), start_xpos(x_m), start_ypos(y_m), start_angle(v_angle_rad),
+          velocity_start(velocity_), total_fall(drop_height),
           velocity_max(std::sqrt( 2 * earth_accel * total_fall )), velocity()
         {
-            rotate(v_angle_rad); // direction of velocity
+            this->dir_angle = start_angle; // direction of velocity
             velocity = pixel::f2::vec_t::from_length_angle(velocity_start, this->dir_angle);
             if( debug_gfx ) {
                 const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
@@ -98,14 +100,15 @@ class ball_t : public pixel::f2::disk_t {
             }
         }
 
-        void reset() noexcept {
+        void reset(bool force_start_pos=false) noexcept {
             velocity_max = std::sqrt( 2 * earth_accel * total_fall );
-            if( velocity_start > 0.0f && this->on_screen() ) {
+            if( !force_start_pos && velocity_start > 0.0f && this->on_screen() ) {
                 // shoot back ;-)
                 this->dir_angle = M_PI - this->dir_angle; // 180 - adeg
             } else {
-                center.x = start_xpos;
-                center.y = start_ypos-radius;
+                this->center.x = start_xpos;
+                this->center.y = start_ypos-radius;
+                this->dir_angle = start_angle; // direction of velocity
             }
             velocity = pixel::f2::vec_t::from_length_angle(velocity_start, this->dir_angle);
         }
@@ -129,9 +132,9 @@ class ball_t : public pixel::f2::disk_t {
                 l_move.p0 = this->center;
                 l_move.p1 = l_move.p0 + ds_m_dir;
                 a_move = l_move.angle();
-                // Extend move size to cover radius in moving direction p1 // and -p0
+                // Extend move size to cover radius in moving direction p1 and -p0
                 pixel::f2::vec_t l_move_diff = pixel::f2::vec_t::from_length_angle(radius, a_move);
-                // l_move.p0 -= l_move_diff;
+                l_move.p0 -= l_move_diff;
                 l_move.p1 += l_move_diff;
             }
             this->move( ds_m_dir );
@@ -184,12 +187,7 @@ class ball_t : public pixel::f2::disk_t {
                     l_new_center.draw();
 
                     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-                } else {
-                    this->draw(false);
-                }
-            }
-            if( nullptr != coll_obj ) {
-                if( debug_gfx ) {
+
                     pixel::log_printf(elapsed_ms, "\n");
                     pixel::log_printf(elapsed_ms, "Ball %s-e-a: v %s, |%f| / %f m/s, ds %s [m/s], move[angle %f, len %f, %s]\n",
                             id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max, ds_m_dir.toString().c_str(),
@@ -198,7 +196,11 @@ class ball_t : public pixel::f2::disk_t {
                             id.c_str(),
                             coll_point.toString().c_str(), coll_out.toString().c_str(), pixel::rad_to_adeg(coll_out.angle()));
                     pixel::log_printf(elapsed_ms, "Ball %s-e-a: %s\n", id.c_str(), coll_obj->toString().c_str());
+                } else {
+                    this->draw(false);
                 }
+            }
+            if( nullptr != coll_obj ) {
                 // reconstruct distance post collision, minimum to surface
                 pixel::f2::vec_t vec_post_coll = l_move.p1 - coll_point;
                 const float s_post_coll = std::max( radius, vec_post_coll.length() * rho );
@@ -270,6 +272,11 @@ void mainloop() {
         #endif
     } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
         pixel::cart_coord.set_height(0.0f, drop_height+6.0f*thickness);
+    }
+    if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
+        for(ball_ref_t g : ball_list) {
+            g->reset(true);
+        }
     }
     if( event.paused() ) {
         animating = false;
@@ -432,8 +439,8 @@ int main(int argc, char *argv[])
         }
         if(true) {
             // left vertical bounds
-            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
-            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
+            pixel::f2::point_t tl = { pixel::cart_coord.min_x()+small_gap, pixel::cart_coord.max_y()-1.0f*small_gap-thickness };
+            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-2.0f*small_gap-2.0f*thickness);
             list.push_back(r);
             if( debug_gfx ) {
                 pixel::log_printf(elapsed_ms, "XX RL %s\n", r->toString().c_str());
@@ -441,8 +448,8 @@ int main(int argc, char *argv[])
         }
         if(true) {
             // right vertical bounds
-            pixel::f2::point_t tl = { pixel::cart_coord.max_x()-small_gap-thickness, pixel::cart_coord.max_y()-2.0f*small_gap-thickness };
-            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-4.0f*small_gap-2.0f*thickness);
+            pixel::f2::point_t tl = { pixel::cart_coord.max_x()-small_gap-thickness, pixel::cart_coord.max_y()-1.0f*small_gap-thickness };
+            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-2.0f*small_gap-2.0f*thickness);
             list.push_back(r);
             if( debug_gfx ) {
                 pixel::log_printf(elapsed_ms, "XX RR %s\n", r->toString().c_str());
