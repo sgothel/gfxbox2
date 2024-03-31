@@ -99,6 +99,7 @@
 
 <span id='controls'>
   <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
+  <span><input type="checkbox" id="DebugGfx" onclick="setDebugGfx(this.checked)">dbg-vec</span>
   <span><input type="number" id="SetFPS" min="0" max="60" step="10" value="0" style="width: 3em;" onchange="setForcedFPS(this.value)"/>fps</span>
 </span>
 
@@ -119,7 +120,9 @@
             <th>Move Down</th>
             <th>Rotate-Right</th>
             <th>Rotate-Left</th>
-            <th>Pause</th>
+            <th>Play / Manual</th>
+            <th>Manual + 1 ms</th>
+            <th>Manual +10 ms</th>
         </tr>
         <tr>
             <td>Player 1</td>
@@ -128,6 +131,8 @@
             <td>Cursor-Right</td>
             <td>Cursor-Left</td>
             <td>P</td>
+            <td>Cursor-Right</td>
+            <td>Cursor-Up</td>
         </tr>
         <tr>
             <td>Player 2</td>
@@ -136,6 +141,8 @@
             <td>D</td>
             <td>A</td>
             <td>P</td>
+            <td>Cursor-Right</td>
+            <td>Cursor-Up</td>
         </tr>
         </table>
     </div>
@@ -145,11 +152,13 @@
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
       var wasm_set_forced_fps, wasm_set_window_size;
+      var wasm_set_debug_gfx;
 
       var Module = {
         onRuntimeInitialized: function() {
             wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
+            wasm_set_debug_gfx = Module.cwrap('set_debug_gfx', 'null', ['boolean']);
             maximizeCanvas();
         },
         preRun: [],
@@ -213,6 +222,11 @@
         };
       };
 
+      function setDebugGfx(v) {
+          if( null != wasm_set_debug_gfx ) {
+              wasm_set_debug_gfx(v);
+          }
+      }
       function setForcedFPS(v) {
           if( null != wasm_set_forced_fps ) {
               wasm_set_forced_fps(v);

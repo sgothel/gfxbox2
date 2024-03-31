@@ -37,6 +37,10 @@ const float max_velocity = 5.6f; // m/s
 
 bool debug_gfx = false;
 
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool v) noexcept { debug_gfx = v; }
+}
+
 std::vector<pixel::f2::rect_ref_t> player_pads;
 
 /**
@@ -213,6 +217,7 @@ void mainloop() {
     static uint64_t frame_count_total = 0;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
+    static bool animating = true;
 
     pixel::handle_events(event);
     if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -225,27 +230,18 @@ void mainloop() {
     } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
         pixel::cart_coord.set_height(-field_height/2.0f, field_height/2.0f);
     }
-    const bool animating = !event.paused();
-
-    // white background
-    pixel::clear_pixel_fb(0, 0, 0, 255);
-
-    const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
-    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
-    t_last = t1;
-
-    pixel::texture_ref hud_text;
-    {
-        std::string hud_s = pixel::to_string("td %s, %5.2f m/s",
-                pixel::to_decstring(t1, ',', 9).c_str(), ball->velocity.length());
-        if( one_player ) {
-            hud_s.append( pixel::to_string(", angle %6.2f deg", pixel::rad_to_adeg(pad_r->dir_angle)) );
+    if( event.paused() ) {
+        animating = false;
+    } else {
+        if( !animating ) {
+            t_last = pixel::getElapsedMillisecond(); // [ms]
         }
-        hud_s.append( pixel::to_string(", fps %2.2f", pixel::get_gpu_fps()) );
-        hud_text = pixel::make_text_texture(hud_s);
+        animating = true;
     }
 
+    uint64_t t1;
     if( animating ) {
+        t1 = pixel::getElapsedMillisecond(); // [ms]
         if( event.has_any_p1() ){
             if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
                 pad_r->move(pad_step_up);
@@ -263,10 +259,34 @@ void mainloop() {
                 pad_r->rotate(pixel::adeg_to_rad(-pad_rot_step));
             }
         }
-
-        // move ball_1
-        ball->tick(dt);
+    } else {
+        t1 = t_last;
+        if( event.has_any_p1() ) {
+            if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
+                t1 +=  1;
+            } else if( event.pressed(pixel::input_event_type_t::P1_UP) ){
+                t1 += 10;
+            }
+        }
     }
+    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
+    t_last = t1;
+
+    // white background
+    pixel::clear_pixel_fb(0, 0, 0, 255);
+    pixel::texture_ref hud_text;
+    {
+        std::string hud_s = pixel::to_string("td %s, %5.2f m/s",
+                pixel::to_decstring(t1, ',', 9).c_str(), ball->velocity.length());
+        if( one_player ) {
+            hud_s.append( pixel::to_string(", angle %6.2f deg", pixel::rad_to_adeg(pad_r->dir_angle)) );
+        }
+        hud_s.append( pixel::to_string(", fps %2.2f", pixel::get_gpu_fps()) );
+        hud_text = pixel::make_text_texture(hud_s);
+    }
+
+    // move ball_1
+    ball->tick(dt);
 
     pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
     {
