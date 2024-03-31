@@ -161,7 +161,7 @@ void pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
 
     if( 0 != win_width && 0 != win_height ) {
         // override using pre-set default, i.e. set_window_size(..)
-        wwidth = win_width, wheight = win_height;
+        wwidth = win_width; wheight = win_height;
     }
     sdl_win = SDL_CreateWindow(title,
             SDL_WINDOWPOS_UNDEFINED,
