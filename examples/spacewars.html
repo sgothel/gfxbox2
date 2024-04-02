@@ -73,7 +73,7 @@
       }
 
       #output {
-        width: 100%;
+        width: 98%;
         height: 16em;
         font-size: 0.8em;
         margin: 0 auto;
@@ -161,7 +161,7 @@
             wasm_set_showvelo = Module.cwrap('set_showvelo', 'null', ['boolean'])
             wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
-            maximizeCanvas();
+            maximizeCanvas(0.98);
         },
         preRun: [],
         postRun: [],
@@ -234,10 +234,10 @@
               wasm_set_forced_fps(v);
           }
       }
-      function maximizeCanvas() {
+      function maximizeCanvas(scale) {
         var ecr = document.getElementById('canvas_border').getBoundingClientRect();
-        var h = ecr.width*9/16; // ecr.height is not maxed-out
-        wasm_set_window_size(ecr.width, Math.min(h, window.innerHeight));
+        var h = ecr.width*scale*9/16; // ecr.height is not maxed-out
+        wasm_set_window_size(ecr.width*scale, Math.min(h, window.innerHeight));
       }
     </script>
     <script async type="text/javascript" src="spacewars.js"></script>
