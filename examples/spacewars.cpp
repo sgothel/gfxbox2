@@ -396,8 +396,15 @@ class spaceship_t : public pixel::f2::linestrip_t {
         constexpr static const float peng_velo_0 = vel_max / 2;
         constexpr static const int peng_inventory_max = 5000;
 
+        constexpr static const float shield_radius = spaceship_height * 0.9f;
+        constexpr static const float shield_time_max = 10; // [s]
+
     private:
         idscore_t* m_owner;
+
+        float m_shield_time;
+        bool m_shield;
+        pixel::f2::disk_t shield_body = pixel::f2::disk_t(p_center, shield_radius);
 
         bool hits_fragment(const pixel::f2::aabbox_t& box) noexcept {
             bool hit = false;
@@ -405,7 +412,9 @@ class spaceship_t : public pixel::f2::linestrip_t {
             for(auto it = fragments.begin(); it != fragments.end(); ) {
                 fragment_ref_t f = *it;
                 if( box.intersects(f->box()) ) {
-                    m_owner->add_score(-idscore_t::score_ship);
+                    if( !m_shield ) {
+                        m_owner->add_score(-idscore_t::score_ship);
+                    }
                     hit = true;
                     it = fragments.erase(it);
                     make_fragments(new_fragments, f,
@@ -425,10 +434,12 @@ class spaceship_t : public pixel::f2::linestrip_t {
                 if( p.armed() && box.intersects(p.m_peng.box()) ) {
                     hit = true;
                     it = pengs.erase(it);
-                    if( m_owner->id() == p.owner().id() ) {
-                        m_owner->add_score(-idscore_t::score_ship);
-                    } else {
-                        p.owner().add_score(idscore_t::score_ship);
+                    if( !m_shield ) {
+                        if( m_owner->id() == p.owner().id() ) {
+                            m_owner->add_score(-idscore_t::score_ship);
+                        } else {
+                            p.owner().add_score(idscore_t::score_ship);
+                        }
                     }
                 } else {
                     ++it;
@@ -443,7 +454,9 @@ class spaceship_t : public pixel::f2::linestrip_t {
 
         spaceship_t(idscore_t* owner,
                     const pixel::f2::point_t& center, const float angle) noexcept
-        : linestrip_t(center, angle), m_owner(owner), velocity(), peng_inventory(peng_inventory_max)
+        : linestrip_t(center, angle), m_owner(owner),
+          m_shield_time(shield_time_max), m_shield(false),
+          velocity(), peng_inventory(peng_inventory_max)
         {}
 
         void peng() noexcept {
@@ -466,10 +479,32 @@ class spaceship_t : public pixel::f2::linestrip_t {
             rotate(pixel::adeg_to_rad(da_adeg));
         }
 
+        bool shield() const noexcept { return m_shield; }
+        float shield_time() const noexcept { return m_shield_time; }
+
+        void toggle_shield() noexcept {
+            set_shield(!m_shield);
+        }
+        void set_shield(bool v) noexcept {
+            if( m_shield_time <= 0 ) {
+                m_shield = false;
+            } else {
+                m_shield = v;
+            }
+        }
+
+        pixel::f2::aabbox_t box() const noexcept override {
+            if( m_shield ) {
+                return shield_body.box();
+            } else {
+                return linestrip_t::box();
+            }
+        }
         bool tick(const float dt) noexcept override {
             pixel::f2::vec_t g = sun->gravity_ships(p_center);
             velocity += g * dt;
             move(velocity * dt);
+
             if( p_center.x < pixel::cart_coord.min_x() ) {
                 move(pixel::cart_coord.max_x()-p_center.x, 0.0f);
             }
@@ -482,12 +517,21 @@ class spaceship_t : public pixel::f2::linestrip_t {
             if( p_center.y > pixel::cart_coord.max_y() ) {
                 move(0.0f, pixel::cart_coord.min_y()-p_center.y);
             }
+            shield_body.center = this->p_center;
+
+            if( m_shield ) {
+                m_shield_time -= dt;
+                if( m_shield_time <= 0 ) {
+                    m_shield = false;
+                    m_shield_time = 0;
+                }
+            }
             if( sun->hit(p_center) ) {
                 m_owner->add_score(-m_owner->score_ship);
                 return false;
             }
             pixel::f2::aabbox_t b = box();
-            return !hits_fragment(b) && !hits_peng(b);
+            return ( !hits_fragment(b) && !hits_peng(b) ) || m_shield;
         }
 
         void set_orbit_velocity() noexcept {
@@ -506,6 +550,10 @@ class spaceship_t : public pixel::f2::linestrip_t {
         }
 
         void draw() const noexcept override {
+            pixel::set_pixel_color(rgba_white);
+            if( m_shield ) {
+                shield_body.draw(false);
+            }
             linestrip_t::draw();
             if( show_ship_velo ) {
                 pixel::set_pixel_color(rgba_yellow);
@@ -674,6 +722,7 @@ class player_t : public idscore_t {
         }
 
     public:
+
         static void collision(player_t& pl, player_t& pr) noexcept {
             if( nullptr != pl.m_ship && nullptr != pr.m_ship && pl.m_ship->intersects(*pr.m_ship)) {
                 pl.ship_dtor();
@@ -696,6 +745,13 @@ class player_t : public idscore_t {
 
         int peng_inventory() const noexcept { return nullptr != m_ship ? m_ship->peng_inventory : 0; }
 
+        float shield_time() const noexcept {
+            if( nullptr != m_ship ) {
+                return m_ship->shield_time();
+            } else {
+                return 0;
+            }
+        }
         bool cloak() const noexcept { return m_cloak; }
         void set_cloak( bool v ) noexcept { m_cloak = cloak_enabled && v; }
 
@@ -777,18 +833,18 @@ void mainloop() {
 
     if( cloak_enabled ) {
         hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-              "%s s, fps %4.2f, S1 %4d (%4d pengs, %4.2f m/s, %6.2f / %6.2f), "
-              "S2 %4d (%4d pengs, %.2f m/s, %6.2f / %6.2f)",
+              "%s s, fps %4.2f, S1 %4d (%4d pengs, %.1f s shield, %4.2f m/s, %6.2f / %6.2f), "
+              "S2 %4d (%4d pengs, %.1f s shield, %.2f m/s, %6.2f / %6.2f)",
               pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-              fps, p1.score(), p1.peng_inventory(), p1.velocity(), p1_c.x, p1_c.y,
-                   p2.score(), p2.peng_inventory(), p2.velocity(), p2_c.x, p2_c.y);
+              fps, p1.score(), p1.peng_inventory(), p1.shield_time(), p1.velocity(), p1_c.x, p1_c.y,
+                   p2.score(), p2.peng_inventory(), p2.shield_time(), p2.velocity(), p2_c.x, p2_c.y);
     } else {
         hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-              "%s s, fps %4.2f, S1 %4d (%4d pengs, %4.2f m/s), "
-              "S2 %4d (%4d pengs, %.2f m/s)",
+              "%s s, fps %4.2f, S1 %4d (%4d pengs, %.1f s shield, %4.2f m/s), "
+              "S2 %4d (%4d pengs, %.1f s shield, %.2f m/s)",
               pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-              fps, p1.score(), p1.peng_inventory(), p1.velocity(),
-                   p2.score(), p2.peng_inventory(), p2.velocity());
+              fps, p1.score(), p1.peng_inventory(), p1.shield_time(), p1.velocity(),
+                   p2.score(), p2.peng_inventory(), p2.shield_time(), p2.velocity());
     }
 
     if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
@@ -818,6 +874,7 @@ void mainloop() {
             } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION3) ) {
                 p1.set_cloak(!p1.cloak());
             }
+            ship1->set_shield( event.pressed(pixel::input_event_type_t::P1_DOWN) );
         }
         p1.tick(dt);
 
@@ -838,6 +895,7 @@ void mainloop() {
                 } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION3) ){
                     p2.set_cloak(!p2.cloak());
                 }
+                ship2->set_shield( event.pressed(pixel::input_event_type_t::P2_DOWN) );
             }
             p2.tick(dt);
 
