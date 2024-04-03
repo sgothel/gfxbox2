@@ -401,6 +401,8 @@ static uint16_t to_ascii(SDL_Scancode scancode) {
             [[fallthrough]];
         case SDL_SCANCODE_RIGHTBRACKET: return ')';
 
+        case SDL_SCANCODE_COMMA: return ',';
+
         case SDL_SCANCODE_PERIOD: return '.';
 
         case SDL_SCANCODE_SPACE:

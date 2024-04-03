@@ -55,7 +55,9 @@ namespace rpn_calc {
         MUL, DIV, MOD,
         ABS, SIN, COS, TAN, ARCSIN, ARCCOS, ARCTAN,
         POW, LOG, LOG10, EXP,
-        SQRT, NEG
+        SQRT, CEIL, FLOOR,
+        STEP, MIX,
+        NEG
     };
     std::string to_string(const rpn_token_t ts) noexcept;
 

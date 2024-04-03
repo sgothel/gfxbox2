@@ -91,6 +91,10 @@ blank [ \t\r]
 "exp"       return infix_calc_yy::parser::make_EXP(loc);
 "neg"       return infix_calc_yy::parser::make_NEG(loc);
 "mod"       return infix_calc_yy::parser::make_MOD(loc);
+"ceil"      return infix_calc_yy::parser::make_CEIL(loc);
+"floor"     return infix_calc_yy::parser::make_FLOOR(loc);
+"step"      return infix_calc_yy::parser::make_STEP(loc);
+"mix"       return infix_calc_yy::parser::make_MIX(loc);
 
 {ureal}{pi} return infix_calc::make_UREAL (yytext, M_PI, loc);
 {ureal}[e]  return infix_calc::make_UREAL (yytext, M_E, loc);

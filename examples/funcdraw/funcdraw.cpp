@@ -135,8 +135,9 @@ void commandline_proc() {
 void print_usage() {
     printf("Usage:\n");
     printf("\tdraw sin(x);\n");
-    printf("\t\tunary functions: abs, sin, cos, tan, asin, acos, atan, sqrt, ln, log, exp\n");
     printf("\t\tbinary operations: +, -, *, /, modulo: '%%' or 'mod', pow: '^' or '**'\n");
+    printf("\t\tunary functions: abs, sin, cos, tan, asin, acos, atan, sqrt, ln, log, exp, ceil, floor\n");
+    printf("\t\tmisc functions: step(edge, x), mix(x, y, a)\n");
     printf("\t\tbraces: (, )\n");
     printf("\tclear;\n");
     printf("\tset_width x1, x2;\n");

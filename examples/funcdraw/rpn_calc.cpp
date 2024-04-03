@@ -91,6 +91,14 @@ std::string to_string(const rpn_token_t ts) noexcept {
             return "exp";
         case rpn_token_t::SQRT:
             return "sqrt";
+        case rpn_token_t::CEIL:
+            return "ceil";
+        case rpn_token_t::FLOOR:
+            return "floor";
+        case rpn_token_t::STEP:
+            return "step";
+        case rpn_token_t::MIX:
+            return "mix";
         case rpn_token_t::NEG:
             return "neg";
     }
@@ -133,7 +141,7 @@ std::string to_string(const variable_set& variables) noexcept {
 RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
     res.clear();
     RPNStatus status = RPNStatus::No_Error;
-    double left_operand, right_operand;
+    double lleft_op3, left_op2, right_op1;
 
     auto check_stack_cntr = [&](size_t min) noexcept -> bool {
         if( res.size() < min ) {
@@ -154,12 +162,20 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
                 return false;
             }
         }
-        if( count >= 1 ) {
-            right_operand  = res.back().value;
+        if( count == 3 ) {
+            right_op1  = res.back().value;
             res.pop_back();
-        }
-        if( count >= 2 ) {
-            left_operand = res.back().value;
+            left_op2 = res.back().value;
+            res.pop_back();
+            lleft_op3 = res.back().value;
+            res.pop_back();
+        } else if( count == 2 ) {
+            right_op1  = res.back().value;
+            res.pop_back();
+            left_op2 = res.back().value;
+            res.pop_back();
+        } if( count == 1 ) {
+            right_op1  = res.back().value;
             res.pop_back();
         }
         return true;
@@ -181,17 +197,17 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::ADD:
                 if( !check_stack_cntr(2) ) { break; }
                 if( get_stack_ureal(2) ) {
-                    if ( ( ( left_operand > 0 && right_operand > 0 )
+                    if ( ( ( left_op2 > 0 && right_op1 > 0 )
                            ||
-                           ( left_operand < 0 && right_operand < 0 )
+                           ( left_op2 < 0 && right_op1 < 0 )
                          ) &&
-                         std::abs(left_operand) >=
-                             std::numeric_limits<double>::max() - std::abs(right_operand)
+                         std::abs(left_op2) >=
+                             std::numeric_limits<double>::max() - std::abs(right_op1)
                        )
                     {
                         status = RPNStatus::Overflow;
                     } else {
-                        res.push_back( { rpn_token_t::UREAL, left_operand + right_operand, "" } );
+                        res.push_back( { rpn_token_t::UREAL, left_op2 + right_op1, "" } );
                     }
                 } else {
                     res.push_back(t);
@@ -201,17 +217,17 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::SUB:
                 if( !check_stack_cntr(2) ) { break; }
                 if( get_stack_ureal(2) ) {
-                    if ( ( ( left_operand > 0 && right_operand < 0 )
+                    if ( ( ( left_op2 > 0 && right_op1 < 0 )
                            ||
-                           ( left_operand < 0 && right_operand > 0 )
+                           ( left_op2 < 0 && right_op1 > 0 )
                          ) &&
-                         std::abs(left_operand) >=
-                                 std::numeric_limits<double>::max() - std::abs(right_operand)
+                         std::abs(left_op2) >=
+                                 std::numeric_limits<double>::max() - std::abs(right_op1)
                        )
                     {
                         status =RPNStatus::Overflow;
                     } else {
-                        res.push_back( { rpn_token_t::UREAL, left_operand - right_operand, "" } );
+                        res.push_back( { rpn_token_t::UREAL, left_op2 - right_op1, "" } );
                     }
                 } else {
                     res.push_back(t);
@@ -221,13 +237,13 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::MUL:
                 if( !check_stack_cntr(2) ) { break; }
                 if( get_stack_ureal(2) ) {
-                    if( std::abs(right_operand) > 1 &&
-                        std::abs(left_operand) >=
-                            std::numeric_limits<double>::max() / std::abs(right_operand) )
+                    if( std::abs(right_op1) > 1 &&
+                        std::abs(left_op2) >=
+                            std::numeric_limits<double>::max() / std::abs(right_op1) )
                     {
                         status =RPNStatus::Overflow;
                     } else {
-                        res.push_back( { rpn_token_t::UREAL, left_operand * right_operand, "" } );
+                        res.push_back( { rpn_token_t::UREAL, left_op2 * right_op1, "" } );
                     }
                 } else {
                     res.push_back(t);
@@ -237,18 +253,18 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::DIV:
                 if( !check_stack_cntr(2) ) { break; }
                 if( get_stack_ureal(2) ) {
-                    if (right_operand == 0)
+                    if (right_op1 == 0)
                     {
                         status = RPNStatus::Division_by_zero;
                         break;
                     }
-                    if( std::abs(right_operand) < 1 &&
-                        std::abs(left_operand) >=
-                            std::numeric_limits<double>::max() * std::abs(right_operand) )
+                    if( std::abs(right_op1) < 1 &&
+                        std::abs(left_op2) >=
+                            std::numeric_limits<double>::max() * std::abs(right_op1) )
                     {
                         status = RPNStatus::Overflow;
                     } else {
-                        res.push_back( { rpn_token_t::UREAL, left_operand / right_operand, "" } );
+                        res.push_back( { rpn_token_t::UREAL, left_op2 / right_op1, "" } );
                     }
                 } else {
                     res.push_back(t);
@@ -258,18 +274,18 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::MOD:
                 if( !check_stack_cntr(2) ) { break; }
                 if( get_stack_ureal(2) ) {
-                    if (right_operand == 0)
+                    if (right_op1 == 0)
                     {
                         status = RPNStatus::Division_by_zero;
                         break;
                     }
-                    if( std::abs(right_operand) < 1 &&
-                        std::abs(left_operand) >=
-                            std::numeric_limits<double>::max() * std::abs(right_operand) )
+                    if( std::abs(right_op1) < 1 &&
+                        std::abs(left_op2) >=
+                            std::numeric_limits<double>::max() * std::abs(right_op1) )
                     {
                         status = RPNStatus::Overflow;
                     } else {
-                        res.push_back( { rpn_token_t::UREAL, std::fmod(left_operand, right_operand), "" } );
+                        res.push_back( { rpn_token_t::UREAL, std::fmod(left_op2, right_op1), "" } );
                     }
                 } else {
                     res.push_back(t);
@@ -279,7 +295,7 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::POW:
                 if( !check_stack_cntr(2) ) { break; }
                 if( get_stack_ureal(2) ) {
-                    res.push_back( { rpn_token_t::UREAL, std::pow(left_operand, right_operand), "" } );
+                    res.push_back( { rpn_token_t::UREAL, std::pow(left_op2, right_op1), "" } );
                 } else {
                     res.push_back(t);
                 }
@@ -288,11 +304,11 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::SQRT:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    if (right_operand<0)
+                    if (right_op1<0)
                     {
                         status=RPNStatus::Undefined;
                     } else {
-                        res.push_back( { rpn_token_t::UREAL, std::sqrt(right_operand), "" } );
+                        res.push_back( { rpn_token_t::UREAL, std::sqrt(right_op1), "" } );
                     }
                 } else {
                     res.push_back(t);
@@ -302,11 +318,11 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::LOG:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    if (right_operand<=0)
+                    if (right_op1<=0)
                     {
                         status=RPNStatus::Undefined;
                     } else {
-                        res.push_back( { rpn_token_t::UREAL, std::log(right_operand), "" } );
+                        res.push_back( { rpn_token_t::UREAL, std::log(right_op1), "" } );
                     }
                 } else {
                     res.push_back(t);
@@ -316,11 +332,11 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::LOG10:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    if (right_operand<=0)
+                    if (right_op1<=0)
                     {
                         status=RPNStatus::Undefined;
                     } else {
-                        res.push_back( { rpn_token_t::UREAL, std::log10(right_operand), "" } );
+                        res.push_back( { rpn_token_t::UREAL, std::log10(right_op1), "" } );
                     }
                 } else {
                     res.push_back(t);
@@ -330,7 +346,7 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::EXP:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    res.push_back( { rpn_token_t::UREAL, std::exp(right_operand), "" } );
+                    res.push_back( { rpn_token_t::UREAL, std::exp(right_op1), "" } );
                 } else {
                     res.push_back(t);
                 }
@@ -339,7 +355,7 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::ABS:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    res.push_back( { rpn_token_t::UREAL, std::abs(right_operand), "" } );
+                    res.push_back( { rpn_token_t::UREAL, std::abs(right_op1), "" } );
                 } else {
                     res.push_back(t);
                 }
@@ -348,7 +364,7 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::SIN:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    res.push_back( { rpn_token_t::UREAL, std::sin(right_operand), "" } );
+                    res.push_back( { rpn_token_t::UREAL, std::sin(right_op1), "" } );
                 } else {
                     res.push_back(t);
                 }
@@ -357,7 +373,7 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::COS:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    res.push_back( { rpn_token_t::UREAL, std::cos(right_operand), "" } );
+                    res.push_back( { rpn_token_t::UREAL, std::cos(right_op1), "" } );
                 } else {
                     res.push_back(t);
                 }
@@ -366,7 +382,7 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::TAN:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    res.push_back( { rpn_token_t::UREAL, std::tan(right_operand), "" } );
+                    res.push_back( { rpn_token_t::UREAL, std::tan(right_op1), "" } );
                 } else {
                     res.push_back(t);
                 }
@@ -375,11 +391,11 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::ARCSIN:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    if (std::abs(right_operand)>1)
+                    if (std::abs(right_op1)>1)
                     {
                         status=RPNStatus::Undefined;
                     } else {
-                        res.push_back( { rpn_token_t::UREAL, std::asin(right_operand), "" } );
+                        res.push_back( { rpn_token_t::UREAL, std::asin(right_op1), "" } );
                     }
                 } else {
                     res.push_back(t);
@@ -389,11 +405,11 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::ARCCOS:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    if (std::abs(right_operand)>1)
+                    if (std::abs(right_op1)>1)
                     {
                         status=RPNStatus::Undefined;
                     } else {
-                        res.push_back( { rpn_token_t::UREAL, std::acos(right_operand), "" } );
+                        res.push_back( { rpn_token_t::UREAL, std::acos(right_op1), "" } );
                     }
                 } else {
                     res.push_back(t);
@@ -403,16 +419,44 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
             case rpn_token_t::ARCTAN:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    res.push_back( { rpn_token_t::UREAL, std::atan(right_operand), "" } );
+                    res.push_back( { rpn_token_t::UREAL, std::atan(right_op1), "" } );
                 } else {
                     res.push_back(t);
                 }
                 break;
 
+            case rpn_token_t::CEIL:
+                if( !check_stack_cntr(1) ) { break; }
+                if( get_stack_ureal(1) ) {
+                    res.push_back( { rpn_token_t::UREAL, std::ceil(right_op1), "" } );
+                } else {
+                    res.push_back(t);
+                }
+                break;
+
+            case rpn_token_t::FLOOR:
+                if( !check_stack_cntr(1) ) { break; }
+                if( get_stack_ureal(1) ) {
+                    res.push_back( { rpn_token_t::UREAL, std::floor(right_op1), "" } );
+                } else {
+                    res.push_back(t);
+                }
+                break;
+
+            case rpn_token_t::STEP:
+                if( !check_stack_cntr(2) ) { break; }
+                res.push_back(t);
+                break;
+
+            case rpn_token_t::MIX:
+                if( !check_stack_cntr(3) ) { break; }
+                res.push_back(t);
+                break;
+
             case rpn_token_t::NEG:
                 if( !check_stack_cntr(1) ) { break; }
                 if( get_stack_ureal(1) ) {
-                    res.push_back( { rpn_token_t::UREAL, 0 - right_operand, "" } );
+                    res.push_back( { rpn_token_t::UREAL, 0 - right_op1, "" } );
                 } else {
                     res.push_back(t);
                 }
@@ -424,6 +468,13 @@ RPNStatus reduce(rpn_stack_t& res, const rpn_stack_t& source) noexcept {
     }
 
     return status;
+}
+
+static double step(double edge, double x) noexcept {
+    return x < edge ? 0 : 1;
+}
+static double mix(double x, double y, double a) noexcept {
+    return x * ( 1 - a ) + y * a;
 }
 
 bool rpn_expression_t::resolved(const variable_set& variables) const noexcept {
@@ -449,7 +500,7 @@ bool rpn_expression_t::resolved(const variable_set& variables) const noexcept {
 
 RPNStatus rpn_expression_t::eval(double& result, const variable_set& variables) const noexcept {
     RPNStatus status = RPNStatus::No_Error;
-    double left_operand, right_operand;
+    double lleft_op3, left_op2, right_op1;
 
     double stack[expr.size()];
     size_t stack_cntr=0;
@@ -460,11 +511,15 @@ RPNStatus rpn_expression_t::eval(double& result, const variable_set& variables) 
             status = RPNStatus::RPN_Underflow;
             return false;
         }
-        if( count >= 1 ) {
-            right_operand = stack[--stack_cntr];
-        }
-        if( count >= 2 ) {
-            left_operand  = stack[--stack_cntr];
+        if( count == 3 ) {
+            right_op1 = stack[--stack_cntr];
+            left_op2  = stack[--stack_cntr];
+            lleft_op3  = stack[--stack_cntr];
+        } else if( count == 2 ) {
+            right_op1 = stack[--stack_cntr];
+            left_op2  = stack[--stack_cntr];
+        } else if( count == 1 ) {
+            right_op1 = stack[--stack_cntr];
         }
         return true;
     };
@@ -492,170 +547,190 @@ RPNStatus rpn_expression_t::eval(double& result, const variable_set& variables) 
 
             case rpn_token_t::ADD:
                 if( !get_stack(2) ) { break; }
-                if ( ( ( left_operand > 0 && right_operand > 0 )
+                if ( ( ( left_op2 > 0 && right_op1 > 0 )
                        ||
-                       ( left_operand < 0 && right_operand < 0 )
+                       ( left_op2 < 0 && right_op1 < 0 )
                      ) &&
-                     std::abs(left_operand) >=
-                         std::numeric_limits<double>::max() - std::abs(right_operand)
+                     std::abs(left_op2) >=
+                         std::numeric_limits<double>::max() - std::abs(right_op1)
                    )
                 {
                     status = RPNStatus::Overflow;
                 } else {
-                    stack[stack_cntr++] = left_operand + right_operand;
+                    stack[stack_cntr++] = left_op2 + right_op1;
                 }
                 break;
 
             case rpn_token_t::SUB:
                 if( !get_stack(2) ) { break; }
-                if ( ( ( left_operand > 0 && right_operand < 0 )
+                if ( ( ( left_op2 > 0 && right_op1 < 0 )
                        ||
-                       ( left_operand < 0 && right_operand > 0 )
+                       ( left_op2 < 0 && right_op1 > 0 )
                      ) &&
-                     std::abs(left_operand) >=
-                             std::numeric_limits<double>::max() - std::abs(right_operand)
+                     std::abs(left_op2) >=
+                             std::numeric_limits<double>::max() - std::abs(right_op1)
                    )
                 {
                     status =RPNStatus::Overflow;
                 } else {
-                    stack[stack_cntr++] = left_operand - right_operand;
+                    stack[stack_cntr++] = left_op2 - right_op1;
                 }
                 break;
 
             case rpn_token_t::MUL:
                 if( !get_stack(2) ) { break; }
-                if( std::abs(right_operand) > 1 &&
-                    std::abs(left_operand) >=
-                        std::numeric_limits<double>::max() / std::abs(right_operand) )
+                if( std::abs(right_op1) > 1 &&
+                    std::abs(left_op2) >=
+                        std::numeric_limits<double>::max() / std::abs(right_op1) )
                 {
                     status =RPNStatus::Overflow;
                 } else {
-                    stack[stack_cntr++] = left_operand * right_operand;
+                    stack[stack_cntr++] = left_op2 * right_op1;
                 }
                 break;
 
             case rpn_token_t::DIV:
                 if( !get_stack(2) ) { break; }
-                if (right_operand == 0)
+                if (right_op1 == 0)
                 {
                     status = RPNStatus::Division_by_zero;
                     break;
                 }
-                if( std::abs(right_operand) < 1 &&
-                    std::abs(left_operand) >=
-                        std::numeric_limits<double>::max() * std::abs(right_operand) )
+                if( std::abs(right_op1) < 1 &&
+                    std::abs(left_op2) >=
+                        std::numeric_limits<double>::max() * std::abs(right_op1) )
                 {
                     status = RPNStatus::Overflow;
                 } else {
-                    stack[stack_cntr++] = left_operand / right_operand;
+                    stack[stack_cntr++] = left_op2 / right_op1;
                 }
                 break;
 
             case rpn_token_t::MOD:
                 if( !get_stack(2) ) { break; }
-                if (right_operand == 0)
+                if (right_op1 == 0)
                 {
                     status = RPNStatus::Division_by_zero;
                     break;
                 }
-                if( std::abs(right_operand) < 1 &&
-                    std::abs(left_operand) >=
-                        std::numeric_limits<double>::max() * std::abs(right_operand) )
+                if( std::abs(right_op1) < 1 &&
+                    std::abs(left_op2) >=
+                        std::numeric_limits<double>::max() * std::abs(right_op1) )
                 {
                     status = RPNStatus::Overflow;
                 } else {
-                    stack[stack_cntr++] = std::fmod(left_operand, right_operand);
+                    stack[stack_cntr++] = std::fmod(left_op2, right_op1);
                 }
                 break;
 
             case rpn_token_t::POW:
                 if( !get_stack(2) ) { break; }
-                stack[stack_cntr++] = std::pow(left_operand,right_operand);
+                stack[stack_cntr++] = std::pow(left_op2,right_op1);
                 break;
 
             case rpn_token_t::SQRT:
                 if( !get_stack(1) ) { break; }
-                if (right_operand<0)
+                if (right_op1<0)
                 {
                     status=RPNStatus::Undefined;
                 } else {
-                    stack[stack_cntr++] = std::sqrt (right_operand);
+                    stack[stack_cntr++] = std::sqrt (right_op1);
                 }
                 break;
 
             case rpn_token_t::LOG:
                 if( !get_stack(1) ) { break; }
-                if (right_operand<=0)
+                if (right_op1<=0)
                 {
                     status=RPNStatus::Undefined;
                 } else {
-                    stack[stack_cntr++] = std::log (right_operand);
+                    stack[stack_cntr++] = std::log (right_op1);
                 }
                 break;
 
             case rpn_token_t::LOG10:
                 if( !get_stack(1) ) { break; }
-                if (right_operand<=0)
+                if (right_op1<=0)
                 {
                     status=RPNStatus::Undefined;
                 } else {
-                    stack[stack_cntr++] = std::log10(right_operand);
+                    stack[stack_cntr++] = std::log10(right_op1);
                 }
                 break;
 
             case rpn_token_t::EXP:
                 if( !get_stack(1) ) { break; }
-                stack[stack_cntr++] = std::exp(right_operand);
+                stack[stack_cntr++] = std::exp(right_op1);
                 break;
 
             case rpn_token_t::ABS:
                 if( !get_stack(1) ) { break; }
-                stack[stack_cntr++] = std::abs(right_operand);
+                stack[stack_cntr++] = std::abs(right_op1);
                 break;
 
             case rpn_token_t::SIN:
                 if( !get_stack(1) ) { break; }
-                stack[stack_cntr++] = std::sin(right_operand);
+                stack[stack_cntr++] = std::sin(right_op1);
                 break;
 
             case rpn_token_t::COS:
                 if( !get_stack(1) ) { break; }
-                stack[stack_cntr++] = std::cos(right_operand);
+                stack[stack_cntr++] = std::cos(right_op1);
                 break;
 
             case rpn_token_t::TAN:
                 if( !get_stack(1) ) { break; }
-                stack[stack_cntr++] = std::tan(right_operand);
+                stack[stack_cntr++] = std::tan(right_op1);
                 break;
 
             case rpn_token_t::ARCSIN:
                 if( !get_stack(1) ) { break; }
-                if (std::abs(right_operand)>1)
+                if (std::abs(right_op1)>1)
                 {
                     status=RPNStatus::Undefined;
                 } else {
-                    stack[stack_cntr++] = std::asin (right_operand);
+                    stack[stack_cntr++] = std::asin (right_op1);
                 }
                 break;
 
             case rpn_token_t::ARCCOS:
                 if( !get_stack(1) ) { break; }
-                if (std::abs(right_operand)>1)
+                if (std::abs(right_op1)>1)
                 {
                     status=RPNStatus::Undefined;
                 } else {
-                    stack[stack_cntr++] = std::acos (right_operand);
+                    stack[stack_cntr++] = std::acos (right_op1);
                 }
                 break;
 
             case rpn_token_t::ARCTAN:
                 if( !get_stack(1) ) { break; }
-                stack[stack_cntr++] = std::atan (right_operand);
+                stack[stack_cntr++] = std::atan (right_op1);
+                break;
+
+            case rpn_token_t::CEIL:
+                if( !get_stack(1) ) { break; }
+                stack[stack_cntr++] = std::ceil(right_op1);
+                break;
+
+            case rpn_token_t::FLOOR:
+                if( !get_stack(1) ) { break; }
+                stack[stack_cntr++] = std::floor(right_op1);
+                break;
+
+            case rpn_token_t::STEP:
+                if( !get_stack(2) ) { break; }
+                stack[stack_cntr++] = step(left_op2, right_op1);
+                break;
+
+            case rpn_token_t::MIX:
+                if( !get_stack(3) ) { break; }
+                stack[stack_cntr++] = mix(lleft_op3, left_op2, right_op1);
                 break;
 
             case rpn_token_t::NEG:
                 if( !get_stack(1) ) { break; }
-                stack[stack_cntr++] = 0 - right_operand;
+                stack[stack_cntr++] = 0 - right_op1;
                 break;
 
             default :
