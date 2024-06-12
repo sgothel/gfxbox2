@@ -55,25 +55,25 @@ void mainloop() {
         a1 = 0;
         a2 = 0;
     }
-    if( event.has_any_p1() ) {
-        if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) && p1.velo < 3000.0f) {
+    if( event.has_any_p2() ) {
+        if( event.pressed_and_clr(pixel::input_event_type_t::P2_UP) && p1.velo < 3000.0f) {
             p1.changeSpeed(1.10f);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) && p1.velo > 1.0f) {
+        } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_DOWN) && p1.velo > 1.0f) {
             p1.changeSpeed(0.90f);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
+        } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_LEFT) ) {
             p1.rotate(M_PI_2);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
+        } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_RIGHT) ) {
             p1.rotate(-M_PI_2);
         }
     }
     if( event.has_any_p2() ) {
-        if( event.pressed_and_clr(pixel::input_event_type_t::P2_UP) && p2.velo < 3000.0f) {
+        if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) && p2.velo < 3000.0f) {
             p2.changeSpeed(1.10f);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_DOWN) && p2.velo > 1.0f) {
+        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) && p2.velo > 1.0f) {
             p2.changeSpeed(0.90f);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_LEFT) ) {
+        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
             p2.rotate(M_PI_2);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_RIGHT) ) {
+        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
             p2.rotate(-M_PI_2);
         }
     }
