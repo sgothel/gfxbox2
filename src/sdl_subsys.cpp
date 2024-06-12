@@ -26,6 +26,7 @@
 #include <thread>
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_scancode.h>
 #include <SDL2/SDL_ttf.h>
 #if !defined(__EMSCRIPTEN__)
     #include <SDL2/SDL_image.h>
@@ -356,6 +357,20 @@ static input_event_type_t to_event_type(SDL_Scancode scancode) {
             /**
         case SDL_SCANCODE_LGUI:
             return input_event_type_t::P2_ACTION4; */
+        case SDL_SCANCODE_I:
+            return input_event_type_t::P3_UP;
+        case SDL_SCANCODE_J:
+            return input_event_type_t::P3_LEFT;
+        case SDL_SCANCODE_K:
+            return input_event_type_t::P3_DOWN;
+        case SDL_SCANCODE_L:
+            return input_event_type_t::P3_RIGHT;
+        case SDL_SCANCODE_V:
+            return input_event_type_t::P3_ACTION1;
+        case SDL_SCANCODE_B:
+            return input_event_type_t::P3_ACTION2;
+        case SDL_SCANCODE_N:
+            return input_event_type_t::P3_ACTION3;
         case SDL_SCANCODE_R:
             return input_event_type_t::RESET;
         default:

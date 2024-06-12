@@ -515,6 +515,13 @@ namespace pixel {
         P2_ACTION1,
         P2_ACTION2,
         P2_ACTION3,
+        P3_UP,
+        P3_DOWN,
+        P3_RIGHT,
+        P3_LEFT,
+        P3_ACTION1,
+        P3_ACTION2,
+        P3_ACTION3,
         RESET, // 18
         /** Request to close window, which then should be closed by caller */
         WINDOW_CLOSE_REQ,
@@ -553,6 +560,15 @@ namespace pixel {
                     bitmask(input_event_type_t::P2_ACTION1) |
                     bitmask(input_event_type_t::P2_ACTION2) |
                     bitmask(input_event_type_t::P2_ACTION3);
+                    
+            constexpr static const uint32_t p3_mask =
+                    bitmask(input_event_type_t::P3_UP) |
+                    bitmask(input_event_type_t::P3_DOWN) |
+                    bitmask(input_event_type_t::P3_RIGHT) |
+                    bitmask(input_event_type_t::P3_LEFT) |
+                    bitmask(input_event_type_t::P3_ACTION1) |
+                    bitmask(input_event_type_t::P3_ACTION2) |
+                    bitmask(input_event_type_t::P3_ACTION3);
             uint32_t m_pressed; // [P1_UP..RESET]
             uint32_t m_lifted; // [P1_UP..RESET]
             bool m_paused;
@@ -616,6 +632,7 @@ namespace pixel {
                     m_paused = !m_paused;
                 }
             }
+            void set_paused(bool v) noexcept { m_paused = v; }
             bool paused() const noexcept { return m_paused; }
             bool pressed(input_event_type_t e) const noexcept {
                 const int bit = bitno(e);
@@ -649,6 +666,9 @@ namespace pixel {
             }
             bool has_any_p2() const noexcept {
                 return 0 != ( ( m_pressed | m_lifted ) & p2_mask );
+            }
+            bool has_any_p3() const noexcept {
+                return 0 != ( ( m_pressed | m_lifted ) & p3_mask );
             }
             std::string to_string() const noexcept;
     };
