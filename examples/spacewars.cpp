@@ -67,6 +67,7 @@ class idscore_t {
         int score() const noexcept { return m_score; }
         void reset() noexcept { m_score = 0; }
 };
+static idscore_t world_id(0);
 
 class star_t {
     public:
@@ -127,7 +128,7 @@ typedef std::shared_ptr<star_t> star_ref_t;
 
 star_ref_t sun;
 
-std::random_device rng;
+static std::random_device rng;
 static const float rng_range = (float)std::random_device::max() - (float)std::random_device::min() + 1.0f;
 
 static float next_rnd() noexcept {
@@ -1219,6 +1220,12 @@ int main(int argc, char *argv[])
                                    sun_gravity * (float)sun_gravity_scale_env,
                                    sun_gravity * (float)sun_gravity_scale_ships);
     
+    const float peng_diag = 0.3f*spaceship_height;
+    for(int i = 0; i < 5; ++i){
+        const float x = next_rnd() * pixel::cart_coord.width();
+        const float y = next_rnd() * pixel::cart_coord.height();
+        pengs.emplace_back(&world_id, pixel::f2::point_t(x, y), peng_diag, 0.0f, 0.0f);
+    }
     reset_asteroids(asteroid_count);
 
     #if defined(__EMSCRIPTEN__)
