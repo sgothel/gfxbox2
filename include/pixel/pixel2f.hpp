@@ -24,6 +24,7 @@
 #ifndef PIXEL2F_HPP_
 #define PIXEL2F_HPP_
 
+#include <string>
 #include "pixel.hpp"
 
 /**
@@ -187,6 +188,9 @@ namespace pixel::f2 {
 
         /**
          * Return the dot product of this vector and the given one
+         *
+         * u⋅v=∥u∥∥v∥cosθ
+         *
          * @return the dot product as float
          */
         constexpr float dot(const vec_t& o) const noexcept {
@@ -283,9 +287,13 @@ namespace pixel::f2 {
         return pixel::is_zero(lhs.x - rhs.x) && pixel::is_zero(lhs.x - rhs.x);
     }
     /** TODO
-    constexpr bool operator<(const vec_t& lhs, const vec_t& rhs ) noexcept {
+    constexpr bool operator<=>(const vec_t& lhs, const vec_t& rhs ) noexcept {
         return pixel::is_zero(lhs.x - rhs.x) && pixel::is_zero(lhs.x - rhs.x);
     } */
+
+    inline std::ostream& operator<<(std::ostream& out, const vec_t& v) {
+        return out << v.toString();
+    }
 
     /**
      * Computes oriented double area of a triangle,
@@ -831,12 +839,12 @@ namespace pixel::f2 {
                 return false;
             }
             /**
-                    if (std::abs(d.y * c.z - d.z * c.y) > e.y * ad.z + e.z * ad.y + std::numeric_limits<float>::epsilon()) {
-                        return false;
-                    }
-                    if (std::abs(d.z * c.x - d.x * c.z) > e.z * ad.x + e.x * ad.z + std::numeric_limits<float>::epsilon()) {
-                        return false;
-                    }
+                if (std::abs(d.y * c.z - d.z * c.y) > e.y * ad.z + e.z * ad.y + std::numeric_limits<float>::epsilon()) {
+                    return false;
+                }
+                if (std::abs(d.z * c.x - d.x * c.z) > e.z * ad.x + e.x * ad.z + std::numeric_limits<float>::epsilon()) {
+                    return false;
+                }
              */
             if (std::abs(d.x * c.y - d.y * c.x) > e.x * ad.y + e.y * ad.x + std::numeric_limits<float>::epsilon()) {
                 return false;
@@ -858,6 +866,7 @@ namespace pixel::f2 {
             return false;
         }
     };
+
 
     /**
      * Simple compound denoting a ray.
