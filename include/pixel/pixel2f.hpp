@@ -1179,6 +1179,13 @@ namespace pixel::f2 {
             dir_angle += rad;
         }
 
+        void rotate(const float radians, const point_t& p) noexcept {
+            const float cos = std::cos(radians);
+            const float sin = std::sin(radians);
+            center.rotate(sin, cos, p);
+            dir_angle += radians;
+        }
+
         void move_dir(const float d) noexcept override {
             point_t dir { d, 0 };
             dir.rotate(dir_angle);
