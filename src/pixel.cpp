@@ -237,6 +237,15 @@ void pixel::f2::lineseg_t::draw(const point_t& p0, const point_t& p1) noexcept {
     }
 }
 
+void pixel::f2::aabbox_t::draw() const noexcept {
+    const point_t tl(bl.x, tr.y);
+    const point_t br(tr.x, bl.y);
+    lineseg_t::draw(tl, tr);
+    lineseg_t::draw(tr, br);
+    lineseg_t::draw(br, bl);
+    lineseg_t::draw(bl, tl);
+}
+
 void pixel::f2::disk_t::draw(const bool filled) const noexcept {
     const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
     const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
@@ -404,14 +413,9 @@ bool pixel::f2::aabbox_t::intersection(vec_t& reflect_out, vec_t& cross_normal, 
     return false;
 }
 
-void pixel::f2::aabbox_t::draw() const noexcept {
-    const point_t tl(bl.x, tr.y);
-    const point_t br(tr.x, bl.y);
-    lineseg_t::draw(tl, tr);
-    lineseg_t::draw(tr, br);
-    lineseg_t::draw(br, bl);
-    lineseg_t::draw(bl, tl);
-}
+//
+//
+//
 
 std::string pixel::input_event_t::to_string() const noexcept {
     return "event[p1 "+std::to_string(has_any_p1())+
@@ -426,3 +430,67 @@ std::string pixel::input_event_t::to_string() const noexcept {
             ;
 }
 
+///
+
+#if 0
+        bool intersects2(const lineseg_t& in) const noexcept {
+            /**
+             *  Taking
+             * E is the starting point of the ray,
+             * L is the end point of the ray,
+             * C is the center of sphere you're testing against
+             * r is the radius of that sphere
+             */
+            vec_t d = in.p1 - in.p0; // Direction vector of ray, from start to end
+            vec_t f = in.p0 - center; // Vector from center sphere to ray start
+            float a = d.dot(d);
+            float b = 2*f.dot( d ) ;
+            float c = f.dot( f ) - radius*radius ;
+
+            float discriminant = b*b - 4*a*c;
+            if( discriminant < 0 ){
+                return false;
+              // no intersection
+            } else {
+              // ray didn't totally miss sphere,
+              // so there is a solution to
+              // the equation.
+
+              discriminant = std::sqrt( discriminant );
+
+              // either solution may be on or off the ray so need to test both
+              // t1 is always the smaller value, because BOTH discriminant and
+              // a are nonnegative.
+              float t1 = (-b - discriminant)/(2*a);
+              float t2 = (-b + discriminant)/(2*a);
+
+              // 3x HIT cases:
+              //          -o->             --|-->  |            |  --|->
+              // Impale(t1 hit,t2 hit), Poke(t1 hit,t2>1), ExitWound(t1<0, t2 hit),
+
+              // 3x MISS cases:
+              //       ->  o                     o ->              | -> |
+              // FallShort (t1>1,t2>1), Past (t1<0,t2<0), CompletelyInside(t1<0, t2>1)
+
+              if( t1 >= 0 && t1 <= 1 )
+              {
+                // t1 is the intersection, and it's closer than t2
+                // (since t1 uses -b - discriminant)
+                // Impale, Poke
+                return true ;
+              }
+
+              // here t1 didn't intersect so we are either started
+              // inside the sphere or completely past it
+              if( t2 >= 0 && t2 <= 1 )
+              {
+                // ExitWound
+                return true ;
+              }
+
+              // no intn: FallShort, Past, CompletelyInside
+              return false ;
+            }
+        }
+
+#endif
