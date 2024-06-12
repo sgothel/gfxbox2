@@ -1605,7 +1605,169 @@ namespace pixel::f2 {
 
         return lf;
     }
+    
+    class circle_seg_t : public ageom_t {
+      private:
+        point_t m_center;
+        float m_radius;
+        float m_start_angle;
+        float m_end_angle;
+        float dir_angle = 0;
+      public:
+        circle_seg_t(const point_t center, const float radius, 
+                     const float start_angle, const float end_angle) noexcept
+        : m_center(center), m_radius(radius), m_start_angle(start_angle), m_end_angle(end_angle) {}
+        
+        circle_seg_t(const point_t center, const float radius,
+                     const float an_angle, const float winkel, const bool b) noexcept
+        : m_center(center), m_radius(radius)
+        {
+            if(b){
+                m_start_angle = an_angle;
+                m_end_angle = m_start_angle + winkel;
+            } else {
+                m_end_angle = an_angle;
+                m_start_angle = m_end_angle - winkel;
+            }
+        }
 
-} // namespace pixel_2f
+        std::string toString() const noexcept override {
+            return "center " + m_center.toString() + ", radius " + std::to_string(m_radius) +
+                   ", start_angle " + std::to_string(m_start_angle) + ", end_angle " + std::to_string(m_end_angle);
+        }
+
+        void set_center(const point_t &new_center) {
+            m_center = new_center;
+        }
+        
+        aabbox_t box() const noexcept override {
+            point_t bl = { m_center.x - m_radius, m_center.y - m_radius};
+            point_t tr = { m_center.x + m_radius, m_center.y + m_radius};
+            return aabbox_t(bl, tr);
+        }
+        
+        bool contains(const point_t& o) const noexcept override {
+            return box().contains(o);
+            // return box().contains(o);
+        }
+
+        bool intersects(const lineseg_t &o) const noexcept override {
+            return box().intersects(o);
+        }
+
+        bool intersects(const aabbox_t &o) const noexcept override {
+            return box().intersects(o);
+        }
+
+        bool intersects(const geom_t &o) const noexcept override {
+            return box().intersects(o);
+        }
+        
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, 
+                          const lineseg_t& in) const noexcept override {
+            if( !in.intersects( box() ) ) {
+                return false;
+            }
+            cross_point = m_center; // use center
+            const vec_t v_in = in.p1 - in.p0;
+            cross_normal = v_in.normal_ccw().normalize();
+            // reflect_out = v_in - ( 2.0f * v_in.dot(cross_normal) * cross_normal );
+            // TODO: check if cross_normal is OK for this case
+            reflect_out = -1.0f * v_in;
+            return true;
+        }
+        
+        void draw(pixel::f2::point_t pm, float r, float alpha1, float alpha2) const noexcept {
+            float x;
+            float y;
+            float i = alpha1;
+            for(; i <= alpha2; i += 0.01){
+                x = std::cos(i) * r;
+                y = std::sin(i) * r;
+                pixel::f2::point_t p0 = pixel::f2::point_t(x, y);
+                p0 += pm;
+                p0.draw();
+            }
+        }
+
+        void draw() const noexcept override {
+            float x;
+            float y;
+            float i = m_start_angle;
+            for(; i <= m_end_angle; i += 0.01){
+                x = std::cos(i) * m_radius;
+                y = std::sin(i) * m_radius;
+                pixel::f2::point_t p0 = pixel::f2::point_t(x, y);
+                p0 += m_center;
+                p0.draw();
+            }
+        }
+        
+        bool on_screen() const noexcept override {
+            return box().on_screen();
+        }
+        
+        void rotate(const float radians) noexcept override {
+            m_start_angle += radians;
+            m_end_angle += radians;
+        }
+
+        void move_dir(const float d) noexcept override {
+            point_t dir { d, 0 };
+            dir.rotate(dir_angle);
+            m_center += dir;
+        }
+
+        void move(const point_t& d) noexcept override {
+            m_center += d;
+        }
+        void move(const float dx, const float dy) noexcept override {
+            m_center.add(dx, dy);
+        }
+    };
+    typedef std::shared_ptr<circle_seg_t> circle_seg_ref_t;
+    
+    class dashed_lineseg_t : public lineseg_t {
+      public:
+        float distance_length;
+        float quantity;
+        dashed_lineseg_t()
+        : lineseg_t(), distance_length(), quantity() {}
+        
+        dashed_lineseg_t(dashed_lineseg_t& bl) noexcept;
+        dashed_lineseg_t(const point_t p0_, const point_t p1_, const float distance_length_, 
+                         const float quantity_)
+            : lineseg_t(p0_, p1_), distance_length(distance_length_), quantity(quantity_) {}
+        
+        dashed_lineseg_t(const lineseg_t &l, const float distance_length_, const float quantity_)
+            : lineseg_t(l), distance_length(distance_length_), quantity(quantity_) {}
+        
+        dashed_lineseg_t& operator=(const dashed_lineseg_t& bl) noexcept = default;
+        
+        bool error() const {
+            return quantity * distance_length >= length();
+        }
+        
+        void draw() const noexcept override {
+            const float a = (length() - quantity * distance_length) / (quantity + 1);
+            point_t pa = p0;
+            point_t pb = pa;
+            const vec_t v1 = vec_t::from_length_angle(a, angle());
+            const vec_t v2 = vec_t::from_length_angle(distance_length, angle());
+            pb += v1;
+            lineseg_t::draw(pa, pb);
+            pa = pb + v2;
+            
+            for(float i = 0; i < quantity; ++i){
+                pb += (v1 + v2);
+                lineseg_t::draw(pa, pb);
+                pa = pb + v2;
+            }
+        }
+        std::string toString() const noexcept override {
+            return "DL[" + p0.toString() + ", " + p1.toString() + "]";
+        }
+    };
+}  // namespace pixel::f2
 
 #endif /*  PIXEL2F_HPP_ */
