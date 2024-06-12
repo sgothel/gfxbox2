@@ -1136,8 +1136,13 @@ namespace pixel::f2 {
             // return box().contains(o);
         }
 
-        bool intersects(const lineseg_t & o) const noexcept override {
-            return o.intersects(box());
+        bool intersects(const lineseg_t& line ) const noexcept override {
+            /** Buggy 
+            const float min_distance = triangle_t::area(center, line.p0, line.p1) /
+                                       (line.p1 - line.p0).length();
+            return min_distance <= radius;
+            */            
+            return line.intersects( box() );
         }
 
         bool intersects(const aabbox_t& o) const noexcept override {
@@ -1153,11 +1158,10 @@ namespace pixel::f2 {
                 return false;
             }
             cross_point = center; // use center
-            const float dx = in.p1.x - in.p0.x;
-            const float dy = in.p1.y - in.p0.y;
-            cross_normal = vec_t(-dy, dx).normalize();
             const vec_t v_in = in.p1 - in.p0;
-            // reflect_out = v_in - ( 2.0f * v_in.dot(cross_normal) * cross_normal ); // TODO: check if cross_normal is OK for this case
+            cross_normal = v_in.normal_ccw().normalize();
+            // reflect_out = v_in - ( 2.0f * v_in.dot(cross_normal) * cross_normal );
+            // TODO: check if cross_normal is OK for this case
             reflect_out = -1.0f * v_in;
             return true;
         }
