@@ -510,24 +510,28 @@ class spaceship_t : public pixel::f2::linestrip_t {
                 return linestrip_t::box();
             }
         }
+        void move(const pixel::f2::point_t& d) noexcept override {
+            linestrip_t::move(d);
+
+            if( p_center.x < pixel::cart_coord.min_x() ) {
+                linestrip_t::move(pixel::cart_coord.max_x()-p_center.x, 0.0f);
+            }
+            if( p_center.x > pixel::cart_coord.max_x() ) {
+                linestrip_t::move(pixel::cart_coord.min_x()-p_center.x, 0.0f);
+            }
+            if( p_center.y < pixel::cart_coord.min_y() ) {
+                linestrip_t::move(0.0f, pixel::cart_coord.max_y()-p_center.y);
+            }
+            if( p_center.y > pixel::cart_coord.max_y() ) {
+                linestrip_t::move(0.0f, pixel::cart_coord.min_y()-p_center.y);
+            }
+            shield_body.center = this->p_center;
+        }
         bool tick(const float dt) noexcept override {
             pixel::f2::vec_t g = sun->gravity_ships(p_center);
             velocity += g * dt;
-            move(velocity * dt);
 
-            if( p_center.x < pixel::cart_coord.min_x() ) {
-                move(pixel::cart_coord.max_x()-p_center.x, 0.0f);
-            }
-            if( p_center.x > pixel::cart_coord.max_x() ) {
-                move(pixel::cart_coord.min_x()-p_center.x, 0.0f);
-            }
-            if( p_center.y < pixel::cart_coord.min_y() ) {
-                move(0.0f, pixel::cart_coord.max_y()-p_center.y);
-            }
-            if( p_center.y > pixel::cart_coord.max_y() ) {
-                move(0.0f, pixel::cart_coord.min_y()-p_center.y);
-            }
-            shield_body.center = this->p_center;
+            move(velocity * dt);
 
             if( m_shield ) {
                 m_shield_time -= dt;
@@ -888,6 +892,7 @@ class player_t : public idscore_t {
         float shield_time() const noexcept { return nullptr != m_ship ? m_ship->shield_time() : 0; }
 
         bool cloak() const noexcept { return m_cloak; }
+
         void set_cloak( bool v ) noexcept { m_cloak = cloak_enabled && v; }
 
         pixel::f2::point_t center() {
