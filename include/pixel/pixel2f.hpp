@@ -1154,7 +1154,7 @@ namespace pixel::f2 {
         }
 
         bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
-            if( !in.intersects( box() ) ) {
+            if( !intersects(in) ) {
                 return false;
             }
             cross_point = center; // use center
