@@ -68,12 +68,15 @@ static bool one_player = true;
 static std::string record_bmpseq_basename;
 static pixel::f2::rect_ref_t pad_l, pad_r;
 static std::shared_ptr<physiks::ball_t> ball;
+static pixel::f2::dashed_lineseg_t divider;
 
 void mainloop() {
     static uint64_t frame_count_total = 0;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static bool animating = true;
+    static int r_score = 0;
+    static int l_score = 0;
 
     pixel::handle_events(event);
     if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -94,21 +97,15 @@ void mainloop() {
         }
         animating = true;
     }
-
+    
     uint64_t t1;
     if( animating ) {
         t1 = pixel::getElapsedMillisecond(); // [ms]
         if( event.has_any_p1() ){
             if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
                 pad_r->move(pad_step_up);
-                if( !pad_r->on_screen() ) {
-                    pad_r->move(pad_step_down);
-                }
             } else if( event.pressed(pixel::input_event_type_t::P1_DOWN) ) {
                 pad_r->move(pad_step_down);
-                if( !pad_r->on_screen() ) {
-                    pad_r->move(pad_step_up);
-                }
             } else if( event.pressed(pixel::input_event_type_t::P1_LEFT) ) {
                 pad_r->rotate(pixel::adeg_to_rad(pad_rot_step));
             } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ) {
@@ -122,6 +119,26 @@ void mainloop() {
                 t1 +=  1;
             } else if( event.pressed(pixel::input_event_type_t::P1_UP) ){
                 t1 += 10;
+            }
+        }
+    }
+    if( animating && !one_player) {
+        t1 = pixel::getElapsedMillisecond(); // [ms]
+        if( event.has_any_p2() ){
+            if( event.pressed(pixel::input_event_type_t::P2_UP) ) {
+                pad_l->move(pad_step_up);
+                if( !pad_l->on_screen() ) {
+                    pad_l->move(pad_step_down);
+                }
+            } else if( event.pressed(pixel::input_event_type_t::P2_DOWN) ) {
+                pad_l->move(pad_step_down);
+                if( !pad_l->on_screen() ) {
+                    pad_l->move(pad_step_up);
+                }
+            } else if( event.pressed(pixel::input_event_type_t::P2_LEFT) ) {
+                pad_l->rotate(pixel::adeg_to_rad(pad_rot_step));
+            } else if( event.pressed(pixel::input_event_type_t::P2_RIGHT) ) {
+                pad_l->rotate(pixel::adeg_to_rad(-pad_rot_step));
             }
         }
     }
@@ -139,12 +156,20 @@ void mainloop() {
             hud_s.append( pixel::to_string(", angle %6.2f deg", pixel::rad_to_adeg(pad_l->dir_angle)) );
         }
         hud_s.append( pixel::to_string(", fps %2.2f", pixel::get_gpu_fps()) );
+        hud_s.append( pixel::to_string(", score %d : %d", l_score, r_score) );
         hud_text = pixel::make_text_texture(hud_s);
     }
     
     // move ball_1
     ball->tick(dt);
-
+    if(!ball->on_screen()){
+        if(ball->center.x < 0){
+            ++r_score;
+        } else { // if(ball->center.x >= pixel::cart_coord.max_x() - ball->radius){
+            ++l_score;
+        }
+        ball->reset(true);
+    }
     pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
     {
         pixel::f2::geom_list_t& list = pixel::f2::gobjects();
@@ -161,6 +186,10 @@ void mainloop() {
         }
     }
 
+    if(!one_player){
+        divider.draw();
+    }
+    
     fflush(nullptr);
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
@@ -191,7 +220,9 @@ int main(int argc, char *argv[])
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-2p", argv[i]) ) {
-                // one_player = false;
+                one_player = false;
+            } else if( 0 == strcmp("-1p", argv[i])){
+                one_player = true;
             } else if( 0 == strcmp("-big_pads", argv[i])){
                 big_pads = true;
             } else if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
@@ -254,6 +285,12 @@ int main(int argc, char *argv[])
     }
     player_pads.push_back(pad_r);
 
+    if(!one_player){
+        pixel::f2::point_t p0 = {tl.x + (pixel::cart_coord.width()-7.0f*pad_thickness) / 2, 
+                                       tl.y - pad_thickness};
+        pixel::f2::point_t p1 = {p0.x, p0.y - pixel::cart_coord.height() + 4*pad_thickness};
+        divider = pixel::f2::dashed_lineseg_t(pixel::f2::lineseg_t(p0, p1), pad_thickness, 20.0f);
+    }
     {
         const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
         if( debug_gfx ) {
