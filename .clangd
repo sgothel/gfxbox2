@@ -14,7 +14,7 @@
 
 InlayHints:
   Enabled: Yes
-  ParameterNames: Yes
+  ParameterNames: No
   DeducedTypes: Yes
 
 Hover:
