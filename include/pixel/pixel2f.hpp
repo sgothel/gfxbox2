@@ -1213,13 +1213,14 @@ namespace pixel::f2 {
          *   (c)-----(d)
          */
         /** Unrotated top-left */
-        point_t p_a;
+        point_t m_tl;
         /** Unrotated top-right */
-        point_t p_b;
+        point_t m_tr;
         /** Unrotated bottom-left */
-        point_t p_c;
-        /** Unrotated bottom_right */
-        point_t p_d;
+        point_t m_bl;
+        /** Unrotated bottom-right */
+        point_t m_br;
+        /** Unrotated center */
         point_t p_center;
         /** direction angle in radians */
         float dir_angle;
@@ -1227,58 +1228,58 @@ namespace pixel::f2 {
     public:
         rect_t(const point_t& tl_, const float width, const float height, const float radians) noexcept
         {
-            p_a = tl_;
-            p_b = { p_a.x + width, p_a.y };
-            p_c = { p_a.x        , p_a.y - height};
-            p_d = { p_a.x + width, p_a.y - height};
-            p_center = { p_a.x + width/2  , p_a.y - height/2  };
+            m_tl = tl_;
+            m_tr = { m_tl.x + width, m_tl.y };
+            m_bl = { m_tl.x        , m_tl.y - height};
+            m_br = { m_tl.x + width, m_tl.y - height};
+            p_center = { m_tl.x + width/2  , m_tl.y - height/2  };
             dir_angle = 0.0f;
             rotate(radians);
         }
 
         rect_t(const point_t& tl_, const float width, const float height) noexcept{
-            p_a = tl_;
-            p_b = { p_a.x + width, p_a.y };
-            p_c = { p_a.x        , p_a.y - height};
-            p_d = { p_a.x + width, p_a.y - height};
-            p_center = { p_a.x + width/2  , p_a.y - height/2  };
+            m_tl = tl_;
+            m_tr = { m_tl.x + width, m_tl.y };
+            m_bl = { m_tl.x        , m_tl.y - height};
+            m_br = { m_tl.x + width, m_tl.y - height};
+            p_center = { m_tl.x + width/2  , m_tl.y - height/2  };
             dir_angle = 0.0f;
         }
 
 
         rect_t(const point_t& tl_, const point_t& tr_, const point_t& bl_, const point_t& br_) noexcept
-        : p_a(tl_), p_b(tr_), p_c(bl_), p_d(br_)
+        : m_tl(tl_), m_tr(tr_), m_bl(bl_), m_br(br_)
         {
-            p_center = { ( p_a.x + p_b.x ) / 2.0f  , ( p_a.y + p_c.y ) / 2.0f  };
+            p_center = { ( m_tl.x + m_tr.x ) / 2.0f  , ( m_tl.y + m_bl.y ) / 2.0f  };
             dir_angle = 0.0f;
         }
 
         aabbox_t box() const noexcept override {
-            return aabbox_t().resize(p_a).resize(p_b).resize(p_c).resize(p_d);
+            return aabbox_t().resize(m_tl).resize(m_tr).resize(m_bl).resize(m_br);
         }
 
         void move_dir(const float d) noexcept override {
             point_t dir { d, 0 };
             dir.rotate(dir_angle);
-            p_a += dir;
-            p_b += dir;
-            p_c += dir;
-            p_d += dir;
+            m_tl += dir;
+            m_tr += dir;
+            m_bl += dir;
+            m_br += dir;
             p_center += dir;
         }
 
         void move(const point_t& d) noexcept override {
-            p_a += d;
-            p_b += d;
-            p_c += d;
-            p_d += d;
+            m_tl += d;
+            m_tr += d;
+            m_bl += d;
+            m_br += d;
             p_center += d;
         }
         void move(const float dx, const float dy) noexcept override {
-            p_a.add(dx, dy);
-            p_b.add(dx, dy);
-            p_c.add(dx, dy);
-            p_d.add(dx, dy);
+            m_tl.add(dx, dy);
+            m_tr.add(dx, dy);
+            m_bl.add(dx, dy);
+            m_br.add(dx, dy);
             p_center.add(dx, dy);
         }
 
@@ -1288,17 +1289,17 @@ namespace pixel::f2 {
         void rotate(const float radians, const point_t& p) noexcept {
             const float cos = std::cos(radians);
             const float sin = std::sin(radians);
-            p_a.rotate(sin, cos, p);
-            p_b.rotate(sin, cos, p);
-            p_c.rotate(sin, cos, p);
-            p_d.rotate(sin, cos, p);
+            m_tl.rotate(sin, cos, p);
+            m_tr.rotate(sin, cos, p);
+            m_bl.rotate(sin, cos, p);
+            m_br.rotate(sin, cos, p);
             dir_angle += radians;
         }
 
         void set_top_left(const point_t& p) {
             // FIXME: Since m_p_a is unknown to be top-left ...
-            const float dx = p.x - p_a.x;
-            const float dy = p.y - p_a.y;
+            const float dx = p.x - m_tl.x;
+            const float dy = p.y - m_tl.y;
             move( dx, dy );
         }
 
@@ -1324,31 +1325,45 @@ namespace pixel::f2 {
 
         bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override {
             {
-                // tl .. tr
-                const lineseg_t l(p_a, p_b);
-                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                    return true;
+                const lineseg_t lt(m_tl, m_tr);
+                const lineseg_t lb(m_bl, m_br);
+                const float dt = lt.distance( in.p0 );
+                const float db = lb.distance( in.p0 );
+                if( dt < db ) {
+                    if( lt.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                    if( lb.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                } else {
+                    if( lb.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                    if( lt.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
                 }
             }
             {
-                // bl .. br
-                const lineseg_t l(p_c, p_d);
-                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                    return true;
-                }
-            }
-            {
-                // br .. tr
-                const lineseg_t l(p_d, p_b);
-                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                    return true;
-                }
-            }
-            {
-                // bl .. tl
-                const lineseg_t l(p_c, p_a);
-                if( l.intersection(reflect_out, cross_normal, cross_point, in) ) {
-                    return true;
+                const lineseg_t lr(m_br, m_tr);
+                const lineseg_t ll(m_bl, m_tl);
+                const float dr = lr.distance( in.p0 );
+                const float dl = ll.distance( in.p0 );
+                if( dr < dl ) {
+                    if( lr.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                    if( ll.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                } else {
+                    if( ll.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
+                    if( lr.intersection(reflect_out, cross_normal, cross_point, in) ) {
+                        return true;
+                    }
                 }
             }
             return false;
@@ -1357,7 +1372,7 @@ namespace pixel::f2 {
         bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in, const float in_radius) const noexcept {
             {
                 // tl .. tr
-                lineseg_t l(p_a, p_b);
+                lineseg_t l(m_tl, m_tr);
                 const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
                 l.p0 += added_size;
                 l.p1 += added_size;
@@ -1367,7 +1382,7 @@ namespace pixel::f2 {
             }
             {
                 // bl .. br
-                lineseg_t l(p_c, p_d);
+                lineseg_t l(m_bl, m_br);
                 const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
                 l.p0 += added_size;
                 l.p1 += added_size;
@@ -1377,7 +1392,7 @@ namespace pixel::f2 {
             }
             {
                 // br .. tr
-                lineseg_t l(p_d, p_b);
+                lineseg_t l(m_br, m_tr);
                 const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
                 l.p0 += added_size;
                 l.p1 += added_size;
@@ -1387,7 +1402,7 @@ namespace pixel::f2 {
             }
             {
                 // bl .. tl
-                lineseg_t l(p_c, p_a);
+                lineseg_t l(m_bl, m_tl);
                 const vec_t added_size = (l.p1 - l.p0).normal_ccw().normalize() * in_radius;
                 l.p0 += added_size;
                 l.p1 += added_size;
@@ -1404,10 +1419,10 @@ namespace pixel::f2 {
         void draw(const bool filled) const noexcept;
 
         std::string toString() const noexcept override {
-            return "rect[a " + p_a.toString() +
-                    ", b " + p_b.toString() +
-                    ", c " + p_c.toString() +
-                    ", d " + p_d.toString() +
+            return "rect[a " + m_tl.toString() +
+                    ", b " + m_tr.toString() +
+                    ", c " + m_bl.toString() +
+                    ", d " + m_br.toString() +
                     "]";
         }
     };

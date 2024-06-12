@@ -257,7 +257,7 @@ void pixel::f2::disk_t::draw(const bool filled) const noexcept {
 void pixel::f2::rect_t::draw(const bool filled) const noexcept {
     if(filled) {
         constexpr bool debug = false;
-        vec_t ac = p_c - p_a;
+        vec_t ac = m_bl - m_tl;
         ac.normalize();
         vec_t vunit_per_pixel(pixel::cart_coord.from_fb_dx( 1 ), pixel::cart_coord.from_fb_dy( 1 ));
         if( debug ) {
@@ -269,7 +269,7 @@ void pixel::f2::rect_t::draw(const bool filled) const noexcept {
          * Problem mit rotation, wo step breite und linien-loop zu luecken fuehrt!
          */
         vec_t step = ac * unit_per_pixel * 1.0f;
-        vec_t i(p_a), j(p_b);
+        vec_t i(m_tl), j(m_tr);
         if( debug ) {
             printf("%s\n", toString().c_str());
             printf("ac %s\n", ac.toString().c_str());
@@ -282,15 +282,15 @@ void pixel::f2::rect_t::draw(const bool filled) const noexcept {
             if( debug ) {
                 printf("z: i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
             }
-        } else if(p_a.y < p_c.y){
-            for(; /*i.x > p_c.x ||*/ i.y <= p_c.y; i+=step, j+=step) {
+        } else if(m_tl.y < m_bl.y){
+            for(; /*i.x > p_c.x ||*/ i.y <= m_bl.y; i+=step, j+=step) {
                 lineseg_t::draw(i, j);
                 if( debug ) {
                     printf("a: i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
                 }
             }
         }else{
-            for(; /*i.x > p_c.x ||*/ i.y >= p_c.y; i+=step, j+=step) {
+            for(; /*i.x > p_c.x ||*/ i.y >= m_bl.y; i+=step, j+=step) {
                 lineseg_t::draw(i, j);
                 if( debug ) {
                     printf("b: i %s, j %s\n", i.toString().c_str(), j.toString().c_str());
@@ -299,10 +299,10 @@ void pixel::f2::rect_t::draw(const bool filled) const noexcept {
         }
 
     } else {
-        lineseg_t::draw(p_a, p_b);
-        lineseg_t::draw(p_b, p_d);
-        lineseg_t::draw(p_d, p_c);
-        lineseg_t::draw(p_c, p_a);
+        lineseg_t::draw(m_tl, m_tr);
+        lineseg_t::draw(m_tr, m_br);
+        lineseg_t::draw(m_br, m_bl);
+        lineseg_t::draw(m_bl, m_tl);
     }
 }
 
