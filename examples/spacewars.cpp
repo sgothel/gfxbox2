@@ -313,7 +313,7 @@ fragment_ref_t make_asteroid(const pixel::f2::point_t& center, float height,
 }
 
 class peng_t {
-private:
+  private:
     idscore_t* m_owner;
     float m_fuse = 0.25f; // [s]
 
@@ -337,14 +337,14 @@ private:
         return hit;
     }
 
-public:
+  public:
     pixel::f2::vec_t m_velo; // [m/s]
     pixel::f2::rect_t m_peng;
 
     peng_t(idscore_t* owner,
-           const pixel::f2::point_t& p0, const float diag, const float v, const float angle) noexcept
-    : m_owner(owner), m_velo( pixel::f2::point_t::from_length_angle(v, angle) ),
-      m_peng(p0 + pixel::f2::point_t(-diag/2, +diag/2), diag, diag, angle)
+           const pixel::f2::point_t& p0, const float diag, const float fuse = 1) noexcept
+    : m_owner(owner), m_fuse(fuse), m_velo(),
+      m_peng(p0 + pixel::f2::point_t(-diag/2, +diag/2), diag, diag, 0)
     { }
     peng_t(idscore_t* owner,
            const pixel::f2::point_t& p0, const float diag, const pixel::f2::vec_t& v) noexcept
@@ -399,6 +399,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
         constexpr static const float peng_diag = 0.15f*height;
         constexpr static const float peng_velo_0 = vel_max / 2;
         constexpr static const int peng_inventory_max = 5000;
+        constexpr static const int mine_inventory_max = 10;
 
         constexpr static const float shield_radius = spaceship_height * 0.9f;
         constexpr static const float shield_time_max = 10; // [s]
@@ -455,12 +456,13 @@ class spaceship_t : public pixel::f2::linestrip_t {
         pixel::f2::disk_t shield_body = pixel::f2::disk_t(p_center, shield_radius);
         pixel::f2::vec_t velocity; // [m/s]
         int peng_inventory;
+        int mine_inventory;
 
         spaceship_t(idscore_t* owner,
                     const pixel::f2::point_t& center, const float angle) noexcept
         : linestrip_t(center, angle), m_owner(owner),
           m_shield_time(shield_time_max), m_shield(false),
-          velocity(), peng_inventory(peng_inventory_max)
+          velocity(), peng_inventory(peng_inventory_max), mine_inventory(mine_inventory_max)
         {}
 
         void peng() noexcept {
@@ -472,11 +474,19 @@ class spaceship_t : public pixel::f2::linestrip_t {
                     p0 = p_list[0];
                 }
                 pixel::f2::vec_t v_p = velocity + pixel::f2::vec_t::from_length_angle(peng_velo_0, dir_angle);
-                pengs.push_back( peng_t(m_owner, p0, peng_diag, v_p ) );
+                pengs.emplace_back(m_owner, p0, peng_diag, v_p  );
                 --peng_inventory;
             }
         }
-
+        
+        void mine() noexcept {     
+            if(mine_inventory <= 0){
+                return;
+            }
+            pengs.emplace_back(m_owner, p_center, peng_diag);
+            --mine_inventory;
+        }
+        
         void velo_up(const float dv = vel_step) noexcept {
             pixel::f2::vec_t v = velocity;
             v += pixel::f2::vec_t::from_length_angle(dv, dir_angle);
@@ -889,6 +899,8 @@ class player_t : public idscore_t {
 
         int peng_inventory() const noexcept { return nullptr != m_ship ? m_ship->peng_inventory : 0; }
 
+        int mine_inventory() const noexcept { return nullptr != m_ship ? m_ship->mine_inventory : 0; }
+
         float shield_time() const noexcept { return nullptr != m_ship ? m_ship->shield_time() : 0; }
 
         bool cloak() const noexcept { return m_cloak; }
@@ -924,7 +936,6 @@ class player_t : public idscore_t {
             }
         }
 };
-
 static bool two_players = true;
 static bool three_players = false;
 static int asteroid_count = 6;
@@ -960,7 +971,7 @@ void mainloop() {
     const bool animating = !event.paused();
 
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
-
+    
     // black background
     pixel::clear_pixel_fb(0, 0, 0, 255);
     if( raster ) {
@@ -974,22 +985,25 @@ void mainloop() {
 
     if( cloak_enabled ) {
         hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-              "%s s, fps %4.2f, S1 %4d (%4d pengs, %.1f s shield, %4.2f m/s, %6.2f / %6.2f), "
-              "S2 %4d (%4d pengs, %.1f s shield, %.2f m/s, %6.2f / %6.2f), "
-              "S3 %4d (%4d pengs, %.1f s shield, %.2f m/s, %6.2f / %6.2f), ",
+              "%s s, fps %4.2f, S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s, %6.2f / %6.2f), "
+              "S2 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s, %6.2f / %6.2f), "
+              "S3 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s, %6.2f / %6.2f), ",
               pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-              fps, p1.score(), p1.peng_inventory(), p1.shield_time(), p1.velocity(), p1_c.x, p1_c.y,
-                   p2.score(), p2.peng_inventory(), p2.shield_time(), p2.velocity(), p2_c.x, p2_c.y,
-                   p3.score(), p3.peng_inventory(), p3.shield_time(), p3.velocity(), p3_c.x, p3_c.y);
+              fps, p1.score(), p1.peng_inventory(), p1.mine_inventory(), 
+                   p1.shield_time(), p1.velocity(), p1_c.x, p1_c.y,
+                   p2.score(), p2.peng_inventory(), p2.mine_inventory(), 
+                   p2.shield_time(), p2.velocity(), p2_c.x, p2_c.y,
+                   p3.score(), p3.peng_inventory(), p3.mine_inventory(), 
+                   p3.shield_time(), p3.velocity(), p3_c.x, p3_c.y);
     } else {
         hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-              "%s s, fps %4.2f, S1 %4d (%4d pengs, %.1f s shield, %4.2f m/s), "
-              "S2 %4d (%4d pengs, %.1f s shield, %.2f m/s)"
-              "S3 %4d (%4d pengs, %.1f s shield, %.2f m/s)",
+              "%s s, fps %4.2f, S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s), "
+              "S2 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s)"
+              "S3 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s)",
               pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-              fps, p1.score(), p1.peng_inventory(), p1.shield_time(), p1.velocity(),
-                   p2.score(), p2.peng_inventory(), p2.shield_time(), p2.velocity(),
-                   p3.score(), p3.peng_inventory(), p3.shield_time(), p3.velocity());
+              fps, p1.score(), p1.peng_inventory(), p1.mine_inventory(), p1.shield_time(), p1.velocity(),
+                   p2.score(), p2.peng_inventory(), p2.mine_inventory(), p2.shield_time(), p2.velocity(),
+                   p3.score(), p3.peng_inventory(), p3.mine_inventory(), p3.shield_time(), p3.velocity());
     }
 
     if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
@@ -1015,9 +1029,13 @@ void mainloop() {
                 ship1->rotate_adeg(spaceship_t::rot_step * dt);
             } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
                 ship1->rotate_adeg(-spaceship_t::rot_step * dt);
+            } else if( event.pressed(pixel::input_event_type_t::P1_ACTION2)  ) {
+                if(event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION1)){
+                    ship1->mine();
+                }
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION1) ) {
-                ship1->peng();
-            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
+                    ship1->peng();
+            } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
                 ship1->set_orbit_velocity();
             } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION3) ) {
                 p1.set_cloak(!p1.cloak());
@@ -1036,9 +1054,13 @@ void mainloop() {
                     ship2->rotate_adeg(spaceship_t::rot_step * dt);
                 } else if( event.pressed(pixel::input_event_type_t::P2_RIGHT) ){
                     ship2->rotate_adeg(-spaceship_t::rot_step * dt);
+                } else if( event.pressed(pixel::input_event_type_t::P2_ACTION2)  ) {
+                    if(event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION1)){
+                        ship2->mine();
+                    }
                 } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION1) ) {
                     ship2->peng();
-                } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
+                } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
                     ship2->set_orbit_velocity();
                 } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION3) ){
                     p2.set_cloak(!p2.cloak());
@@ -1049,7 +1071,7 @@ void mainloop() {
             player_t::collision(p1, p2);
 
         }
-        // ship2 tick
+        // ship3 tick
         if( three_players ) {
             spaceship_ref_t ship3 = p3.ship();
             if( nullptr != ship3 && event.has_any_p3() ) {
@@ -1059,9 +1081,13 @@ void mainloop() {
                     ship3->rotate_adeg(spaceship_t::rot_step * dt);
                 } else if( event.pressed(pixel::input_event_type_t::P3_RIGHT) ){
                     ship3->rotate_adeg(-spaceship_t::rot_step * dt);
+                } else if( event.pressed(pixel::input_event_type_t::P3_ACTION2)  ) {
+                    if(event.pressed_and_clr(pixel::input_event_type_t::P3_ACTION1)){
+                        ship3->mine();
+                    }
                 } else if( event.pressed_and_clr(pixel::input_event_type_t::P3_ACTION1) ) {
                     ship3->peng();
-                } else if( event.pressed_and_clr(pixel::input_event_type_t::P3_ACTION2) ) {
+                } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION2) ) {
                     ship3->set_orbit_velocity();
                 } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION3) ){
                     p3.set_cloak(!p3.cloak());
@@ -1093,7 +1119,7 @@ void mainloop() {
         {
             for(auto it = pengs.begin(); it != pengs.end(); ) {
                 peng_t& p = *it;
-                if(p.on_screen() && p.m_velo.length_sq() > 0){
+                if(p.on_screen()){
                     if( p.tick(dt) ) {
                         ++it;
                         continue;
@@ -1120,8 +1146,8 @@ void mainloop() {
     for(fragment_ref_t &a : fragments) {
         a->draw();
     }
-    for(auto it = pengs.begin(); it != pengs.end(); ++it) {
-        (*it).draw();
+    for(auto & peng : pengs) {
+        peng.draw();
     }
     sun->draw();
 
@@ -1224,13 +1250,18 @@ int main(int argc, char *argv[])
     sun = std::make_shared<star_t>(pixel::f2::point_t(0, 0), spaceship_height,
                                    sun_gravity * (float)sun_gravity_scale_env,
                                    sun_gravity * (float)sun_gravity_scale_ships);
-    
-    const float peng_diag = 0.3f*spaceship_height;
+    /*    
+    const float peng_diag = spaceship_height;
     for(int i = 0; i < 5; ++i){
         const float x = next_rnd() * pixel::cart_coord.width();
         const float y = next_rnd() * pixel::cart_coord.height();
-        pengs.emplace_back(&world_id, pixel::f2::point_t(x, y), peng_diag, 0.0f, 0.0f);
+        peng_t peng(&world_id, pixel::f2::point_t(x, y), peng_diag, 0.0f, 0.0f);
+        pengs.emplace_back(peng);
+        if(!peng.on_screen()){
+            printf("peng %d is not on screen", i);
+        }
     }
+    */
     reset_asteroids(asteroid_count);
 
     #if defined(__EMSCRIPTEN__)
