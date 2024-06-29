@@ -1107,15 +1107,24 @@ namespace pixel::f2 {
         /** m_center */
         point_t center;
         float radius;
+        float thickness = 0;
         /** direction angle in radians */
         float dir_angle;
+
+        disk_t()
+        : center(), radius(), dir_angle() {}
 
         disk_t(const point_t& c_, const float r_)
         : center( c_), radius(r_), dir_angle(0.0f) {}
 
+        disk_t(const point_t& c_, const float r_, const float thickness_)
+        : center( c_), radius(r_), thickness(thickness_), dir_angle(0.0f) {}
+
         disk_t(float x, float y, const float r_)
         : center(x, y), radius(r_), dir_angle(0.0f) {}
-
+        
+        ~disk_t() override = default;
+        
         std::string toString() const noexcept override {
             return "disk[c " + center.toString() +
                     ", r " + std::to_string(radius) +
@@ -1170,7 +1179,24 @@ namespace pixel::f2 {
             draw(true);
         }
         void draw(const bool filled) const noexcept;
-
+        
+        void draw_with_thickness(){
+            const float r1 = radius;
+            const float r2 = radius - thickness;
+            const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
+            const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
+            // const float ival2 = 1.0f*std::min(x_ival, y_ival);
+            const aabbox_t b = box();
+            for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) {
+                for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
+                    const point_t p { x, y };
+                    const float cp = center.dist(p);
+                    if( cp >= r2 && cp <= r1 ) {
+                        p.draw();
+                    }
+                }
+            }        
+        }
         bool on_screen() const noexcept override {
             return box().on_screen();
         }
