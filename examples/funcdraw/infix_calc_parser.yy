@@ -79,7 +79,7 @@
 %token <std::string> ERROR
 
 %nterm <double> real_number
-%nterm <rpn_calc::rpn_token_t> unary_func
+%nterm <rpn_calc::rpn_token_t> unary_func, arg2_func, arg3_func
 
 %token LPAREN RPAREN COMMA SEMICOLON EOL
 
@@ -89,7 +89,8 @@
 %left MUL DIV MOD MOD2
 %left ABS SIN COS TAN ARCSIN ARCCOS ARCTAN
 %left POW POW2 LOG LOG10 EXP
-%left SQRT
+%left SQRT CEIL FLOOR
+%left STEP MIX
 %left NEG
 
 %%
@@ -128,6 +129,8 @@ operand     : IDENTIFIER { cc.put_rpn(std::move($1)); }
                                 }
               | LPAREN expression RPAREN
               | unary_func LPAREN expression RPAREN { cc.put_rpn($1); }
+              | arg2_func LPAREN expression COMMA expression RPAREN { cc.put_rpn($1); }
+              | arg3_func LPAREN expression COMMA expression COMMA expression RPAREN { cc.put_rpn($1); }
               | real_number { cc.put_rpn($1); }
               ;
 
@@ -142,7 +145,13 @@ unary_func  : ABS { $$=rpn_calc::rpn_token_t::ABS; } |
               LOG10 { $$=rpn_calc::rpn_token_t::LOG10; } |
               EXP { $$=rpn_calc::rpn_token_t::EXP; } |
               SQRT { $$=rpn_calc::rpn_token_t::SQRT; } |
+              CEIL { $$=rpn_calc::rpn_token_t::CEIL; } |
+              FLOOR { $$=rpn_calc::rpn_token_t::FLOOR; } |
               NEG  { $$=rpn_calc::rpn_token_t::NEG; } ;
+              
+arg2_func  : STEP { $$=rpn_calc::rpn_token_t::STEP; };
+
+arg3_func  : MIX { $$=rpn_calc::rpn_token_t::MIX; };
 
 real_number : UREAL { $$=$1; } |
               ADD UREAL { $$=$2; } |
