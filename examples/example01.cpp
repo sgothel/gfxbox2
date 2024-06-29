@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
 
         if( event.has_any_p1() && animating ) {
             blob0_speed += 2;
-            pixel::f2::point_t p_old = hero.p_a;
+            pixel::f2::point_t p_old = hero.m_tl;
             if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) ) {
                 hero.move_dir((float)blob0_speed);
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
