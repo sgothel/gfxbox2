@@ -374,7 +374,7 @@ static input_event_type_t to_event_type(SDL_Scancode scancode) {
         case SDL_SCANCODE_R:
             return input_event_type_t::RESET;
         default:
-            return input_event_type_t::NONE;
+            return input_event_type_t::ANY_KEY;
     }
 }
 static uint16_t to_ascii(SDL_Scancode scancode) {
