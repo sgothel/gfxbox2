@@ -498,9 +498,8 @@ namespace pixel {
         NONE,
         POINTER_BUTTON,
         POINTER_MOTION,
-        ANY_KEY_UP,
-        ANY_KEY_DOWN,
-        P1_UP, // 5
+        ANY_KEY, // 3
+        P1_UP, // 4
         P1_DOWN,
         P1_RIGHT,
         P1_LEFT,
@@ -522,13 +521,13 @@ namespace pixel {
         P3_ACTION1,
         P3_ACTION2,
         P3_ACTION3,
-        RESET, // 18
+        RESET, // 26
         /** Request to close window, which then should be closed by caller */
         WINDOW_CLOSE_REQ,
-        WINDOW_RESIZED, // 20
+        WINDOW_RESIZED, // 28
     };
     constexpr int bitno(const input_event_type_t e) noexcept {
-        return static_cast<int>(e) - static_cast<int>(input_event_type_t::P1_UP);
+        return static_cast<int>(e) - static_cast<int>(input_event_type_t::ANY_KEY);
     }
     constexpr uint32_t bitmask(const input_event_type_t e) noexcept {
         return 1U << bitno(e);
