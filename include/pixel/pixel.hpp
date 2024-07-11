@@ -625,8 +625,9 @@ namespace pixel {
                     const uint32_t m = bitmask(bit);
                     m_lifted |= m_pressed & m;
                     m_pressed &= ~m;
-                    this->last_key_code = 0;
                 }
+                this->last = e;
+                this->last_key_code = key_code;                
                 if( input_event_type_t::PAUSE == e ) {
                     m_paused = !m_paused;
                 }
@@ -692,6 +693,25 @@ namespace pixel {
         }
         return one;
     }
+    
+    /**
+     * Event callback function pointer.
+     *
+     * @return true to continue event polling, otherwise end event polling to return immediately 
+     */
+    typedef bool (*event_callback)(input_event_t& event) noexcept;
+    
+    inline bool handle_events(input_event_t& event, event_callback cb) noexcept {
+        bool cont = true;
+        bool one = false;
+        while( cont && pixel::handle_one_event(event) ) {
+            one = true;
+            cont = cb(event);
+            // std::cout << "Input " << to_string(event) << std::endl;
+        }
+        return one;
+    }
+    
     void save_snapshot(const std::string& fname) noexcept;
 
     //

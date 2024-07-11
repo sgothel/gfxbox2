@@ -35,19 +35,20 @@ void mainloop() {
 
     const float grid_gap = 50;
 
-    pixel::handle_events(event);
-    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        printf("Exit Application\n");
-        #if defined(__EMSCRIPTEN__)
-            emscripten_cancel_main_loop();
-        #else
-            exit(0);
-        #endif
-    } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
-        // nop for this demo, resize already performed
+    bool animating = !event.paused();
+    while(pixel::handle_one_event(event)){
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+            printf("Exit Application\n");
+            #if defined(__EMSCRIPTEN__)
+                emscripten_cancel_main_loop();
+            #else
+                exit(0);
+            #endif
+        } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+            // nop for this demo, resize already performed
+        }
+        animating = !event.paused();
     }
-    const bool animating = !event.paused();
-
     const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;

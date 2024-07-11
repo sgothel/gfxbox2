@@ -436,6 +436,8 @@ static uint16_t to_ascii(SDL_Scancode scancode) {
     return 0;
 }
 
+static constexpr const bool DEBUG_KEY = false;
+
 bool pixel::handle_one_event(input_event_t& event) noexcept {
     SDL_Event sdl_event;
 
@@ -472,13 +474,23 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
                 case SDL_KEYUP: {
                     const SDL_Scancode scancode = sdl_event.key.keysym.scancode;
                     event.clear(to_event_type(scancode), to_ascii(scancode));
+                    if constexpr ( DEBUG_KEY ) {
+                        printf("%s: UP  : %s\n",
+                            to_decstring(getElapsedMillisecond(), ',', 9).c_str(),
+                            to_string(event).c_str());
+                    }                   
                   }
                   break;
 
                 case SDL_KEYDOWN: {
                     const SDL_Scancode scancode = sdl_event.key.keysym.scancode;
                     event.set(to_event_type(scancode), to_ascii(scancode));
-             //       printf("%d", scancode);
+                    if constexpr ( DEBUG_KEY ) {
+                    printf("%s: DOWN: %s\n",
+                            to_decstring(getElapsedMillisecond(), ',', 9).c_str(),
+                            to_string(event).c_str());                    
+                 //       printf("%d", scancode);
+                    }
                   }
                   break;
         }

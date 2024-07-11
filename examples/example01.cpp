@@ -103,10 +103,39 @@ int main(int argc, char *argv[])
     float last_fps = -1.0f;
     pixel::input_event_t event;
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        if( pixel::handle_events(event) ) {
+        bool animating = !event.paused();
+        while( pixel::handle_one_event(event) ) {
             // std::cout << "Event " << pixel::to_string(event) << std::endl;
+            animating = !event.paused();
+                    if( event.has_any_p1() && animating ) {
+            blob0_speed += 2;
+            pixel::f2::point_t p_old = hero.m_tl;
+            if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) ) {
+                hero.move_dir((float)blob0_speed);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
+                hero.move_dir((float)-blob0_speed);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
+                hero.rotate(pixel::adeg_to_rad(2.0f));
+                // hero.move(-blob0_speed, 0);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
+                hero.rotate(pixel::adeg_to_rad(-2.0f));
+                // hero.move(blob0_speed, 0);
+            }
+            if( !hero.on_screen() ) {
+                hero.set_top_left( p_old );
+                if( true ) {
+                    printf("XXX offscreen %s\n", hero.toString().c_str());
+                }
+            }
+            blob1_hit = false; // blob1.intersects(hero);
+            if( blob1_hit ) {
+                printf("XXX coll.blob %d, 0: %s, 1: %s\n",
+                        blob1_hit, hero.toString().c_str(), blob1.toString().c_str());
+            }
+        } else {
+            blob0_speed = 2;
         }
-        const bool animating = !event.paused();
+    }
         {
             float fps = pixel::get_gpu_fps();
             if( fps != last_fps ) {
@@ -201,34 +230,6 @@ int main(int argc, char *argv[])
         }
         blob1.draw();
 
-        if( event.has_any_p1() && animating ) {
-            blob0_speed += 2;
-            pixel::f2::point_t p_old = hero.m_tl;
-            if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) ) {
-                hero.move_dir((float)blob0_speed);
-            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
-                hero.move_dir((float)-blob0_speed);
-            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
-                hero.rotate(pixel::adeg_to_rad(2.0f));
-                // hero.move(-blob0_speed, 0);
-            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
-                hero.rotate(pixel::adeg_to_rad(-2.0f));
-                // hero.move(blob0_speed, 0);
-            }
-            if( !hero.on_screen() ) {
-                hero.set_top_left( p_old );
-                if( true ) {
-                    printf("XXX offscreen %s\n", hero.toString().c_str());
-                }
-            }
-            blob1_hit = false; // blob1.intersects(hero);
-            if( blob1_hit ) {
-                printf("XXX coll.blob %d, 0: %s, 1: %s\n",
-                        blob1_hit, hero.toString().c_str(), blob1.toString().c_str());
-            }
-        } else {
-            blob0_speed = 2;
-        }
         pixel::set_pixel_color(200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
         pixel::i2::draw_circle(   0,    0, 100, pixel::i2::CircleDrawType::OUTLINE);
         pixel::i2::draw_circle( 200,  200, 100, pixel::i2::CircleDrawType::FILLED);

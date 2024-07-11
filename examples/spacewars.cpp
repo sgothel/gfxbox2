@@ -1,5 +1,5 @@
 /*
- * Author: Sven Gothel <sgothel@jausoft.com>
+ * Author: Svenson Han Göthel und Sven Göthel
  * Copyright (c) 2023 Gothel Software e.K.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -951,154 +951,152 @@ void mainloop() {
     static player_t p1(player_id_1);
     static player_t p2(player_id_2);
     static player_t p3(player_id_3);
+    bool p1_mine = false;
+    bool p2_mine = false;
+    bool p3_mine = false;
 
     static pixel::texture_ref hud_text;
     static uint64_t frame_count_total = 0;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
-
-    pixel::handle_events(event);
-    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        printf("Exit Application\n");
-        #if defined(__EMSCRIPTEN__)
-            emscripten_cancel_main_loop();
-        #else
-            exit(0);
-        #endif
-    } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
-        pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
-    }
-    const bool animating = !event.paused();
-
-    tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     
-    // black background
-    pixel::clear_pixel_fb(0, 0, 0, 255);
-    if( raster ) {
-        pixel::draw_grid(50, 255, 0, 0, 0, 255, 0, 0, 0);
-    }
-    const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
-    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
+    const uint64_t t1 = pixel::getElapsedMillisecond();  // [ms]
+    const float dt = (float)(t1 - t_last) / 1000.0f;     // [s]
     t_last = t1;
     float fps = pixel::get_gpu_fps();
+    
+    bool animating = !event.paused();
+    if(animating){
+        if( event.pressed(pixel::input_event_type_t::P1_ACTION2) ) {
+            p1_mine = true;
+        }
+        if( event.pressed(pixel::input_event_type_t::P2_ACTION2) ) {
+            p2_mine = true;
+        }
+        if( event.pressed(pixel::input_event_type_t::P3_ACTION2) ) {
+            p3_mine = true;
+        }
+    }
+    while( pixel::handle_one_event(event) ) {
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+            printf("Exit Application\n");
+            #if defined(__EMSCRIPTEN__)
+                emscripten_cancel_main_loop();
+            #else
+                exit(0);
+            #endif
+        } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+            pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
+        }
+        animating = !event.paused();
+    
+        if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
+            pengs.clear();
+            reset_asteroids(asteroid_count);
+            p1.reset();
+            if(two_players || three_players){
+                p2.reset();
+            }
+            if(three_players){
+                p3.reset();
+            }
+        }
+    
+        // Tick all animated objects
+        if( animating ) {
+            // ship1 tick
+            if( nullptr != p1.ship() && event.has_any_p1() ) {
+                spaceship_ref_t ship1 = p1.ship();
+                if( p1_mine  ) {
+                    if(event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION1)){
+                        ship1->mine();
+                    }
+                } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION1) ) {
+                        ship1->peng();
+                } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
+                    ship1->set_orbit_velocity();
+                } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION3) ) {
+                    p1.set_cloak(!p1.cloak());
+                }
+                ship1->set_shield( event.pressed(pixel::input_event_type_t::P1_DOWN) );
+            }
+    
+            // ship2 tick
+            if( two_players || three_players ) {
+                spaceship_ref_t ship2 = p2.ship();
+                if( nullptr != ship2 && event.has_any_p2() ) {
+                    if( p2_mine  ) {
+                        if(event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION1)){
+                            ship2->mine();
+                        }
+                    } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION1) ) {
+                        ship2->peng();
+                    } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
+                        ship2->set_orbit_velocity();
+                    } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION3) ){
+                        p2.set_cloak(!p2.cloak());
+                    }
+                    ship2->set_shield( event.pressed(pixel::input_event_type_t::P2_DOWN) );
+                }
+            }
+            // ship3 tick
+            if( three_players ) {
+                spaceship_ref_t ship3 = p3.ship();
+                if( nullptr != ship3 && event.has_any_p3() ) {
+                    if( p3_mine  ) {
+                        if(event.pressed_and_clr(pixel::input_event_type_t::P3_ACTION1)){
+                            ship3->mine();
+                        }
+                    } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION1) ) {
+                        ship3->peng();
+                    } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION2) ) {
+                        ship3->set_orbit_velocity();
+                    } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION3) ){
+                        p3.set_cloak(!p3.cloak());
+                    }
+                }
+            }
+        }
+    }
+    tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     const pixel::f2::point_t p1_c = p1.center(), p2_c = p2.center(), p3_c = p3.center();
-
-    if( cloak_enabled ) {
-        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-              "%s s, fps %4.2f, S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s, %6.2f / %6.2f), "
-              "S2 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s, %6.2f / %6.2f), "
-              "S3 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s, %6.2f / %6.2f), ",
-              pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-              fps, p1.score(), p1.peng_inventory(), p1.mine_inventory(), 
-                   p1.shield_time(), p1.velocity(), p1_c.x, p1_c.y,
-                   p2.score(), p2.peng_inventory(), p2.mine_inventory(), 
-                   p2.shield_time(), p2.velocity(), p2_c.x, p2_c.y,
-                   p3.score(), p3.peng_inventory(), p3.mine_inventory(), 
-                   p3.shield_time(), p3.velocity(), p3_c.x, p3_c.y);
-    } else {
-        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-              "%s s, fps %4.2f, S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s), "
-              "S2 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s)"
-              "S3 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s)",
-              pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-              fps, p1.score(), p1.peng_inventory(), p1.mine_inventory(), p1.shield_time(), p1.velocity(),
-                   p2.score(), p2.peng_inventory(), p2.mine_inventory(), p2.shield_time(), p2.velocity(),
-                   p3.score(), p3.peng_inventory(), p3.mine_inventory(), p3.shield_time(), p3.velocity());
-    }
-
-    if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
-        pengs.clear();
-        reset_asteroids(asteroid_count);
-        p1.reset();
-        if(two_players || three_players){
-            p2.reset();
-        }
+    
+    if(animating){
         if(three_players){
-            p3.reset();
-        }
-    }
-
-    // Tick all animated objects
-    if( animating ) {
-        // ship1 tick
-        if( nullptr != p1.ship() && event.has_any_p1() ) {
-            spaceship_ref_t ship1 = p1.ship();
-            if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
-                ship1->velo_up(spaceship_t::vel_step);
-            } else if( event.pressed(pixel::input_event_type_t::P1_LEFT) ){
-                ship1->rotate_adeg(spaceship_t::rot_step * dt);
-            } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
-                ship1->rotate_adeg(-spaceship_t::rot_step * dt);
-            } else if( event.pressed(pixel::input_event_type_t::P1_ACTION2)  ) {
-                if(event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION1)){
-                    ship1->mine();
-                }
-            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION1) ) {
-                    ship1->peng();
-            } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
-                ship1->set_orbit_velocity();
-            } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION3) ) {
-                p1.set_cloak(!p1.cloak());
+            if( event.pressed(pixel::input_event_type_t::P3_UP) ) {
+                p3.ship()->velo_up(spaceship_t::vel_step);
+            } else if( event.pressed(pixel::input_event_type_t::P3_LEFT) ){
+                p3.ship()->rotate_adeg(spaceship_t::rot_step * dt);
+            } else if( event.pressed(pixel::input_event_type_t::P3_RIGHT) ){
+                p3.ship()->rotate_adeg(-spaceship_t::rot_step * dt);
             }
-            ship1->set_shield( event.pressed(pixel::input_event_type_t::P1_DOWN) );
-        }
-        p1.tick(dt);
-
-        // ship2 tick
-        if( two_players || three_players ) {
-            spaceship_ref_t ship2 = p2.ship();
-            if( nullptr != ship2 && event.has_any_p2() ) {
-                if( event.pressed(pixel::input_event_type_t::P2_UP) ) {
-                    ship2->velo_up(spaceship_t::vel_step);
-                } else if( event.pressed(pixel::input_event_type_t::P2_LEFT) ){
-                    ship2->rotate_adeg(spaceship_t::rot_step * dt);
-                } else if( event.pressed(pixel::input_event_type_t::P2_RIGHT) ){
-                    ship2->rotate_adeg(-spaceship_t::rot_step * dt);
-                } else if( event.pressed(pixel::input_event_type_t::P2_ACTION2)  ) {
-                    if(event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION1)){
-                        ship2->mine();
-                    }
-                } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION1) ) {
-                    ship2->peng();
-                } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
-                    ship2->set_orbit_velocity();
-                } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION3) ){
-                    p2.set_cloak(!p2.cloak());
-                }
-                ship2->set_shield( event.pressed(pixel::input_event_type_t::P2_DOWN) );
-            }
-            p2.tick(dt);
-            player_t::collision(p1, p2);
-
-        }
-        // ship3 tick
-        if( three_players ) {
-            spaceship_ref_t ship3 = p3.ship();
-            if( nullptr != ship3 && event.has_any_p3() ) {
-                if( event.pressed(pixel::input_event_type_t::P3_UP) ) {
-                    ship3->velo_up(spaceship_t::vel_step);
-                } else if( event.pressed(pixel::input_event_type_t::P3_LEFT) ){
-                    ship3->rotate_adeg(spaceship_t::rot_step * dt);
-                } else if( event.pressed(pixel::input_event_type_t::P3_RIGHT) ){
-                    ship3->rotate_adeg(-spaceship_t::rot_step * dt);
-                } else if( event.pressed(pixel::input_event_type_t::P3_ACTION2)  ) {
-                    if(event.pressed_and_clr(pixel::input_event_type_t::P3_ACTION1)){
-                        ship3->mine();
-                    }
-                } else if( event.pressed_and_clr(pixel::input_event_type_t::P3_ACTION1) ) {
-                    ship3->peng();
-                } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION2) ) {
-                    ship3->set_orbit_velocity();
-                } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION3) ){
-                    p3.set_cloak(!p3.cloak());
-                }
-                ship3->set_shield( event.pressed(pixel::input_event_type_t::P3_DOWN) );
-            }
+            p3.ship()->set_shield( event.pressed(pixel::input_event_type_t::P3_DOWN) );
             p3.tick(dt);
             player_t::collision(p1, p3);
             player_t::collision(p2, p3);
-
         }
+        if(three_players || two_players){
+            if( event.pressed(pixel::input_event_type_t::P2_UP) ) {
+                p2.ship()->velo_up(spaceship_t::vel_step);
+            } else if( event.pressed(pixel::input_event_type_t::P2_LEFT) ){
+                p2.ship()->rotate_adeg(spaceship_t::rot_step * dt);
+            } else if( event.pressed(pixel::input_event_type_t::P2_RIGHT) ){
+                p2.ship()->rotate_adeg(-spaceship_t::rot_step * dt);
+            }
+            p2.tick(dt);
+            player_t::collision(p1, p2);
+        }
+        if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
+            p1.ship()->velo_up(spaceship_t::vel_step);
+        } else if( event.pressed(pixel::input_event_type_t::P1_LEFT) ){
+            p1.ship()->rotate_adeg(spaceship_t::rot_step * dt);
+        } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
+            p1.ship()->rotate_adeg(-spaceship_t::rot_step * dt);
+        }        p1.tick(dt);
+        if (raster) {
+            pixel::draw_grid(50, 255, 0, 0, 0, 255, 0, 0, 0);
+        }
+
         // fragments tick
         {
             std::vector<fragment_ref_t> new_fragments;
@@ -1133,7 +1131,8 @@ void mainloop() {
         }
         sun->tick(dt);
     }
-
+    pixel::clear_pixel_fb(0, 0, 0, 255);
+    
     // Draw all objects
     pixel::set_pixel_color(rgba_white);
     p1.draw();
@@ -1150,7 +1149,28 @@ void mainloop() {
         peng.draw();
     }
     sun->draw();
-
+    if( cloak_enabled ) {
+        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
+              "%s s, fps %4.2f, S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s, %6.2f / %6.2f), "
+              "S2 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s, %6.2f / %6.2f), "
+              "S3 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s, %6.2f / %6.2f), ",
+              pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
+              fps, p1.score(), p1.peng_inventory(), p1.mine_inventory(), 
+                   p1.shield_time(), p1.velocity(), p1_c.x, p1_c.y,
+                   p2.score(), p2.peng_inventory(), p2.mine_inventory(), 
+                   p2.shield_time(), p2.velocity(), p2_c.x, p2_c.y,
+                   p3.score(), p3.peng_inventory(), p3.mine_inventory(), 
+                   p3.shield_time(), p3.velocity(), p3_c.x, p3_c.y);
+    } else {
+        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
+              "%s s, fps %4.2f, S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s), "
+              "S2 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s)"
+              "S3 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s)",
+              pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
+              fps, p1.score(), p1.peng_inventory(), p1.mine_inventory(), p1.shield_time(), p1.velocity(),
+                   p2.score(), p2.peng_inventory(), p2.mine_inventory(), p2.shield_time(), p2.velocity(),
+                   p3.score(), p3.peng_inventory(), p3.mine_inventory(), p3.shield_time(), p3.velocity());
+    }
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;

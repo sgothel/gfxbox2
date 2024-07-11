@@ -1,5 +1,5 @@
 /**
- * Author: Svenson Han Göthel
+ * Author: Svenson Han Göthel und Sven Göthel
  * Funktion Name: Panzer.cpp
  */
 #include <algorithm>
@@ -77,7 +77,7 @@ class canon_t {
     private:
         constexpr static const float velocity_max = 14; // 14;
         constexpr static const float radius = cannon_height*0.8f;
-        constexpr static const float velocity_min = cannon_height; // [m/s]
+        constexpr static const float velocity_min = 1.0f; // [m/s]
         
         #if 0
         rect_t aabbox = {point_t(cart_coord.min_x() + frame_gap + frame_thickness, 
@@ -158,6 +158,14 @@ class canon_t {
             m_barrel_end.rotate(rad, rot_point);
         }
         
+        long pow(const int a, const int b){
+            long result = 1;
+            for(int i = 0; i < b; ++i){
+                result *= a;
+            }
+            return result;
+        }
+        
         bool tick(const float dt){
             for (auto it = m_pengs_all.begin(); it != m_pengs_all.end();) {
                 physiks::ball_ref_t& p = *it;
@@ -170,34 +178,38 @@ class canon_t {
                     ++it;
                 }
             }
+            point_t tr = korb_box.tr;
+            point_t bl = korb_box.bl;
+            korb_box.tr.add(-basket_frame_thickness, 0);
+            korb_box.bl.add( basket_frame_thickness, basket_frame_thickness);
             for (auto it = m_pengs_flying.begin(); it != m_pengs_flying.end();) {
                 physiks::ball_ref_t& p = *it;
-                korb_box.tr.add(-basket_frame_thickness, 0);
-                korb_box.bl.add( basket_frame_thickness, basket_frame_thickness);
-                for(geom_ref_t g : agobjects()){
-                    if(g->intersects(p->box())){
-                        ++m_cp;
-                    }
-                }
                 if(p->box().intersects( korb_box )){
-                    m_score += static_cast<int>( std::pow(2.0f, m_cp) );
+                    m_score += (m_cp + 1);//static_cast<int>( pow(2.0f, m_cp) );
                     it = m_pengs_flying.erase(it);
                     reset(false);
                     // rotate_adeg(rot_step * dt * next_rnd() * 3.0f);
                 } else {
                     ++it;
+                    for(geom_ref_t g : agobjects()){
+                        if(g->intersects(p->box()) && g != p){
+                            ++m_cp;
+                        }
+                    }
                 }
             }
-            
+            korb_box.tr = tr;
+            korb_box.bl = bl;
             return true;
         }
 
         bool change_velocity(const float o) {
-            if((m_velocity * o) <= velocity_max) {
-                m_velocity *= o;
-                return true;
+            m_velocity *= o;
+            if(m_velocity > velocity_max){
+                m_velocity = velocity_max;
+                return false;
             }
-            return false;
+            return true;
         }
         
         void set_velocity(const float o) { 
@@ -253,9 +265,9 @@ float next_rnd() noexcept {
 }
 
 static const float text_lum = 0.0f;
-static const pixel::f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f);
+static const f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f);
 static std::vector<geom_ref_t> korb;
-static canon_t player;
+static canon_t player = canon_t();
 static rect_ref_t sf;
 static bool make_sf = false;
 static bool UpOrDown = true;
@@ -264,26 +276,44 @@ void mainloop() {
     static pixel::texture_ref hud_text;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
-
-    pixel::handle_events(event);
-    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        printf("Exit Application\n");
-        #if defined(__EMSCRIPTEN__)
-            emscripten_cancel_main_loop();
-        #else
-            exit(0);
-        #endif
-    } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
-        pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
-        player.resize();
+    float rot_step = 10.0f; // [ang-degrees / s]
+    if(event.pressed(pixel::input_event_type_t::P2_ACTION2 ) ) {
+        rot_step *= 2;
+    }
+    
+    const uint64_t t1 = getElapsedMillisecond(); // [ms]
+    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
+    t_last = t1;
+    while(pixel::handle_one_event(event)){
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+            printf("Exit Application\n");
+            #if defined(__EMSCRIPTEN__)
+                emscripten_cancel_main_loop();
+            #else
+                exit(0);
+            #endif
+        } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+            pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
+            player.resize();
+        }
+        if( !event.paused() ) {
+            if( event.released_and_clr(input_event_type_t::RESET) ) {
+                player.reset();
+            }
+            if( event.has_any_p1() ) {
+                if( event.pressed_and_clr(input_event_type_t::P1_UP) ) {
+                    player.rotate_adeg(rot_step*dt);
+                } else if( event.pressed_and_clr(input_event_type_t::P1_DOWN ) ) {
+                    player.rotate_adeg(-rot_step*dt);
+                } else if( event.released_and_clr(input_event_type_t::P1_ACTION1) ) {
+                    player.peng();
+                }
+            }
+        }
     }
     // const bool animating = !event.paused();
     const point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
-    if( handle_events(event) ) {
-        // std::cout << "Event " << to_string(event) << std::endl;
-    }
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
-    const uint64_t t1 = getElapsedMillisecond(); // [ms]
                              
     float fps = get_gpu_fps();
     hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
@@ -294,31 +324,9 @@ void mainloop() {
     // white background
     clear_pixel_fb( 255, 255, 255, 255);
     set_pixel_color(0, 0, 255, 255);
-    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
-    t_last = t1;
-    constexpr const float rot_step = 10.0f; // [ang-degrees / s]
     if( !event.paused() ) {
-        if( event.released_and_clr(input_event_type_t::RESET) ) {
-            player.reset();
-        }
-        if( event.has_any_p1() ) {
-            if( event.pressed_and_clr(input_event_type_t::P1_UP) ) {
-                if(event.pressed(pixel::input_event_type_t::P2_ACTION2 ) ) {
-                    player.rotate_adeg(rot_step*dt*2);
-                } else {
-                    player.rotate_adeg(rot_step*dt);
-                }
-            } else if( event.pressed_and_clr(input_event_type_t::P1_DOWN ) ) {
-                if(event.pressed(pixel::input_event_type_t::P2_ACTION2 ) ) {
-                    player.rotate_adeg(-rot_step*dt*2);
-                } else {
-                    player.rotate_adeg(-rot_step*dt);
-                }
-            } else if( event.released_and_clr(input_event_type_t::P1_ACTION1) ) {
-                player.peng();
-            } else if( event.pressed(input_event_type_t::P1_ACTION1) ) {
-                player.change_velocity(1.1);
-            }
+        if( event.pressed(input_event_type_t::P1_ACTION1) ) {
+            player.change_velocity(1.1);
         }
         player.tick(dt);
         UpOrDown = ((sf->m_tl.y < (cart_coord.max_y() - frame_offset)) && UpOrDown) || 
@@ -350,7 +358,7 @@ void mainloop() {
 int main(int argc, char *argv[])
 {
     int window_width = 1920, window_height = 1000;
-    float adeg=0, velocity=0;
+    float adeg=0, velocity=1;
     bool auto_shoot = false;
     {
         for(int i=1; i<argc; ++i) {

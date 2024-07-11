@@ -1,5 +1,5 @@
 /*
- * Author: Sven Gothel <sgothel@jausoft.com>
+ * Author: Svenson Han Göthel und Sven Göthel
  * Copyright (c) 2022 Gothel Software e.K.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -78,53 +78,46 @@ void mainloop() {
     static int r_score = 0;
     static int l_score = 0;
 
-    pixel::handle_events(event);
-    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        printf("Exit Application\n");
-        #if defined(__EMSCRIPTEN__)
-            emscripten_cancel_main_loop();
-        #else
-            exit(0);
-        #endif
-    } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
-        pixel::cart_coord.set_height(-field_height/2.0f, field_height/2.0f);
-    }
-    if( event.paused() ) {
-        animating = false;
-    } else {
-        if( !animating ) {
-            t_last = pixel::getElapsedMillisecond(); // [ms]
+    while(pixel::handle_one_event(event)){
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+            printf("Exit Application\n");
+            #if defined(__EMSCRIPTEN__)
+                emscripten_cancel_main_loop();
+            #else
+                exit(0);
+            #endif
+        } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+            pixel::cart_coord.set_height(-field_height/2.0f, field_height/2.0f);
         }
-        animating = true;
-    }
-    
-    uint64_t t1;
-    if( animating ) {
-        t1 = pixel::getElapsedMillisecond(); // [ms]
+        if( event.paused() ) {
+            animating = false;
+        } else {
+            if( !animating ) {
+                t_last = pixel::getElapsedMillisecond(); // [ms]
+            }
+            animating = true;
+        }        
+    }    
+    uint64_t t1;    
+    if(animating){
         if( event.has_any_p1() ){
             if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
                 pad_r->move(pad_step_up);
+                if(!pad_r->on_screen()){
+                    pad_r->move(pad_step_down);
+                }
             } else if( event.pressed(pixel::input_event_type_t::P1_DOWN) ) {
                 pad_r->move(pad_step_down);
+                if(!pad_r->on_screen()){
+                    pad_r->move(pad_step_up);
+                }
             } else if( event.pressed(pixel::input_event_type_t::P1_LEFT) ) {
                 pad_r->rotate(pixel::adeg_to_rad(pad_rot_step));
             } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ) {
                 pad_r->rotate(pixel::adeg_to_rad(-pad_rot_step));
             }
         }
-    } else {
-        t1 = t_last;
-        if( event.has_any_p1() ) {
-            if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
-                t1 +=  1;
-            } else if( event.pressed(pixel::input_event_type_t::P1_UP) ){
-                t1 += 10;
-            }
-        }
-    }
-    if( animating && !one_player) {
-        t1 = pixel::getElapsedMillisecond(); // [ms]
-        if( event.has_any_p2() ){
+        if( !one_player && event.has_any_p2() ) {
             if( event.pressed(pixel::input_event_type_t::P2_UP) ) {
                 pad_l->move(pad_step_up);
                 if( !pad_l->on_screen() ) {
@@ -139,6 +132,16 @@ void mainloop() {
                 pad_l->rotate(pixel::adeg_to_rad(pad_rot_step));
             } else if( event.pressed(pixel::input_event_type_t::P2_RIGHT) ) {
                 pad_l->rotate(pixel::adeg_to_rad(-pad_rot_step));
+            }
+        }        
+        t1 = pixel::getElapsedMillisecond(); // [ms]
+    } else {
+        t1 = t_last;
+        if( event.has_any_p1() ) {
+            if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
+                t1 +=  1;
+            } else if( event.pressed(pixel::input_event_type_t::P1_UP) ){
+                t1 += 10;
             }
         }
     }

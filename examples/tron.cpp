@@ -26,55 +26,54 @@ void mainloop() {
     static int a2 = 0;
     static pixel::input_event_t event;
 
-    pixel::handle_events(event);
-    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        printf("Exit Application\n");
-        #if defined(__EMSCRIPTEN__)
-            emscripten_cancel_main_loop();
-        #else
-            exit(0);
-        #endif
-    } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
-        // nop for this demo, resize already performed
-    }
-    const bool animating = !event.paused();
-
+    bool animating = !event.paused();
+    const uint64_t t1 = pixel::getElapsedMillisecond();  // [ms]
+    const float dt = (float)(t1 - t_last) / 1000.0f;     // [s]
+    t_last = t1;
     const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, text_color, text_height,
             "Tron %4d (%.2f m/s), MCP %4d (%.2f m/s), fps %5.2f, %s",
             a1, p1.velo, a2, p2.velo, pixel::get_gpu_fps(), animating?"animating":"paused");
-
-    // white background
-    pixel::clear_pixel_fb( 255, 255, 255, 255);
-    const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
-    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
-    t_last = t1;
-    if( event.released_and_clr(pixel::input_event_type_t::RESET) ){
-        p1.reset();
-        p2.reset();
-        a1 = 0;
-        a2 = 0;
-    }
-    if( event.has_any_p2() ) {
-        if( event.pressed_and_clr(pixel::input_event_type_t::P2_UP) && p1.velo < 3000.0f) {
-            p1.changeSpeed(1.10f);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_DOWN) && p1.velo > 1.0f) {
-            p1.changeSpeed(0.90f);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_LEFT) ) {
-            p1.rotate(M_PI_2);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_RIGHT) ) {
-            p1.rotate(-M_PI_2);
+    while(pixel::handle_one_event(event)) {
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+            printf("Exit Application\n");
+            #if defined(__EMSCRIPTEN__)
+                emscripten_cancel_main_loop();
+            #else
+                exit(0);
+            #endif
+        } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+            // nop for this demo, resize already performed
         }
-    }
-    if( event.has_any_p2() ) {
-        if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) && p2.velo < 3000.0f) {
-            p2.changeSpeed(1.10f);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) && p2.velo > 1.0f) {
-            p2.changeSpeed(0.90f);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
-            p2.rotate(M_PI_2);
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
-            p2.rotate(-M_PI_2);
+        animating = !event.paused();
+    
+        if( event.released_and_clr(pixel::input_event_type_t::RESET) ){
+            p1.reset();
+            p2.reset();
+            a1 = 0;
+            a2 = 0;
+        }
+        if( event.has_any_p2() ) {
+            if( event.pressed_and_clr(pixel::input_event_type_t::P2_UP) && p1.velo < 3000.0f) {
+                p1.changeSpeed(1.10f);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_DOWN) && p1.velo > 1.0f) {
+                p1.changeSpeed(0.90f);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_LEFT) ) {
+                p1.rotate(M_PI_2);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_RIGHT) ) {
+                p1.rotate(-M_PI_2);
+            }
+        }
+        if( event.has_any_p1() ) {
+            if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) && p2.velo < 3000.0f) {
+                p2.changeSpeed(1.10f);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) && p2.velo > 1.0f) {
+                p2.changeSpeed(0.90f);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
+                p2.rotate(M_PI_2);
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
+                p2.rotate(-M_PI_2);
+            }
         }
     }
     float dbs = 2000;
@@ -102,7 +101,7 @@ void mainloop() {
             if( p1.intersects(p2) ) {
                 //     std::cout << "Crash P1: " << p1.toString() << std::endl;
                 p1.reset();
-                a2 += p2.velo;
+                a2 += (int)p2.velo;
             }
         }
         p2.tick(dt);
@@ -116,12 +115,13 @@ void mainloop() {
             if( p2.intersects(p1) ) {
                 //  std::cout << "Crash P2: " << p2.toString() << std::endl;
                 p2.reset();
-                a1 += p1.velo;
+                a1 += (int)p1.velo;
             }
         }
     }
-
-
+    // white background
+    pixel::clear_pixel_fb( 255, 255, 255, 255);
+    
     pixel::set_pixel_color(0, 0, 255, 255);
     p1.draw();
 
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("gfxbox example01", win_width, win_height, origin_norm);
+        pixel::init_gfx_subsystem("tron", win_width, win_height, origin_norm);
     }
     pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
     {

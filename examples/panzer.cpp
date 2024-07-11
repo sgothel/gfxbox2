@@ -62,11 +62,29 @@ int main(int argc, char *argv[])
 
     while( !event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
         const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
-        if( pixel::handle_events(event) ) {
+        while( pixel::handle_one_event(event) ) {
             // std::cout << "Event " << pixel::to_string(event) << std::endl;
+            if( !event.paused() ) {
+                if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
+                    p1.reset();
+                    p2.reset();
+                    a1 = 0;
+                    a2 = 0;
+                }
+                if( event.has_any_p1() ) {
+                    if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
+                        p1.peng();
+                    }
+                }
+                if( event.has_any_p2() ) {
+                    if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
+                        p2.peng();
+                    }
+                }
+            }
         }
         // resized = event.has_and_clr( pixel::input_event_type_t::WINDOW_RESIZED );
-
+    
         if( true ) {
             float fps = pixel::get_gpu_fps();
             texts.push_back( pixel::make_text(tl_text, 0, text_color,
@@ -85,56 +103,41 @@ int main(int argc, char *argv[])
         const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
         const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
         t_last = t1;
-        if( !event.paused() ) {
-            if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
-                p1.reset();
-                p2.reset();
-                a1 = 0;
-                a2 = 0;
-            }
-            if( event.has_any_p1() ) {
-                if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
-                    p1.changeSpeed(1.05f);
-                } else if( event.pressed(pixel::input_event_type_t::P1_DOWN) ) {
-                    p1.changeSpeed(0.95f);
-                } else if( event.pressed(pixel::input_event_type_t::P1_LEFT) ) {
-                    if( event.pressed(pixel::input_event_type_t::P1_ACTION1) ) {
-                        p1.rotate_barrel(M_PI / 200);
-                    } else {
-                        p1.rotate(M_PI / 100);
-                    }
-                } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ) {
-                    if( event.pressed(pixel::input_event_type_t::P1_ACTION1) ) {
-                        p1.rotate_barrel(-(M_PI / 200));
-                    } else {
-                        p1.rotate(-(M_PI / 100));
-                    }
-                } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
-                    p1.peng();
+        if (!event.paused()) {
+            if (event.pressed(pixel::input_event_type_t::P1_UP)) {
+                p1.changeSpeed(1.05f);
+            } else if (event.pressed(pixel::input_event_type_t::P1_DOWN)) {
+                p1.changeSpeed(0.95f);
+            } else if (event.pressed(pixel::input_event_type_t::P1_LEFT)) {
+                if (event.pressed(pixel::input_event_type_t::P1_ACTION1)) {
+                    p1.rotate_barrel(M_PI / 200);
+                } else {
+                    p1.rotate(M_PI / 100);
+                }
+            } else if (event.pressed(pixel::input_event_type_t::P1_RIGHT)) {
+                if (event.pressed(pixel::input_event_type_t::P1_ACTION1)) {
+                    p1.rotate_barrel(-(M_PI / 200));
+                } else {
+                    p1.rotate(-(M_PI / 100));
                 }
             }
-            if( event.has_any_p2() ) {
-                if( event.pressed(pixel::input_event_type_t::P2_UP) ) {
-                    p2.changeSpeed(1.05f);
-                } else if( event.pressed(pixel::input_event_type_t::P2_DOWN) ) {
-                    p2.changeSpeed(0.95f);
-                } else if( event.pressed(pixel::input_event_type_t::P2_LEFT) ) {
-                    if( event.pressed(pixel::input_event_type_t::P2_ACTION1) ) {
-                        p2.rotate_barrel((M_PI / 200));
-                    } else {
-                        p2.rotate((M_PI / 100));
-                    }
-                } else if( event.pressed(pixel::input_event_type_t::P2_RIGHT) ) {
-                    if( event.pressed(pixel::input_event_type_t::P2_ACTION1) ) {
-                        p2.rotate_barrel(-(M_PI / 200));
-                    } else {
-                        p2.rotate(-(M_PI / 100));
-                    }
-                } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
-                    p2.peng();
+            if (event.pressed(pixel::input_event_type_t::P2_UP)) {
+                p2.changeSpeed(1.05f);
+            } else if (event.pressed(pixel::input_event_type_t::P2_DOWN)) {
+                p2.changeSpeed(0.95f);
+            } else if (event.pressed(pixel::input_event_type_t::P2_LEFT)) {
+                if (event.pressed(pixel::input_event_type_t::P2_ACTION1)) {
+                    p2.rotate_barrel((M_PI / 200));
+                } else {
+                    p2.rotate((M_PI / 100));
+                }
+            } else if (event.pressed(pixel::input_event_type_t::P2_RIGHT)) {
+                if (event.pressed(pixel::input_event_type_t::P2_ACTION1)) {
+                    p2.rotate_barrel(-(M_PI / 200));
+                } else {
+                    p2.rotate(-(M_PI / 100));
                 }
             }
-
             p1.tick(dt);
             p2.tick(dt);
 

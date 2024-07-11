@@ -407,23 +407,13 @@ void mainloop() {
     static int a2 = 0;
     static pixel::input_event_t event;
 
-    pixel::handle_events(event);
-    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        printf("Exit Application\n");
-        #if defined(__EMSCRIPTEN__)
-            emscripten_cancel_main_loop();
-        #else
-            exit(0);
-        #endif
-    }
-    const bool animating = !event.paused();
+    // white background
+    pixel::clear_pixel_fb(255, 255, 255, 255);
+    pixel::draw_grid(grid_gap,
+            225 /* r */, 225 /* g */, 225 /* b */, 255 /* a */,
+            200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
 
     const float plot_inc = pixel::cart_coord.width() / ( ticks_per_circle * circles_per_plot );
-    manual = manual && animating;
-    m1 = m1 && anim1;
-    m2 = m2 && anim2;
-    anim1 = animating && demo_index == 1;
-    anim2 = animating && demo_index == 2;
     float fps = pixel::get_gpu_fps();
     texts.push_back( pixel::make_text(
             point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), 0, text_color,
@@ -431,50 +421,62 @@ void mainloop() {
 
     const float max_radius = pixel::cart_coord.max_y() * 0.9f;
 
-    // white background
-    pixel::clear_pixel_fb(255, 255, 255, 255);
-    pixel::draw_grid(grid_gap,
-            225 /* r */, 225 /* g */, 225 /* b */, 255 /* a */,
-            200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
-
-    if( event.has_any_p1() ) {
-        if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) ) {
-            manual = true;
-            if( circum_corners < 128 && demo_index == 3 ) {
-                circum_corners += 1;
-            } else if( demo_index == 2 ){
-                ang_rad += angrad_inc / 2;
-                m2 = true;
-            } else if(demo_index == 1){
-                off_pct += 0.0025;
-                m1 = true;
-            }
-        } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
-            manual = true;
-            if( circum_corners > 3 && demo_index == 3 ) {
-                circum_corners -= 1;
-            } else if( demo_index == 2 ){
-                ang_rad -= angrad_inc / 2;
-                m2 = true;
-            } else if(demo_index == 1){
-                off_pct -= 0.0025;
-                m1 = true;
-            }
-        } else if( event.released_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
-            demo_index -= 1;
-            if( demo_index < 0 ) {
-                demo_index = DEMO_MAX_IDX;
-            }
-        } else if( event.released_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
-            demo_index += 1;
-            if( demo_index > DEMO_MAX_IDX ) {
-                demo_index = 0;
-            }
-        } else if( !animating ) {
-            if( demo_index == 1 ) {
-                ++a1;
-            } else if( demo_index == 2) {
-                ++a2;
+    while(pixel::handle_one_event(event)){
+        bool animating = !event.paused();
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+            printf("Exit Application\n");
+            #if defined(__EMSCRIPTEN__)
+                emscripten_cancel_main_loop();
+            #else
+                exit(0);
+            #endif
+        }
+        animating = !event.paused();
+    
+        manual = manual && animating;
+        m1 = m1 && anim1;
+        m2 = m2 && anim2;
+        anim1 = animating && demo_index == 1;
+        anim2 = animating && demo_index == 2;
+        if( event.has_any_p1() ) {
+            if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) ) {
+                manual = true;
+                if( circum_corners < 128 && demo_index == 3 ) {
+                    circum_corners += 1;
+                } else if( demo_index == 2 ){
+                    ang_rad += angrad_inc / 2;
+                    m2 = true;
+                } else if(demo_index == 1){
+                    off_pct += 0.0025;
+                    m1 = true;
+                }
+            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
+                manual = true;
+                if( circum_corners > 3 && demo_index == 3 ) {
+                    circum_corners -= 1;
+                } else if( demo_index == 2 ){
+                    ang_rad -= angrad_inc / 2;
+                    m2 = true;
+                } else if(demo_index == 1){
+                    off_pct -= 0.0025;
+                    m1 = true;
+                }
+            } else if( event.released_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
+                demo_index -= 1;
+                if( demo_index < 0 ) {
+                    demo_index = DEMO_MAX_IDX;
+                }
+            } else if( event.released_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
+                demo_index += 1;
+                if( demo_index > DEMO_MAX_IDX ) {
+                    demo_index = 0;
+                }
+            } else if( !animating ) {
+                if( demo_index == 1 ) {
+                    ++a1;
+                } else if( demo_index == 2) {
+                    ++a2;
+                }
             }
         }
     }

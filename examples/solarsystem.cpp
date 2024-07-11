@@ -1,6 +1,6 @@
 /**
- * Author: Svenson Han Göthel
- * Funktion Name: sunsystem.cpp
+ * Author: Svenson Han Göthel und Sven Göthel
+ * Funktion Name: solarsystem.cpp
  */
 #include <algorithm>
 #include <cstddef>
@@ -272,19 +272,14 @@ void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static si_time_t tick_ts = 1_month;
-    
-    pixel::handle_events(event);
-    if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-        printf("Exit Application\n");
-        #if defined(__EMSCRIPTEN__)
-            emscripten_cancel_main_loop();
-        #else
-            exit(0);
-        #endif
-    } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
-        pixel::cart_coord.set_height(-space_height, space_height);
+    bool b = false;
+    bool animating = !event.paused();
+    if(animating){
+        if( event.pressed(input_event_type_t::P1_ACTION1) ) {
+            b = true;
+        }
     }
-    // const bool animating = !event.paused();
+    
     const point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
     const uint64_t t1 = getElapsedMillisecond(); // [ms]
@@ -296,79 +291,96 @@ void mainloop() {
                     fps, t1, global_scale(), 
                     cbodies[number(info_id)]->toString().c_str(), 
                     to_magnitude_timestr(tick_ts).c_str());
-    // white background
-    clear_pixel_fb( 0, 0, 0, 0);
-    set_pixel_color(255, 255, 255, 255);
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
-    // constexpr const float rot_step = 10.0f; // [ang-degrees / s]
-    if( event.released_and_clr(input_event_type_t::RESET) ) {
-        _global_scale = 20;
-        info_id = cbodyid_t::earth;
-        max_planet_id = cbodyid_t::mars;
-        space_height = cbodies[number(max_planet_id)]->d_sun +
-                       cbodies[number(max_planet_id)]->radius;
-        pixel::cart_coord.set_height(-space_height, space_height);
-        tick_ts = 1_month;
-        pl.clear();
-        ipl.clear();
-        cbodies.clear();
-        for(size_t i = 0; i <= number(cbodyid_t::pluto); ++i){
-            CBodyRef cb = std::make_shared<CBody>( static_cast<cbodyid_t>( i ) );
-            cbodies.push_back(cb);
-            printf("%s\n", cb->toString().c_str());
+    while (pixel::handle_one_event(event)) {
+        if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
+            printf("Exit Application\n");
+            #if defined(__EMSCRIPTEN__)
+                emscripten_cancel_main_loop();
+            #else
+                exit(0);
+            #endif
+        } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
+            pixel::cart_coord.set_height(-space_height, space_height);
         }
-    }
-    if( !event.paused() ) {
-        if( event.has_any_p1() ) {
-            bool reset_space_height = false;
-            if( event.pressed(input_event_type_t::P1_ACTION1) ) {
-                if( event.released_and_clr(input_event_type_t::P1_UP) && tick_ts < 1_year) {
-                    tick_ts *= 2;
-                } else if( event.released_and_clr(input_event_type_t::P1_DOWN) && tick_ts > 1_h) {
-                    tick_ts /= 2;
+        animating = !event.paused();
+        // constexpr const float rot_step = 10.0f; // [ang-degrees / s]
+        if( event.released_and_clr(input_event_type_t::RESET) ) {
+            _global_scale = 20;
+            info_id = cbodyid_t::earth;
+            max_planet_id = cbodyid_t::mars;
+            space_height = cbodies[number(max_planet_id)]->d_sun +
+                           cbodies[number(max_planet_id)]->radius;
+            pixel::cart_coord.set_height(-space_height, space_height);
+            tick_ts = 1_month;
+            pl.clear();
+            ipl.clear();
+            cbodies.clear();
+            for(size_t i = 0; i <= number(cbodyid_t::pluto); ++i){
+                CBodyRef cb = std::make_shared<CBody>( static_cast<cbodyid_t>( i ) );
+                cbodies.push_back(cb);
+                printf("%s\n", cb->toString().c_str());
+            }
+        }
+        if( animating ) {
+            if( event.has_any_p1() ) {
+                bool reset_space_height = false;
+                if( b ) {
+                    if( event.released_and_clr(input_event_type_t::P1_UP) && tick_ts < 1_year) {
+                        tick_ts *= 2;
+                    } else if( event.released_and_clr(input_event_type_t::P1_DOWN) && tick_ts > 1_h) {
+                        tick_ts /= 2;
+                    }
+                } else if (event.released_and_clr(input_event_type_t::P1_UP)) {
+                    global_scale(1.5f);
+                } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
+                    global_scale(0.5f);
+                } else if (event.released_and_clr(input_event_type_t::P1_RIGHT)) {
+                    if( max_planet_id < cbodyid_t::pluto ) {                    
+                        ++max_planet_id;
+                        reset_space_height = true;
+                    }
+                } else if (event.released_and_clr(input_event_type_t::P1_LEFT)) {
+                    if( max_planet_id > cbodyid_t::mercury ) {
+                        --max_planet_id;
+                        reset_space_height = true;
+                        if(info_id > max_planet_id){
+                            info_id = max_planet_id;
+                            pl.clear();
+                        }
+                    }
                 }
-            } else if (event.released_and_clr(input_event_type_t::P1_UP)) {
-                global_scale(1.5f);
-            } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
-                global_scale(0.5f);
-            } else if (event.released_and_clr(input_event_type_t::P1_RIGHT)) {
-                if( max_planet_id < cbodyid_t::pluto ) {                    
-                    ++max_planet_id;
-                    reset_space_height = true;
+                if( reset_space_height ) {
+                    space_height = cbodies[number(max_planet_id)]->d_sun + 
+                                   cbodies[number(max_planet_id)]->radius;
+                    pixel::cart_coord.set_height(-space_height, space_height);
                 }
-            } else if (event.released_and_clr(input_event_type_t::P1_LEFT)) {
-                if( max_planet_id > cbodyid_t::mercury ) {
-                    --max_planet_id;
-                    reset_space_height = true;
-                    if(info_id > max_planet_id){
-                        info_id = max_planet_id;
-                        pl.clear();
+            } else if( event.released_and_clr(input_event_type_t::ANY_KEY) && 
+                event.last_key_code == ' ') {
+                if(info_id < max_planet_id){
+                    ++info_id;
+                } else {
+                    info_id = cbodyid_t::mercury;
+                }
+                if(!draw_all_orbits){
+                    for(size_t i = 1; i <= number(cbodyid_t::pluto); ++i){
+                        cbodies[i]->orbit_points.clear();
                     }
                 }
             }
-            if( reset_space_height ) {
-                space_height = cbodies[number(max_planet_id)]->d_sun + 
-                               cbodies[number(max_planet_id)]->radius;
-                pixel::cart_coord.set_height(-space_height, space_height);
-            }
         }
-        if( event.released_and_clr(input_event_type_t::ANY_KEY) && event.last == input_event_type_t::ANY_KEY) {
-            if(info_id < max_planet_id){
-                ++info_id;
-            } else {
-                info_id = cbodyid_t::mercury;
-            }
-            if(!draw_all_orbits){
-                for(size_t i = 1; i <= number(cbodyid_t::pluto); ++i){
-                    cbodies[i]->orbit_points.clear();
-                }
-            }
-        }
+    }
+    if(animating) {
         for(CBodyRef &cb : cbodies){
             cb->tick(dt, tick_ts);
         }
     }
+    // white background
+    clear_pixel_fb( 0, 0, 0, 0);
+    
+    set_pixel_color(255, 255, 255, 255);
+        
     if(info_id != cbodyid_t::sun && !draw_all_orbits){
         set_pixel_color4f(normal_orbit_color.x, normal_orbit_color.y, normal_orbit_color.z, 
                           normal_orbit_color.w);
@@ -431,7 +443,7 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        init_gfx_subsystem("gfxbox example01", window_width, window_height, origin_norm);
+        init_gfx_subsystem("solarsystem", window_width, window_height, origin_norm);
     }
     // space_height = n.sfplts + n.pluto_radius; // [km]
     // space_height = n.sfnets; //  + n.neptun_radius; // [km]
