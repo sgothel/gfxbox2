@@ -63,6 +63,8 @@ blank [ \t\r]
     loc.step ();
 %}
 
+"//".*      loc.step (); 
+
 {blank}+    loc.step ();
 \n+         loc.lines (yyleng); loc.step ();
 

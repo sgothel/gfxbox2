@@ -99,13 +99,14 @@ program       : command
               | program command
               ;
               
-command       : DRAW { cc.rpn_expr.clear(); } expression SEMICOLON { add_func(cc.rpn_expr); cc.rpn_expr.clear(); }
-              | CLEAR SEMICOLON { clear_funcs(); }
-              | SET_WIDTH real_number COMMA real_number SEMICOLON { set_width($2, $4); }
-              | SET_HEIGHT real_number COMMA real_number SEMICOLON { set_height($2, $4); }
-              | HELP SEMICOLON { print_usage(); }
-              | EXIT SEMICOLON { exit_app(); }     
-              | error { print_usage(); }         
+command       : DRAW { cc.rpn_expr.clear(); } expression semicolon_opt { add_func(cc.rpn_expr); cc.rpn_expr.clear(); }
+              | CLEAR semicolon_opt { clear_funcs(); }
+              | SET_WIDTH real_number COMMA real_number semicolon_opt { set_width($2, $4); }
+              | SET_HEIGHT real_number COMMA real_number semicolon_opt { set_height($2, $4); }
+              | HELP semicolon_opt { print_usage(); }
+              | EXIT semicolon_opt { exit_app(); }
+              | error { print_usage(); yyerrok; yyclearin; }        
+              | semicolon_opt     
               ;
               
 expression    : product
@@ -156,6 +157,8 @@ arg3_func  : MIX { $$=rpn_calc::rpn_token_t::MIX; };
 real_number : UREAL { $$=$1; } |
               ADD UREAL { $$=$2; } |
               SUB UREAL { $$=$2*(-1); } ;
+
+semicolon_opt: %empty | SEMICOLON ;
 
 %%
 
