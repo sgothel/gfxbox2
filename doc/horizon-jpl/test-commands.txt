@@ -1,0 +1,30 @@
+# START_TIME='2024-Jan-01 00:00:00'
+# STOP_TIME='2024-Jan-01 00:00:01'
+# TABLE_TYPE='Vector'
+# REF_PLANE='Ecliptic'
+# CENTER='@010'
+# COMMAND='199'
+#
+# COMMAND='199'
+# OBJ_DATA='YES'
+# MAKE_EPHEM='NO'
+# EPHEM_TYPE='Vectors'
+# CENTER='@010'
+# REF_PLANE='Ecliptic'
+# COORD_TYPE='GEODETIC'
+# START_TIME='2024-Jan-01 00:00:00'
+# STOP_TIME='2024-Jan-01 00:00:01'
+#
+# COMMAND='199'
+# OBJ_DATA='YES'
+# MAKE_EPHEM='NO'
+# TABLE_TYPE='Vector'
+# CENTER='@010'
+# REF_PLANE='Ecliptic'
+# START_TIME='2024-Jan-01 00:00:00'
+# STOP_TIME='2024-Jan-01 00:00:01'
+# STEP_SIZE='1 s'
+#
+# 
+curl -s -F format=text -F input=@horizons-mercury.cmd https://ssd.jpl.nasa.gov/api/horizons_file.api > horizons-mercury.res
+
