@@ -504,7 +504,6 @@ RPNStatus rpn_expression_t::eval(double& result, const variable_set& variables) 
 
     std::vector<double> stack;
     stack.reserve(expr.size());
-    stack.push_back(0.0);
 
     auto get_stack = [&](size_t count) noexcept -> bool {
         if( stack.size() < count ) {
@@ -739,7 +738,11 @@ RPNStatus rpn_expression_t::eval(double& result, const variable_set& variables) 
     }
 
     if( status == RPNStatus::No_Error ) {
-        result = stack[0];
+        if( stack.size() < 1 ) {
+            status = RPNStatus::RPN_Underflow;
+        } else {
+            result = stack.back(); stack.pop_back();
+        }
     }
     return (status);
 }
