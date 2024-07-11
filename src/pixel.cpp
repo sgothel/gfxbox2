@@ -95,6 +95,9 @@ void pixel::log_printf(const char * format, ...) noexcept {
 void pixel::draw_grid(float raster_sz,
                       uint8_t gr, uint8_t gg, uint8_t gb, uint8_t ga,
                       uint8_t cr, uint8_t cg, uint8_t cb, uint8_t ca){
+    if( is_zero( raster_sz ) ) {
+        return;
+    }                    
     float wl = pixel::cart_coord.min_x();
     float hb = pixel::cart_coord.min_y();
     float l = (int)(wl / raster_sz) * raster_sz;
