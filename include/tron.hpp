@@ -310,7 +310,7 @@ public:
         return false;
     }
 
-    std::string toString() const noexcept {
+    std::string toString() const noexcept override {
         return "Panzer[c "+center().toString()+", a "+std::to_string(barrel.dir_angle)+
                 ", v "+std::to_string(velo)+
                 ", tail "+std::to_string(p_list.size())+"]";

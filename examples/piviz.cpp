@@ -403,8 +403,6 @@ void mainloop() {
 
     static bool anim1 = true;
     static bool anim2 = true;
-    static int a1 = 0;
-    static int a2 = 0;
     static pixel::input_event_t event;
 
     // white background
@@ -470,12 +468,6 @@ void mainloop() {
                 demo_index += 1;
                 if( demo_index > DEMO_MAX_IDX ) {
                     demo_index = 0;
-                }
-            } else if( !animating ) {
-                if( demo_index == 1 ) {
-                    ++a1;
-                } else if( demo_index == 2) {
-                    ++a2;
                 }
             }
         }

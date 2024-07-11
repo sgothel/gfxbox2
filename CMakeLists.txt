@@ -23,6 +23,13 @@ endif()
 include(Setup.cmake)
 Setup()
 
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.clangd)
+# Fixup clangd w/ absolute path
+set (gfxbox2_clangd_source_args "-isystem, ${CMAKE_CURRENT_SOURCE_DIR}/include, -isystem, ${CMAKE_CURRENT_SOURCE_DIR}/src, -isystem, ${CMAKE_CURRENT_SOURCE_DIR}/examples")
+configure_file (${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/clangd.in
+                ${CMAKE_CURRENT_SOURCE_DIR}/.clangd)
+endif()
+
 find_path (SYSTEM_USR_DIR "stdlib.h")
 include_directories (${SYSTEM_USR_DIR})
 

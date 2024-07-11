@@ -1,6 +1,9 @@
 #!/bin/sh
 
-export EM_CONFIG=$HOME/.emscripten
+if [ -z "$EMSDK" ] ; then
+    export EM_CONFIG=$HOME/.emscripten
+fi
+
 #
 # emcc --generate-config
 # emcc --clear-cache

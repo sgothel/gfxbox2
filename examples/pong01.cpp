@@ -38,9 +38,9 @@
 
 // const float field_width = 4.0f;
 const float field_height = 3.0f;
-const float diff_bounce = 0.075f;
-const float rho_deaccel = 1.0f-diff_bounce; // factor
-const float pad_accel = 1.0f+diff_bounce; // factor
+// const float diff_bounce = 0.075f;
+// const float rho_deaccel = 1.0f-diff_bounce; // factor
+// const float pad_accel = 1.0f+diff_bounce; // factor
 const float max_velocity = 5.6f; // m/s
 
 bool debug_gfx = false;
