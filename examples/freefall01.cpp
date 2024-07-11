@@ -87,14 +87,11 @@ void mainloop() {
             }
             animating = true;
         }
-        if( animating ) {
-            t1 = pixel::getElapsedMillisecond(); // [ms]
-        } else {
-            t1 = t_last;
-        }
     }
     if(animating){
         t1 = pixel::getElapsedMillisecond(); // [ms]
+    } else {
+        t1 = t_last;
     }
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
