@@ -5,9 +5,12 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <fstream>
 #include <ostream>
 #include <sstream>
+#include <string>
 #include <thread>
+
 
 #include "rpn_calc.hpp"
 #include "infix_calc.hpp"
@@ -122,7 +125,7 @@ void commandline_proc() {
 
         while( !exit_raised && std::getline(std::cin, line) ) {
             if( line.length() > 0 ) {
-                const bool pok = cc.parse (line.c_str(), line.length());
+                const bool pok = cc.parse (line.c_str(), (int)line.length());
                 if( !pok ) {
                     std::cerr << "Error occurred @ parsing: " << cc.location() << std::endl;
                 }
@@ -134,16 +137,19 @@ void commandline_proc() {
 
 void print_usage() {
     printf("Usage:\n");
-    printf("\tdraw sin(x);\n");
-    printf("\t\tbinary operations: +, -, *, /, modulo: '%%' or 'mod', pow: '^' or '**'\n");
-    printf("\t\tunary functions: abs, sin, cos, tan, asin, acos, atan, sqrt, ln, log, exp, ceil, floor\n");
-    printf("\t\tmisc functions: step(edge, x), mix(x, y, a)\n");
-    printf("\t\tbraces: (, )\n");
-    printf("\tclear;\n");
-    printf("\tset_width x1, x2;\n");
-    printf("\tset_height y1, y2;\n");
-    printf("\thelp;\n");
-    printf("\texit;\n");
+    printf("  - Semicolon at end of statement is optional.\n");
+    printf("  - Expression being any operation of:\n");
+    printf("    - binary operations: +, -, *, /, modulo: '%%' or 'mod', pow: '^' or '**'\n");
+    printf("    - unary functions: abs, sin, cos, tan, asin, acos, atan, sqrt, ln, log, exp, ceil, floor\n");
+    printf("    - misc functions: step(edge, x), mix(x, y, a)\n");
+    printf("    - braces: (, )\n");
+    printf("  > draw <expression>\n");
+    printf("  > draw sin(x)\n");
+    printf("  > clear\n");
+    printf("  > set_width x1, x2\n");
+    printf("  > set_height y1, y2\n");
+    printf("  > help\n");
+    printf("  > exit\n");
 }
 
 void mainloop() {
@@ -154,7 +160,7 @@ void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::f2::lineseg_t l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
     static pixel::f2::lineseg_t l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
-    static float grid_gap = std::floor( std::min(pixel::cart_coord.width(), pixel::cart_coord.height()) / 10.0f );
+    static float grid_gap = std::max(1.0f, std::floor( std::min(pixel::cart_coord.width(), pixel::cart_coord.height()) / 10.0f ));
     static pixel::input_event_t event;
     static std::string input_text;
     {
@@ -170,7 +176,7 @@ void mainloop() {
                     fflush(stdout);
                 } else if( '\n' == key_code ) {
                     input_text.pop_back();
-                    const bool pok = cc.parse (event.text.c_str(), event.text.length());
+                    const bool pok = cc.parse (event.text.c_str(), (int)event.text.length());
                     if( !pok ) {
                         std::ostringstream ss;
                         ss << cc.location();
@@ -195,7 +201,7 @@ void mainloop() {
         cart_coord_setup();
         l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
         l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
-        grid_gap = std::floor( std::min(pixel::cart_coord.width(), pixel::cart_coord.height()) / 10.0f );
+        grid_gap = std::max(1.0f, std::floor( std::min(pixel::cart_coord.width(), pixel::cart_coord.height()) / 10.0f ));
         printf("x-axis: %s\n", l_x.toString().c_str());
         printf("y-axis: %s\n", l_y.toString().c_str());
         fprintf(stdout, "> ");
@@ -205,7 +211,7 @@ void mainloop() {
 
     const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, text_color, text_height,
-            "fps %5.2f, %.2f / %.2f: grid %.1f, type > %s", pixel::get_gpu_fps(),
+            "fps %5.2f, %.2f / %.2f: grid %.0f, type > %s", pixel::get_gpu_fps(),
             pixel::cart_coord.from_win_x(event.pointer_x),
             pixel::cart_coord.from_win_y(event.pointer_y),
             grid_gap, input_text.c_str());
@@ -279,9 +285,27 @@ int main(int argc, char *argv[])
     if( !commandfile.empty() ) {
         infix_calc::compiler cc;
         std::cout << "Processing command input file: " << commandfile << std::endl;
+        
+        size_t lineno = 0;
+        std::ifstream fin(commandfile);        
+        std::string line;
+        while( !exit_raised && std::getline(fin, line) ) {
+            ++lineno;
+            if( line.length() > 0 ) {
+                const bool pok = cc.parse (line.c_str(), (int)line.length());
+                if( !pok ) {
+                    std::cerr << "Error occurred @ parsing: " << cc.location() << std::endl;
+                } else {
+                    std::cout << "#" << lineno << ": " << line << std::endl;
+                }
+            }
+            std::cout << std::endl;
+        }
+        if( false ) {                
         const bool pok = cc.parse (commandfile);
         if( !pok ) {
             std::cerr << "Error occurred @ parsing: " << cc.location() << std::endl;
+        }
         }
     }
 
