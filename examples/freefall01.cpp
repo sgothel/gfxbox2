@@ -62,7 +62,6 @@ void mainloop() {
     static pixel::input_event_t event;
     static bool animating = true;
 
-    uint64_t t1;
     while(pixel::handle_one_event(event)){
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -88,12 +87,11 @@ void mainloop() {
             animating = true;
         }
     }
+    uint64_t t1;
     if(animating){
         t1 = pixel::getElapsedMillisecond(); // [ms]
     } else {
         t1 = t_last;
-    }
-    if (!animating) {
         if (event.has_any_p1()) {
             if (event.pressed(pixel::input_event_type_t::P1_RIGHT)) {
                 t1 += 1;
