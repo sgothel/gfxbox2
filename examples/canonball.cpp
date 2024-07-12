@@ -75,7 +75,7 @@ static aabbox_t korb_box;
 
 class canon_t {
     private:
-        constexpr static const float velocity_max = 14; // 14;
+        constexpr static const float velocity_max = 24; // 14;
         constexpr static const float radius = cannon_height*0.8f;
         constexpr static const float velocity_min = 1.0f; // [m/s]
         
@@ -187,7 +187,8 @@ class canon_t {
                 if(p->box().intersects( korb_box )){
                     m_score += (m_cp + 1);//static_cast<int>( pow(2.0f, m_cp) );
                     it = m_pengs_flying.erase(it);
-                    reset(false);
+                    // FIXME
+                    // reset(false);
                     // rotate_adeg(rot_step * dt * next_rnd() * 3.0f);
                 } else {
                     ++it;
@@ -276,10 +277,7 @@ void mainloop() {
     static pixel::texture_ref hud_text;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
-    float rot_step = 10.0f; // [ang-degrees / s]
-    if(event.pressed(pixel::input_event_type_t::P2_ACTION2 ) ) {
-        rot_step *= 2;
-    }
+    float rot_step_default = 20.0f; // [ang-degrees / s]
     
     const uint64_t t1 = getElapsedMillisecond(); // [ms]
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
@@ -301,6 +299,10 @@ void mainloop() {
                 player.reset();
             }
             if( event.has_any_p1() ) {
+                float rot_step = rot_step_default;
+                if(event.pressed(pixel::input_event_type_t::P2_ACTION2 ) ) {
+                    rot_step *= 2;
+                }
                 if( event.pressed_and_clr(input_event_type_t::P1_UP) ) {
                     player.rotate_adeg(rot_step*dt);
                 } else if( event.pressed_and_clr(input_event_type_t::P1_DOWN ) ) {
@@ -326,7 +328,7 @@ void mainloop() {
     set_pixel_color(0, 0, 255, 255);
     if( !event.paused() ) {
         if( event.pressed(input_event_type_t::P1_ACTION1) ) {
-            player.change_velocity(1.1);
+            player.change_velocity(1.05);
         }
         player.tick(dt);
         UpOrDown = ((sf->m_tl.y < (cart_coord.max_y() - frame_offset)) && UpOrDown) || 
@@ -352,7 +354,7 @@ void mainloop() {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
         hud_text->draw(dx, 0);
     }
-    pixel::swap_gpu_buffer(60);
+    pixel::swap_gpu_buffer();
 }
 
 int main(int argc, char *argv[])
@@ -360,6 +362,7 @@ int main(int argc, char *argv[])
     int window_width = 1920, window_height = 1000;
     float adeg=0, velocity=1;
     bool auto_shoot = false;
+    pixel::forced_fps = 30;
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
