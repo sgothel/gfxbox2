@@ -112,16 +112,20 @@
 
     <div>
         <pre>
-        Usage:
-        draw sin(x);
-                unary functions: abs, sin, cos, tan, asin, acos, atan, sqrt, ln, log, exp
-                binary operations: +, -, *, /, modulo: '%' or 'mod', pow: '^' or '**'
-                braces: (, )
-        clear;
-        set_width x1, x2;
-        set_height y1, y2;
-        help;
-        exit;
+          Usage:
+          - Semicolon at end of statement is optional.
+          - Expression being any operation of:
+            - binary operations: +, -, *, /, modulo: '%' or 'mod', pow: '^' or '**'
+            - unary functions: abs, sin, cos, tan, asin, acos, atan, sqrt, ln, log, exp, ceil, floor
+            - misc functions: step(edge, x), mix(x, y, a)
+            - braces: (, )
+          > draw <expression>
+          > draw sin(x)
+          > clear
+          > set_width x1, x2
+          > set_height y1, y2
+          > help
+          > exit
         </pre>
     </div>
 
