@@ -377,7 +377,7 @@ void mainloop() {
 
     static const int circles_per_plot = 2;
     const float ticks_per_circle = 12.0f * 60.0f; // one circle in 12s @ 60Hz, [s] * [1/s] = [1]
-    const float angrad_inc = ( 2.0f * M_PI ) / ticks_per_circle;
+    const float angrad_inc = (float)(3.0 * M_PI ) / ticks_per_circle;
     static float ang_rad = 0.0f, ang_grad = 0.0f;
     static float an = -0.35f;
     static float off_pct = an;
@@ -404,6 +404,7 @@ void mainloop() {
     static bool anim1 = true;
     static bool anim2 = true;
     static pixel::input_event_t event;
+    static bool animating = true;
 
     // white background
     pixel::clear_pixel_fb(255, 255, 255, 255);
@@ -412,15 +413,10 @@ void mainloop() {
             200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
 
     const float plot_inc = pixel::cart_coord.width() / ( ticks_per_circle * circles_per_plot );
-    float fps = pixel::get_gpu_fps();
-    texts.push_back( pixel::make_text(
-            point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), 0, text_color,
-            "fps "+std::to_string(fps)) );
 
     const float max_radius = pixel::cart_coord.max_y() * 0.9f;
 
     while(pixel::handle_one_event(event)){
-        bool animating = !event.paused();
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
             #if defined(__EMSCRIPTEN__)
@@ -429,35 +425,21 @@ void mainloop() {
                 exit(0);
             #endif
         }
-        animating = !event.paused();
-    
-        manual = manual && animating;
-        m1 = m1 && anim1;
-        m2 = m2 && anim2;
-        anim1 = animating && demo_index == 1;
-        anim2 = animating && demo_index == 2;
+        if( event.paused() ) {
+            animating = false;
+        } else {
+            animating = true;
+        }            
         if( event.has_any_p1() ) {
-            if( event.pressed_and_clr(pixel::input_event_type_t::P1_UP) ) {
+            if( event.released_and_clr(pixel::input_event_type_t::P1_UP) ) {
                 manual = true;
                 if( circum_corners < 128 && demo_index == 3 ) {
                     circum_corners += 1;
-                } else if( demo_index == 2 ){
-                    ang_rad += angrad_inc / 2;
-                    m2 = true;
-                } else if(demo_index == 1){
-                    off_pct += 0.0025;
-                    m1 = true;
                 }
-            } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
+            } else if( event.released_and_clr(pixel::input_event_type_t::P1_DOWN) ) {
                 manual = true;
                 if( circum_corners > 3 && demo_index == 3 ) {
                     circum_corners -= 1;
-                } else if( demo_index == 2 ){
-                    ang_rad -= angrad_inc / 2;
-                    m2 = true;
-                } else if(demo_index == 1){
-                    off_pct -= 0.0025;
-                    m1 = true;
                 }
             } else if( event.released_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
                 demo_index -= 1;
@@ -472,6 +454,39 @@ void mainloop() {
             }
         }
     }
+    if( event.has_any_p1() ) {
+        if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
+            manual = true;
+            if( demo_index == 2 ) {
+                ang_rad += angrad_inc / 2;
+                m2       = true;
+            } else if( demo_index == 1 ) {
+                off_pct += 0.0025 * 1.5;
+                m1       = true;
+            }
+        } else if( event.pressed(pixel::input_event_type_t::P1_DOWN) ) {
+            manual = true;
+            if( demo_index == 2 ) {
+                ang_rad -= angrad_inc / 2;
+                m2       = true;
+            } else if( demo_index == 1 ) {
+                off_pct -= 0.0025 * 1.5;
+                m1       = true;
+            }
+        }
+    }
+    manual = manual && animating;
+    m1 = m1 && anim1;
+    m2 = m2 && anim2;
+    anim1 = animating && demo_index == 1;
+    anim2 = animating && demo_index == 2;
+    
+    float fps = pixel::get_gpu_fps();
+    texts.push_back( pixel::make_text(
+            point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), 0, text_color,
+            // "fps "+std::to_string(fps)+", anim[g "+std::to_string(animating)+", a1 "+std::to_string(anim1)+", a2 "+std::to_string(anim2)+"], m "+std::to_string(manual) ));
+            "fps "+std::to_string(fps) ) );
+    
     // rect_t(point_t(0, 0), max_radius, 100).draw(true);
     if( false ) {
         rect_t r1(point_t(0, 0), max_radius, max_radius);
