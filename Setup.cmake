@@ -43,6 +43,9 @@ endif()
 set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(cxx_clangd_flags "-pedantic, -pedantic-errors, -Wall, -Wextra, -Werror, -DDEBUG, -std=c++20")
+message(STATUS "cxx_clangd_flags: ${cxx_clangd_flags}")
+
 # for all
 set (CC_FLAGS_WARNING "-Wall -Wextra -Werror")
 set (GCC_FLAGS_WARNING_FORMAT "-Wformat=2 -Wformat-overflow=2 -Wformat-nonliteral -Wformat-security -Wformat-signedness -Wformat-y2k")
