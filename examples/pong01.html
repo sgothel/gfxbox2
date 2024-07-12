@@ -99,6 +99,7 @@
 
 <span id='controls'>
   <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
+  <span><input type="checkbox" id="TwoPlayer" onclick="setTwoPlayer(this.checked)">2-player</span>
   <span><input type="checkbox" id="DebugGfx" onclick="setDebugGfx(this.checked)">dbg-vec</span>
   <span><input type="number" id="SetFPS" min="0" max="60" step="10" value="0" style="width: 3em;" onchange="setForcedFPS(this.value)"/>fps</span>
 </span>
@@ -153,12 +154,14 @@
       var spinnerElement = document.getElementById('spinner');
       var wasm_set_forced_fps, wasm_set_window_size;
       var wasm_set_debug_gfx;
+      var wasm_set_two_player;
 
       var Module = {
         onRuntimeInitialized: function() {
             wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
             wasm_set_debug_gfx = Module.cwrap('set_debug_gfx', 'null', ['boolean']);
+            wasm_set_two_player = Module.cwrap('set_two_player', 'null', ['boolean']);
             maximizeCanvas(0.98);
         },
         preRun: [],
@@ -222,6 +225,11 @@
         };
       };
 
+      function setTwoPlayer(v) {
+          if( null != wasm_set_two_player ) {
+              wasm_set_two_player(v);
+          }
+      }
       function setDebugGfx(v) {
           if( null != wasm_set_debug_gfx ) {
               wasm_set_debug_gfx(v);

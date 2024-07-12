@@ -70,6 +70,68 @@ static pixel::f2::rect_ref_t pad_l, pad_r;
 static std::shared_ptr<physiks::ball_t> ball;
 static pixel::f2::dashed_lineseg_t divider;
 
+void reset_playfield() {
+    const pixel::f2::point_t tl = { pixel::cart_coord.min_x()+4.0f*pad_thickness, pixel::cart_coord.max_y()-pad_thickness };
+    const pixel::f2::point_t br = { pixel::cart_coord.max_x()-4.0f*pad_thickness, pixel::cart_coord.min_y()+pad_thickness };
+
+    if( one_player || big_pads) {
+        pad_l = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, pixel::cart_coord.max_y()-2.0f*pad_thickness),
+                                                    pad_thickness, pixel::cart_coord.height() - 4*pad_thickness);
+    } else {
+        pad_l = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, 0.0f+pad_height/2.0f),
+                                                    pad_thickness, pad_height);
+    }
+    player_pads.push_back(pad_l);
+
+    if( big_pads ){
+        pad_r = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(br.x, pixel::cart_coord.max_y()-2.0f*pad_thickness),
+                                                    pad_thickness, pixel::cart_coord.height() - 4*pad_thickness);
+    } else {
+        pad_r = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(br.x, 0.0f+pad_height/2.0f),
+                                                    pad_thickness, pad_height);
+    }
+    player_pads.push_back(pad_r);
+
+    if(!one_player){
+        pixel::f2::point_t p0 = {tl.x + (pixel::cart_coord.width()-7.0f*pad_thickness) / 2, 
+                                       tl.y - pad_thickness};
+        pixel::f2::point_t p1 = {p0.x, p0.y - pixel::cart_coord.height() + 4*pad_thickness};
+        divider = pixel::f2::dashed_lineseg_t(pixel::f2::lineseg_t(p0, p1), pad_thickness, 20.0f);
+    }
+    {
+        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
+        if( debug_gfx ) {
+            pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
+        }
+        pixel::f2::geom_list_t& list = pixel::f2::gobjects();
+        list.clear();
+        list.push_back(ball);
+        list.push_back(pad_r);
+        list.push_back(pad_l);
+        {
+            // top horizontal bounds
+            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-7.0f*pad_thickness, pad_thickness);
+            list.push_back(r);
+            if( debug_gfx ) {
+                pixel::log_printf(elapsed_ms, "XX RT %s\n", r->toString().c_str());
+            }
+        }
+        {
+            // bottom horizontal bounds
+            pixel::f2::point_t bottom_tl = { tl.x, pixel::cart_coord.min_y()+2.0f*pad_thickness };
+            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(bottom_tl, pixel::cart_coord.width()-7.0f*pad_thickness, pad_thickness);
+            list.push_back(r);
+            if( debug_gfx ) {
+                pixel::log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
+            }
+        }
+    }    
+}
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_two_player(bool v) noexcept { one_player = !v; reset_playfield(); }
+}
+
 void mainloop() {
     static uint64_t frame_count_total = 0;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
@@ -267,60 +329,7 @@ int main(int argc, char *argv[])
                                     4.0f /* [m/s] */, pixel::adeg_to_rad(0), 
                                     max_velocity, false, player_pads);
 
-    const pixel::f2::point_t tl = { pixel::cart_coord.min_x()+4.0f*pad_thickness, pixel::cart_coord.max_y()-pad_thickness };
-    const pixel::f2::point_t br = { pixel::cart_coord.max_x()-4.0f*pad_thickness, pixel::cart_coord.min_y()+pad_thickness };
-
-    if( one_player || big_pads) {
-        pad_l = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, pixel::cart_coord.max_y()-2.0f*pad_thickness),
-                                                    pad_thickness, pixel::cart_coord.height() - 4*pad_thickness);
-    } else {
-        pad_l = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, 0.0f+pad_height/2.0f),
-                                                    pad_thickness, pad_height);
-    }
-    player_pads.push_back(pad_l);
-
-    if( big_pads ){
-        pad_r = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(br.x, pixel::cart_coord.max_y()-2.0f*pad_thickness),
-                                                    pad_thickness, pixel::cart_coord.height() - 4*pad_thickness);
-    } else {
-        pad_r = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(br.x, 0.0f+pad_height/2.0f),
-                                                    pad_thickness, pad_height);
-    }
-    player_pads.push_back(pad_r);
-
-    if(!one_player){
-        pixel::f2::point_t p0 = {tl.x + (pixel::cart_coord.width()-7.0f*pad_thickness) / 2, 
-                                       tl.y - pad_thickness};
-        pixel::f2::point_t p1 = {p0.x, p0.y - pixel::cart_coord.height() + 4*pad_thickness};
-        divider = pixel::f2::dashed_lineseg_t(pixel::f2::lineseg_t(p0, p1), pad_thickness, 20.0f);
-    }
-    {
-        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        if( debug_gfx ) {
-            pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
-        }
-        pixel::f2::geom_list_t& list = pixel::f2::gobjects();
-        list.push_back(ball);
-        list.push_back(pad_r);
-        list.push_back(pad_l);
-        {
-            // top horizontal bounds
-            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-7.0f*pad_thickness, pad_thickness);
-            list.push_back(r);
-            if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RT %s\n", r->toString().c_str());
-            }
-        }
-        {
-            // bottom horizontal bounds
-            pixel::f2::point_t bottom_tl = { tl.x, pixel::cart_coord.min_y()+2.0f*pad_thickness };
-            pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(bottom_tl, pixel::cart_coord.width()-7.0f*pad_thickness, pad_thickness);
-            list.push_back(r);
-            if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
-            }
-        }
-    }
+    reset_playfield();
 
     #if defined(__EMSCRIPTEN__)
         emscripten_set_main_loop(mainloop, 0, 1);
