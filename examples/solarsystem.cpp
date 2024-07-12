@@ -34,6 +34,10 @@ using namespace pixel;
 using namespace pixel::f2;
 bool draw_all_orbits = false;
 
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_draw_all_orbits(bool v) noexcept { draw_all_orbits = v; }
+}
+
 enum class cbodyid_t : size_t {
     none = std::numeric_limits<size_t>::max(),
     sun = 0,
@@ -220,7 +224,7 @@ class CBody {
         }
     }
     
-    void tick(const float dt){
+    void sub_tick(const float dt){
         if(id == cbodyid_t::sun){
             return;
         }
@@ -239,7 +243,7 @@ class CBody {
     void tick(const float dt, const si_time_t time_scale) {
         float dts = dt * time_scale;        
         while( dts > std::numeric_limits<float>::epsilon() ) {
-            tick( std::min(dts, max_time_step) );
+            sub_tick( std::min(dts, max_time_step) );
             dts -= max_time_step;
         }
         orbit_points.push_back(body.center);
@@ -272,27 +276,20 @@ void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static si_time_t tick_ts = 1_month;
-    bool b = false;
+    static const f4::vec_t vec4_text_color = {1, 1, 1, 1};
+    static const int text_height = 30;
+    
+    bool p1_action_pressed = false;
     bool animating = !event.paused();
     if(animating){
         if( event.pressed(input_event_type_t::P1_ACTION1) ) {
-            b = true;
+            p1_action_pressed = true;
         }
     }
     
     const point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
-    const uint64_t t1 = getElapsedMillisecond(); // [ms]
-    f4::vec_t vec4_text_color = {1, 1, 1, 1};
-    int text_height = 30;
-    float fps = get_gpu_fps();
-    hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-                    "fps %f, td %d [ms], gscale %.2f, %s, 1s -> %s", 
-                    fps, t1, global_scale(), 
-                    cbodies[number(info_id)]->toString().c_str(), 
-                    to_magnitude_timestr(tick_ts).c_str());
-    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
-    t_last = t1;
+    
     while (pixel::handle_one_event(event)) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -326,16 +323,16 @@ void mainloop() {
         if( animating ) {
             if( event.has_any_p1() ) {
                 bool reset_space_height = false;
-                if( b ) {
-                    if( event.released_and_clr(input_event_type_t::P1_UP) && tick_ts < 1_year) {
-                        tick_ts *= 2;
-                    } else if( event.released_and_clr(input_event_type_t::P1_DOWN) && tick_ts > 1_h) {
-                        tick_ts /= 2;
+                if( p1_action_pressed ) {
+                    if (event.released_and_clr(input_event_type_t::P1_UP)) {
+                        global_scale(1.5f);
+                    } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
+                        global_scale(0.5f);
                     }
-                } else if (event.released_and_clr(input_event_type_t::P1_UP)) {
-                    global_scale(1.5f);
-                } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
-                    global_scale(0.5f);
+                } else if( event.released_and_clr(input_event_type_t::P1_UP) && tick_ts < 1_year) {
+                    tick_ts *= 2;
+                } else if( event.released_and_clr(input_event_type_t::P1_DOWN) && tick_ts > 1_h) {
+                    tick_ts /= 2;
                 } else if (event.released_and_clr(input_event_type_t::P1_RIGHT)) {
                     if( max_planet_id < cbodyid_t::pluto ) {                    
                         ++max_planet_id;
@@ -356,6 +353,10 @@ void mainloop() {
                                    cbodies[number(max_planet_id)]->radius;
                     pixel::cart_coord.set_height(-space_height, space_height);
                 }
+            } else if( event.has_any_p2() ) {
+                if (event.released_and_clr(input_event_type_t::P2_ACTION1)) {
+                    draw_all_orbits = !draw_all_orbits;
+                }
             } else if( event.released_and_clr(input_event_type_t::ANY_KEY) && 
                 event.last_key_code == ' ') {
                 if(info_id < max_planet_id){
@@ -371,6 +372,15 @@ void mainloop() {
             }
         }
     }
+    const uint64_t t1 = getElapsedMillisecond(); // [ms]
+    float fps = get_gpu_fps();
+    hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
+                    "fps %f, td %d [ms], gscale %.2f, %s, 1s -> %s", 
+                    fps, t1, global_scale(), 
+                    cbodies[number(info_id)]->toString().c_str(), 
+                    to_magnitude_timestr(tick_ts).c_str());
+    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
+    t_last = t1;
     if(animating) {
         for(CBodyRef &cb : cbodies){
             cb->tick(dt, tick_ts);
@@ -409,12 +419,13 @@ void mainloop() {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
         hud_text->draw(dx, 0);
     }
-    pixel::swap_gpu_buffer(30);
+    pixel::swap_gpu_buffer();
 }
 
 int main(int argc, char *argv[])
 {
     int window_width = 1920, window_height = 1000;
+    pixel::forced_fps = 30;
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
