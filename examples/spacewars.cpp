@@ -936,8 +936,8 @@ class player_t : public idscore_t {
             }
         }
 };
-static bool two_players = true;
-static bool three_players = false;
+
+static int player_count = 2;
 static int asteroid_count = 6;
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
@@ -951,32 +951,13 @@ void mainloop() {
     static player_t p1(player_id_1);
     static player_t p2(player_id_2);
     static player_t p3(player_id_3);
-    bool p1_mine = false;
-    bool p2_mine = false;
-    bool p3_mine = false;
 
     static pixel::texture_ref hud_text;
     static uint64_t frame_count_total = 0;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
+    static bool animating = true;
     
-    const uint64_t t1 = pixel::getElapsedMillisecond();  // [ms]
-    const float dt = (float)(t1 - t_last) / 1000.0f;     // [s]
-    t_last = t1;
-    float fps = pixel::get_gpu_fps();
-    
-    bool animating = !event.paused();
-    if(animating){
-        if( event.pressed(pixel::input_event_type_t::P1_ACTION2) ) {
-            p1_mine = true;
-        }
-        if( event.pressed(pixel::input_event_type_t::P2_ACTION2) ) {
-            p2_mine = true;
-        }
-        if( event.pressed(pixel::input_event_type_t::P3_ACTION2) ) {
-            p3_mine = true;
-        }
-    }
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -988,16 +969,23 @@ void mainloop() {
         } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
         }
-        animating = !event.paused();
+        if( event.paused() ) {
+            animating = false;
+        } else {
+            if( !animating ) {
+                t_last = pixel::getElapsedMillisecond(); // [ms]
+            }
+            animating = true;
+        }
     
         if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
             pengs.clear();
             reset_asteroids(asteroid_count);
             p1.reset();
-            if(two_players || three_players){
+            if(1 < player_count) {
                 p2.reset();
             }
-            if(three_players){
+            if(2 < player_count) {
                 p3.reset();
             }
         }
@@ -1007,14 +995,14 @@ void mainloop() {
             // ship1 tick
             if( nullptr != p1.ship() && event.has_any_p1() ) {
                 spaceship_ref_t ship1 = p1.ship();
-                if( p1_mine  ) {
-                    if(event.pressed_and_clr(pixel::input_event_type_t::P1_ACTION1)){
-                        ship1->mine();
-                    }
-                } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION1) ) {
+                if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION1) ) {
                         ship1->peng();
                 } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
-                    ship1->set_orbit_velocity();
+                    if( event.pressed(pixel::input_event_type_t::P1_ACTION1)) {
+                        ship1->mine();
+                    } else {
+                        ship1->set_orbit_velocity();
+                    }
                 } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION3) ) {
                     p1.set_cloak(!p1.cloak());
                 }
@@ -1022,17 +1010,17 @@ void mainloop() {
             }
     
             // ship2 tick
-            if( two_players || three_players ) {
+            if(1 < player_count) {
                 spaceship_ref_t ship2 = p2.ship();
                 if( nullptr != ship2 && event.has_any_p2() ) {
-                    if( p2_mine  ) {
-                        if(event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION1)){
-                            ship2->mine();
-                        }
-                    } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION1) ) {
+                    if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION1) ) {
                         ship2->peng();
                     } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
-                        ship2->set_orbit_velocity();
+                        if( event.pressed(pixel::input_event_type_t::P2_ACTION1)) {
+                            ship2->mine();
+                        } else {
+                            ship2->set_orbit_velocity();
+                        }
                     } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION3) ){
                         p2.set_cloak(!p2.cloak());
                     }
@@ -1040,17 +1028,17 @@ void mainloop() {
                 }
             }
             // ship3 tick
-            if( three_players ) {
+            if(2 < player_count) {
                 spaceship_ref_t ship3 = p3.ship();
                 if( nullptr != ship3 && event.has_any_p3() ) {
-                    if( p3_mine  ) {
-                        if(event.pressed_and_clr(pixel::input_event_type_t::P3_ACTION1)){
-                            ship3->mine();
-                        }
-                    } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION1) ) {
+                    if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION1) ) {
                         ship3->peng();
                     } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION2) ) {
-                        ship3->set_orbit_velocity();
+                        if( event.pressed(pixel::input_event_type_t::P3_ACTION1)) {
+                            ship3->mine();
+                        } else {
+                            ship3->set_orbit_velocity();
+                        }
                     } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION3) ){
                         p3.set_cloak(!p3.cloak());
                     }
@@ -1058,11 +1046,12 @@ void mainloop() {
             }
         }
     }
-    tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
-    const pixel::f2::point_t p1_c = p1.center(), p2_c = p2.center(), p3_c = p3.center();
+    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]    
+    const float dt = (float)(t1 - t_last) / 1000.0f; // [s]
+    t_last = t1;
     
-    if(animating){
-        if(three_players){
+    if(animating) {
+        if(2 < player_count) {
             if( event.pressed(pixel::input_event_type_t::P3_UP) ) {
                 p3.ship()->velo_up(spaceship_t::vel_step);
             } else if( event.pressed(pixel::input_event_type_t::P3_LEFT) ){
@@ -1075,7 +1064,7 @@ void mainloop() {
             player_t::collision(p1, p3);
             player_t::collision(p2, p3);
         }
-        if(three_players || two_players){
+        if(1 < player_count) {
             if( event.pressed(pixel::input_event_type_t::P2_UP) ) {
                 p2.ship()->velo_up(spaceship_t::vel_step);
             } else if( event.pressed(pixel::input_event_type_t::P2_LEFT) ){
@@ -1136,10 +1125,10 @@ void mainloop() {
     // Draw all objects
     pixel::set_pixel_color(rgba_white);
     p1.draw();
-    if( two_players || three_players ) {
+    if(1 < player_count) {
         p2.draw();
     }
-    if( three_players ) {
+    if(2 < player_count) {
         p3.draw();
     }
     for(fragment_ref_t &a : fragments) {
@@ -1149,6 +1138,10 @@ void mainloop() {
         peng.draw();
     }
     sun->draw();
+
+    float fps = pixel::get_gpu_fps();    
+    tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
+    const pixel::f2::point_t p1_c = p1.center(), p2_c = p2.center(), p3_c = p3.center();    
     if( cloak_enabled ) {
         hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
               "%s s, fps %4.2f, S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s, %6.2f / %6.2f), "
@@ -1196,13 +1189,14 @@ int main(int argc, char *argv[])
     #if defined(__EMSCRIPTEN__)
         window_width = 1024, window_height = 576; // 16:9
     #endif
+    player_count = 2;
     {
         bool fps_set = false;
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-1p", argv[i]) ) {
-                two_players = false;
+                player_count = 1;
             } else if( 0 == strcmp("-3p", argv[i]) ) {
-                three_players = true;
+                player_count = 3;
             } else if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
                 window_width = atoi(argv[i+1]);
                 ++i;
@@ -1253,7 +1247,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::forced_fps);
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- show_ship_velo %d\n", show_ship_velo);
-        pixel::log_printf(elapsed_ms, "- two_players %d\n", two_players);
+        pixel::log_printf(elapsed_ms, "- two_players %d\n", player_count);
         pixel::log_printf(elapsed_ms, "- raster %d\n", raster);
         pixel::log_printf(elapsed_ms, "- asteroid_count %d\n", asteroid_count);
         pixel::log_printf(elapsed_ms, "- sun_gravity_scale_env %d -> %f [m/s^2]\n", sun_gravity_scale_env, sun_gravity * (float)sun_gravity_scale_env);
