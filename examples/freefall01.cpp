@@ -93,8 +93,6 @@ void mainloop() {
     } else {
         t1 = t_last;
     }
-    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
-    t_last = t1;
     if (!animating) {
         if (event.has_any_p1()) {
             if (event.pressed(pixel::input_event_type_t::P1_RIGHT)) {
@@ -104,6 +102,9 @@ void mainloop() {
             }
         }
     }
+    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
+    t_last = t1;
+    
     // white background
     pixel::clear_pixel_fb(255, 255, 255, 255);
 
