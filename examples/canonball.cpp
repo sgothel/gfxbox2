@@ -402,7 +402,7 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        init_gfx_subsystem("gfxbox example01", window_width, window_height, origin_norm);
+        init_gfx_subsystem("canonball", window_width, window_height, origin_norm);
     }
     pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
     player.resize();
