@@ -605,7 +605,7 @@ std::vector<spaceship_ref_t> spaceship;
  *    /  / \ \
  *   (d)/   \(b)
  */
-spaceship_ref_t make_spaceship3(idscore_t* owner, const pixel::f2::point_t& m, const float h=spaceship_t::height) noexcept
+spaceship_ref_t make_spaceship1(idscore_t* owner, const pixel::f2::point_t& m, const float h=spaceship_t::height) noexcept
 {
     spaceship_ref_t lf = std::make_shared<spaceship_t>(owner, m, pixel::adeg_to_rad(90.0f));
 
@@ -647,7 +647,7 @@ spaceship_ref_t make_spaceship3(idscore_t* owner, const pixel::f2::point_t& m, c
  *    |=|c|=|
  *
  */
-spaceship_ref_t make_spaceship1(idscore_t* owner, const pixel::f2::point_t& m, const float h=spaceship_t::height) noexcept
+spaceship_ref_t make_spaceship2(idscore_t* owner, const pixel::f2::point_t& m, const float h=spaceship_t::height) noexcept
 {
     spaceship_ref_t lf = std::make_shared<spaceship_t>(owner, m, pixel::adeg_to_rad(90.0f));
 
@@ -708,7 +708,7 @@ spaceship_ref_t make_spaceship1(idscore_t* owner, const pixel::f2::point_t& m, c
  *|  |  |  |
  *----------
  */
-spaceship_ref_t make_spaceship2(idscore_t* owner, const pixel::f2::point_t& m, const float h=spaceship_t::height) noexcept
+spaceship_ref_t make_spaceship3(idscore_t* owner, const pixel::f2::point_t& m, const float h=spaceship_t::height) noexcept
 {
     spaceship_ref_t lf = std::make_shared<spaceship_t>(owner, m, pixel::adeg_to_rad(90.0f));
 
