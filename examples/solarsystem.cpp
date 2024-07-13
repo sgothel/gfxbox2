@@ -277,15 +277,8 @@ void mainloop() {
     static pixel::input_event_t event;
     static si_time_t tick_ts = 1_month;
     static const f4::vec_t vec4_text_color = {1, 1, 1, 1};
-    static const int text_height = 30;
-    
-    bool p1_action_pressed = false;
-    bool animating = !event.paused();
-    if(animating){
-        if( event.pressed(input_event_type_t::P1_ACTION1) ) {
-            p1_action_pressed = true;
-        }
-    }
+    static const int text_height = 30;    
+    static bool animating = true;
     
     const point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
@@ -301,7 +294,14 @@ void mainloop() {
         } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             pixel::cart_coord.set_height(-space_height, space_height);
         }
-        animating = !event.paused();
+        if( event.paused() ) {
+            animating = false;
+        } else {
+            if( !animating ) {
+                t_last = pixel::getElapsedMillisecond(); // [ms]
+            }
+            animating = true;
+        }
         // constexpr const float rot_step = 10.0f; // [ang-degrees / s]
         if( event.released_and_clr(input_event_type_t::RESET) ) {
             _global_scale = 20;
@@ -323,7 +323,7 @@ void mainloop() {
         if( animating ) {
             if( event.has_any_p1() ) {
                 bool reset_space_height = false;
-                if( p1_action_pressed ) {
+                if( event.pressed(input_event_type_t::P1_ACTION1) ) {
                     if (event.released_and_clr(input_event_type_t::P1_UP)) {
                         global_scale(1.5f);
                     } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
@@ -353,11 +353,13 @@ void mainloop() {
                                    cbodies[number(max_planet_id)]->radius;
                     pixel::cart_coord.set_height(-space_height, space_height);
                 }
-            } else if( event.has_any_p2() ) {
+            } 
+            if( event.has_any_p2() ) {
                 if (event.released_and_clr(input_event_type_t::P2_ACTION1)) {
                     draw_all_orbits = !draw_all_orbits;
                 }
-            } else if( event.released_and_clr(input_event_type_t::ANY_KEY) && 
+            }
+            if( event.released_and_clr(input_event_type_t::ANY_KEY) && 
                 event.last_key_code == ' ') {
                 if(info_id < max_planet_id){
                     ++info_id;
@@ -372,15 +374,15 @@ void mainloop() {
             }
         }
     }
-    const uint64_t t1 = getElapsedMillisecond(); // [ms]
+    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]    
+    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
+    t_last = t1;
     float fps = get_gpu_fps();
     hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
                     "fps %f, td %d [ms], gscale %.2f, %s, 1s -> %s", 
                     fps, t1, global_scale(), 
                     cbodies[number(info_id)]->toString().c_str(), 
                     to_magnitude_timestr(tick_ts).c_str());
-    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
-    t_last = t1;
     if(animating) {
         for(CBodyRef &cb : cbodies){
             cb->tick(dt, tick_ts);
