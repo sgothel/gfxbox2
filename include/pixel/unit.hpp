@@ -8,6 +8,7 @@
 #ifndef INCLUDE_PIXEL_UNIT_HPP_
 #define INCLUDE_PIXEL_UNIT_HPP_
 
+#include <cmath>
 namespace pixel {
 
     /** Time in fractions of seconds. */
@@ -20,6 +21,8 @@ namespace pixel {
     typedef float si_velo_t;
     /** Acceleration in fractions of meter/seconds^2. */
     typedef float si_accel_t;
+    /** Angle in fraction of radians. */
+    typedef float si_angle_t;
 
     constexpr si_time_t operator ""_year(unsigned long long int __v)   { return (si_time_t)__v*365.25*24*3600.0; }
     constexpr si_time_t operator ""_month(unsigned long long int __v)   { return (si_time_t)__v*30*24*3600.0; }
@@ -52,6 +55,9 @@ namespace pixel {
     constexpr si_accel_t operator ""_dm_s2(unsigned long long int __v)   { return (si_accel_t)__v / 10; }
     constexpr si_accel_t operator ""_cm_s2(unsigned long long int __v)   { return (si_accel_t)__v / 100; }
     constexpr si_accel_t operator ""_mm_s2(unsigned long long int __v)   { return (si_accel_t)__v / 1000; }
+
+    constexpr si_angle_t operator ""_rad(unsigned long long int __v)   { return (si_angle_t)__v; }
+    constexpr si_angle_t operator ""_adeg(unsigned long long int __v)   { return (si_angle_t)__v / 180 * M_PI; }
 }
 
 #endif /* INCLUDE_PIXEL_UNIT_HPP_ */
