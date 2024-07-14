@@ -39,6 +39,8 @@
 #include <iostream>
 #include <cctype>
 
+#include <pixel/version.hpp>
+
 #if defined(__EMSCRIPTEN__)
     #include <emscripten.h>
 #else
@@ -459,7 +461,7 @@ namespace pixel {
     //
 
     /** GFX Toolkit: Initialize a window of given size with a usable framebuffer. */
-    void init_gfx_subsystem(const char* title, int window_width, int window_height, const float origin_norm[2],
+    bool init_gfx_subsystem(const char* title, int window_width, int window_height, const float origin_norm[2],
                             bool enable_vsync=true, bool use_subsys_primitives=true);
     /** GFX Toolkit: Clear the soft-framebuffer. */
     void clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;

@@ -204,8 +204,17 @@ class canon_t {
             return true;
         }
 
-        bool change_velocity(const float o) {
+        bool scale_velocity(const float o) {
             m_velocity *= o;
+            if(m_velocity > velocity_max){
+                m_velocity = velocity_max;
+                return false;
+            }
+            return true;
+        }
+        
+        bool add_velocity(const float pct) {
+            m_velocity += velocity_max * pct;
             if(m_velocity > velocity_max){
                 m_velocity = velocity_max;
                 return false;
@@ -277,9 +286,10 @@ void mainloop() {
     static pixel::texture_ref hud_text;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
-    float rot_step_default = 20.0f; // [ang-degrees / s]
+    static bool animating = true;
+    static float rot_step_default = 45.0f; // [ang-degrees / s]
     
-    const uint64_t t1 = getElapsedMillisecond(); // [ms]
+    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]    
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
     while(pixel::handle_one_event(event)){
@@ -328,7 +338,8 @@ void mainloop() {
     set_pixel_color(0, 0, 255, 255);
     if( !event.paused() ) {
         if( event.pressed(input_event_type_t::P1_ACTION1) ) {
-            player.change_velocity(1.05);
+            // 100% (velo_max) in ~1.0s
+            player.add_velocity(dt/1.0f); 
         }
         player.tick(dt);
         UpOrDown = ((sf->m_tl.y < (cart_coord.max_y() - frame_offset)) && UpOrDown) || 
@@ -363,6 +374,9 @@ int main(int argc, char *argv[])
     float adeg=0, velocity=1;
     bool auto_shoot = false;
     pixel::forced_fps = 30;
+    #if defined(__EMSCRIPTEN__)
+        window_width = 1024, window_height = 576; // 16:9
+    #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
@@ -402,7 +416,9 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        init_gfx_subsystem("canonball", window_width, window_height, origin_norm);
+        if( !pixel::init_gfx_subsystem("canonball", window_width, window_height, origin_norm) ) {
+            return 1;
+        }
     }
     pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
     player.resize();

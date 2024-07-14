@@ -566,6 +566,10 @@ namespace pixel::f2 {
             return a.angle(b);
         }
 
+        void rotate(const float radians) noexcept {
+            p1.rotate(radians);
+        }
+        
         void add(float length) {
             // extend center points p0, p1 with radius in moving direction
             const float a_move = angle();
@@ -1078,7 +1082,7 @@ namespace pixel::f2 {
         }
 
         void draw() const noexcept override {
-            draw(true);
+            draw(false);
         }
 
         void draw(const bool filled) const noexcept;

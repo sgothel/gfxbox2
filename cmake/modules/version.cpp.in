@@ -1,0 +1,6 @@
+#include <pixel/version.hpp>
+
+const char* pixel::VERSION_LONG = "@gfxbox2_VERSION_LONG@";
+const char* pixel::VERSION_SHORT = "@gfxbox2_VERSION_SHORT@";
+const char* pixel::VERSION_API = "@gfxbox2_VERSION_API@";
+

@@ -23,6 +23,7 @@
  */
 #include "pixel/pixel.hpp"
 
+#include <pixel/version.hpp>
 #include <thread>
 
 #include <SDL2/SDL.h>
@@ -130,23 +131,25 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
     }
 }
 
-void pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const float origin_norm[2],
+bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const float origin_norm[2],
                                bool enable_vsync, bool use_subsys_primitives) {
+    printf("gfxbox2 version %s\n", pixel::VERSION_LONG);
+                                
     pixel::use_subsys_primitives_val = use_subsys_primitives;
 
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) { // SDL_INIT_EVERYTHING
         printf("SDL: Error initializing: %s\n", SDL_GetError());
-        exit(1);
+        return false;
     }
     #if !defined(__EMSCRIPTEN__)
         if ( ( IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG ) != IMG_INIT_PNG ) {
             printf("SDL_image: Error initializing: %s\n", SDL_GetError());
-            exit(1);
+            return false;
         }
     #endif
     if( 0 != TTF_Init() ) {
         printf("SDL_TTF: Error initializing: %s\n", SDL_GetError());
-        exit(1);
+        return false;
     }
 
     if( enable_vsync ) {
@@ -157,7 +160,7 @@ void pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
     fb_origin_norm[0] = origin_norm[0];
     fb_origin_norm[1] = origin_norm[1];
 
-    const Uint32 win_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE;
+    const Uint32 win_flags = SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE /* | SDL_WINDOW_OPENGL */;
     const Uint32 render_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
 
     if( 0 != win_width && 0 != win_height ) {
@@ -169,8 +172,25 @@ void pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
             SDL_WINDOWPOS_UNDEFINED,
             wwidth, wheight,
             win_flags);
+            
+    if (nullptr == sdl_win) {
+        printf("SDL: Error initializing window: %s\n", SDL_GetError());
+        return false;
+    }
 
+    Uint32 sdl_win_id = SDL_GetWindowID(sdl_win);
+    if (0 == sdl_win_id) {
+        printf("SDL: Error retrieving window ID: %s\n", SDL_GetError());
+        SDL_DestroyWindow(sdl_win);
+        return false;
+    }
+               
     sdl_rend = SDL_CreateRenderer(sdl_win, -1, render_flags);
+    if (nullptr == sdl_rend) {
+        printf("SDL: Error creating renderer: %s\n", SDL_GetError());
+        SDL_DestroyWindow(sdl_win);
+        return false;
+    }
 
     gpu_fps = 0.0f;
     gpu_fps_t0 = getCurrentMilliseconds();
@@ -179,6 +199,7 @@ void pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
     gpu_frame_count = 0;
 
     on_window_resized(wwidth, wheight);
+    return true;
 }
 
 extern "C" {

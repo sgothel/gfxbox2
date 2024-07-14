@@ -32,10 +32,10 @@
 void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
+    static bool animating = true;
 
     const float grid_gap = 50;
 
-    bool animating = !event.paused();
     while(pixel::handle_one_event(event)){
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -47,7 +47,14 @@ void mainloop() {
         } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             // nop for this demo, resize already performed
         }
-        animating = !event.paused();
+        if( event.paused() ) {
+            animating = false;
+        } else {
+            if( !animating ) {
+                t_last = pixel::getElapsedMillisecond(); // [ms]
+            }
+            animating = true;
+        }
     }
     const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
@@ -72,24 +79,26 @@ void mainloop() {
 
 int main(int argc, char *argv[])
 {
-    unsigned int win_width = 1920, win_height = 1000;
+    int window_width = 1920, window_height = 1000;
     #if defined(__EMSCRIPTEN__)
-        win_width = 1024, win_height = 576; // 16:9
+        window_width = 1024, window_height = 576; // 16:9
     #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
-                win_width = atoi(argv[i+1]);
+                window_width = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
-                win_height = atoi(argv[i+1]);
+                window_height = atoi(argv[i+1]);
                 ++i;
             }
         }
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("gfxbox example01", win_width, win_height, origin_norm, true /* subsys primitives */);
+        if( !pixel::init_gfx_subsystem("sandbox01", window_width, window_height, origin_norm, true, true /* subsys primitives */) ) {
+            return 1;
+        }
     }
 
     pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());

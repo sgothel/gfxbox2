@@ -253,19 +253,19 @@ void mainloop() {
 
 int main(int argc, char *argv[])
 {
-    int win_width = 1920, win_height = 1080;
+    int window_width = 1920, window_height = 1080;
     bool enable_vsync = true;
     std::string commandfile;
     #if defined(__EMSCRIPTEN__)
-        win_width = 1024, win_height = 576; // 16:9
+        window_width = 1024, window_height = 576; // 16:9
     #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
-                win_width = atoi(argv[i+1]);
+                window_width = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
-                win_height = atoi(argv[i+1]);
+                window_height = atoi(argv[i+1]);
                 ++i;
             } else {
                 commandfile = argv[i];
@@ -275,7 +275,9 @@ int main(int argc, char *argv[])
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("funcdraw", win_width, win_height, origin_norm, enable_vsync, true /* subsys primitives */);
+        if( !pixel::init_gfx_subsystem("funcdraw", window_width, window_height, origin_norm, enable_vsync, true /* subsys primitives */) ) {
+            return 1;
+        }
     }
 
     cart_coord_setup();

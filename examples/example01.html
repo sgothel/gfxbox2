@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Jausoft - Spacewars</title>
+    <title>Jausoft - Example01</title>
     <link href="/style.css" rel="stylesheet" type="text/css"/>
     <link href="/style-alt1.css" rel="alternate stylesheet" title="default sans-serif font" type="text/css"/>
     <link href="/images/favicon.ico" rel="shortcut icon"/>
@@ -21,7 +21,7 @@
         padding: 0.25em;
       }
       /* tr:nth-child(even) {
-        background-color: #404040;
+        background-color: #c0c0c0;
       } */
       td:nth-child(even), th:nth-child(even) {
         background-color: #404040;
@@ -92,14 +92,13 @@
   </head>
   <body>
     <a href="https://jausoft.com"><img src="/images/jaugsweklogo-hp-220x80.png" alt="Jausoft" style="background-color: #555555"/></a>
-    <span style="padding:1em; font-size:2em;"><span class="acap">S</span>pacewars</span>... a <a href="https://jausoft.com/cgit/cs_class/gfxbox2.git/about/">gfxbox2 example</a>.
+    <span style="padding:1em; font-size:2em;"><span class="acap">E</span>xample01</span>... a <a href="https://jausoft.com/cgit/cs_class/gfxbox2.git/about/">gfxbox2 example</a>.
 
     <div class="spinner" id='spinner'></div>
     <div class="emscripten" id="status">Downloading...</div>
 
 <span id='controls'>
   <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
-  <span><input type="checkbox" id="ShowVelo" onclick="setShowVelo(this.checked)">orbit-vec</span>
   <span><input type="number" id="SetFPS" min="0" max="60" step="10" value="0" style="width: 3em;" onchange="setForcedFPS(this.value)"/>fps</span>
 </span>
 
@@ -115,39 +114,9 @@
     <div>
         <table>
         <tr>
-            <th>Actor</th>
-            <th>Accelerate</th>
-            <th>Left-Turn</th>
-            <th>Right-Turn</th>
-            <th>Shield</th>
-            <th>Shoot</th>
-            <th>To Orbit</th>
-            <th>Mine</th>
-            <th>Reset</th>
             <th>Pause</th>
         </tr>
         <tr>
-            <td>Ship 1</td>
-            <td>Cursor-Up</td>
-            <td>Cursor-Left</td>
-            <td>Cursor-Right</td>
-            <td>Cursor-Down</td>
-            <td>Right-Shift</td>
-            <td>Enter</td>
-            <td>Enter + Right-Shift</td>            
-            <td>R</td>
-            <td>P</td>
-        </tr>
-        <tr>
-            <td>Ship 2</td>
-            <td>W</td>
-            <td>A</td>
-            <td>D</td>
-            <td>S</td>
-            <td>Left-Shift</td>
-            <td>Left-Control</td>
-            <td>Left-Control + Left-Shift</td>
-            <td>R</td>
             <td>P</td>
         </tr>
         </table>
@@ -157,11 +126,10 @@
       var statusElement = document.getElementById('status');
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
-      var wasm_set_showvelo, wasm_set_forced_fps, wasm_set_window_size;
+      var wasm_set_forced_fps, wasm_set_window_size;
 
       var Module = {
         onRuntimeInitialized: function() {
-            wasm_set_showvelo = Module.cwrap('set_showvelo', 'null', ['boolean'])
             wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
             maximizeCanvas(0.98);
@@ -227,11 +195,6 @@
         };
       };
 
-      function setShowVelo(v) {
-          if( null != wasm_set_showvelo ) {
-              wasm_set_showvelo(v);
-          }
-      }
       function setForcedFPS(v) {
           if( null != wasm_set_forced_fps ) {
               wasm_set_forced_fps(v);
@@ -243,7 +206,7 @@
         wasm_set_window_size(ecr.width*scale, Math.min(h, window.innerHeight));
       }
     </script>
-    <script async type="text/javascript" src="spacewars.js"></script>
+    <script async type="text/javascript" src="example01.js"></script>
   </body>
 </html>
 
