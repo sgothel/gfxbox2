@@ -23,6 +23,7 @@
  */
 #include "pixel/pixel.hpp"
 
+#include <pixel/version.hpp>
 #include <thread>
 
 #include <SDL2/SDL.h>
@@ -132,6 +133,8 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
 
 void pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const float origin_norm[2],
                                bool enable_vsync, bool use_subsys_primitives) {
+    printf("gfxbox2 version %s\n", pixel::VERSION_LONG);
+                                
     pixel::use_subsys_primitives_val = use_subsys_primitives;
 
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) { // SDL_INIT_EVERYTHING
