@@ -287,7 +287,7 @@ void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static bool animating = true;
-    float rot_step_default = 45.0f; // [ang-degrees / s]
+    static float rot_step_default = 45.0f; // [ang-degrees / s]
     
     const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]    
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]

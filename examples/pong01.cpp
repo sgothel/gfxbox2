@@ -58,9 +58,6 @@ std::vector<pixel::f2::rect_ref_t> player_pads;
 static const float ball_height = 0.05f; // [m] .. diameter
 static const float ball_radius = ball_height/2.0f; // [m]
 static const float pad_height = 0.25f * 1.2f; // [m]
-static const pixel::f2::vec_t pad_step_up(0.0f, 1.5f*ball_height); // [m]
-static const pixel::f2::vec_t pad_step_down(0.0f, -1.5f*ball_height); // [m]
-static const float pad_rot_step = 3.0f; // ang-degrees
 static const float pad_thickness = 0.07f; // [m]
 
 static bool big_pads = false;
@@ -160,8 +157,19 @@ void mainloop() {
             animating = true;
         }        
     }    
-    uint64_t t1;    
+    uint64_t t1; // [ms]
+    float dt; // [s]
+    
     if(animating){
+        t1 = pixel::getElapsedMillisecond();
+        dt = (float)( t1 - t_last ) / 1000.0f; // [s]
+        
+        const float pad_rot_step = 180.0f; // [ang-degrees / s]
+        // move field height in 1.0s
+        const float step_delta = field_height*dt/1.0f;
+        const pixel::f2::vec_t pad_step_up(0.0f, step_delta); // [m]
+        const pixel::f2::vec_t pad_step_down(0.0f, -step_delta); // [m]
+        
         if( event.has_any_p1() ){
             if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
                 pad_r->move(pad_step_up);
@@ -174,9 +182,9 @@ void mainloop() {
                     pad_r->move(pad_step_up);
                 }
             } else if( event.pressed(pixel::input_event_type_t::P1_LEFT) ) {
-                pad_r->rotate(pixel::adeg_to_rad(pad_rot_step));
+                pad_r->rotate(pixel::adeg_to_rad(pad_rot_step*dt));
             } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ) {
-                pad_r->rotate(pixel::adeg_to_rad(-pad_rot_step));
+                pad_r->rotate(pixel::adeg_to_rad(-pad_rot_step*dt));
             }
         }
         if( !one_player && event.has_any_p2() ) {
@@ -191,12 +199,11 @@ void mainloop() {
                     pad_l->move(pad_step_up);
                 }
             } else if( event.pressed(pixel::input_event_type_t::P2_LEFT) ) {
-                pad_l->rotate(pixel::adeg_to_rad(pad_rot_step));
+                pad_l->rotate(pixel::adeg_to_rad(pad_rot_step*dt));
             } else if( event.pressed(pixel::input_event_type_t::P2_RIGHT) ) {
-                pad_l->rotate(pixel::adeg_to_rad(-pad_rot_step));
+                pad_l->rotate(pixel::adeg_to_rad(-pad_rot_step*dt));
             }
         }        
-        t1 = pixel::getElapsedMillisecond(); // [ms]
     } else {
         t1 = t_last;
         if( event.has_any_p1() ) {
@@ -206,8 +213,8 @@ void mainloop() {
                 t1 += 10;
             }
         }
+        dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     }
-    const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
 
     // white background
