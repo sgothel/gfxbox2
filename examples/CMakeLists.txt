@@ -4,7 +4,7 @@ include_directories(
 
 # These examples use the standard separate compilation
 if (DEFINED EMSCRIPTEN)
-    set(SOURCES_IDIOMATIC_TARGETS "spacewars.cpp;canonball.cpp;piviz.cpp;freefall01.cpp;pong01.cpp;tron.cpp;sandbox01.cpp;solarsystem.cpp")
+    set(SOURCES_IDIOMATIC_TARGETS "spacewars.cpp;canonball.cpp;piviz.cpp;freefall01.cpp;pong01.cpp;tron.cpp;sandbox01.cpp;solarsystem.cpp;example01.cpp")
 else()
     file(GLOB SOURCES_IDIOMATIC_TARGETS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.cpp")
 #    set(SOURCES_IDIOMATIC_TARGETS "spacewars.cpp, canonball.cpp, solarsystem.cpp")

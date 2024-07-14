@@ -32,10 +32,10 @@
 void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
+    static bool animating = true;
 
     const float grid_gap = 50;
 
-    bool animating = !event.paused();
     while(pixel::handle_one_event(event)){
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -47,7 +47,14 @@ void mainloop() {
         } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             // nop for this demo, resize already performed
         }
-        animating = !event.paused();
+        if( event.paused() ) {
+            animating = false;
+        } else {
+            if( !animating ) {
+                t_last = pixel::getElapsedMillisecond(); // [ms]
+            }
+            animating = true;
+        }
     }
     const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
