@@ -23,6 +23,7 @@ optionally SDL2 with [emscripten](https://emscripten.org/) or [SFML library](htt
 * [tron](https://jausoft.com/projects/gfxbox2/tron.html)
 * [piviz](https://jausoft.com/projects/gfxbox2/piviz.html)
 * [funcdraw](https://jausoft.com/projects/gfxbox2/funcdraw.html)
+* [example01](https://jausoft.com/projects/gfxbox2/example01.html)
 * [sandbox01](https://jausoft.com/projects/gfxbox2/sandbox01.html)
 
 ## Building Binaries
