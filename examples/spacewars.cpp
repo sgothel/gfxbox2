@@ -1156,28 +1156,35 @@ void mainloop() {
 
     float fps = pixel::get_gpu_fps();    
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
-    const pixel::f2::point_t p1_c = p1.center(), p2_c = p2.center(), p3_c = p3.center();    
-    if( cloak_enabled ) {
-        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-              "%s s, fps %4.2f, S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s, %6.2f / %6.2f), "
-              "S2 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s, %6.2f / %6.2f), "
-              "S3 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s, %6.2f / %6.2f), ",
-              pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-              fps, p1.score(), p1.peng_inventory(), p1.mine_inventory(), 
-                   p1.shield_time(), p1.velocity(), p1_c.x, p1_c.y,
-                   p2.score(), p2.peng_inventory(), p2.mine_inventory(), 
-                   p2.shield_time(), p2.velocity(), p2_c.x, p2_c.y,
-                   p3.score(), p3.peng_inventory(), p3.mine_inventory(), 
-                   p3.shield_time(), p3.velocity(), p3_c.x, p3_c.y);
-    } else {
-        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-              "%s s, fps %4.2f, S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s), "
-              "S2 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s)"
-              "S3 %4d (%4d pengs, %2d mines, %.1f s shield, %.2f m/s)",
-              pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-              fps, p1.score(), p1.peng_inventory(), p1.mine_inventory(), p1.shield_time(), p1.velocity(),
-                   p2.score(), p2.peng_inventory(), p2.mine_inventory(), p2.shield_time(), p2.velocity(),
-                   p3.score(), p3.peng_inventory(), p3.mine_inventory(), p3.shield_time(), p3.velocity());
+    {
+        std::string sp1, sp2, sp3;        
+        {
+            std::string c;
+            if( cloak_enabled ) {
+                c = pixel::to_string(", %6.2f / %6.2f", p1.center().x, p1.center().y);
+            }
+            sp1 = pixel::to_string("S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s%s)",
+                p1.score(), p1.peng_inventory(), p1.mine_inventory(), p1.shield_time(), p1.velocity(), c.c_str());
+            }
+        if(1 < player_count) {
+            std::string c;
+            if( cloak_enabled ) {
+                c = pixel::to_string(", %6.2f / %6.2f", p2.center().x, p2.center().y);
+            }
+            sp2 = pixel::to_string(", S2 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s)",
+                p2.score(), p2.peng_inventory(), p2.mine_inventory(), p2.shield_time(), p2.velocity(), c.c_str());
+        }
+        if(2 < player_count) {
+            std::string c;
+            if( cloak_enabled ) {
+                c = pixel::to_string(", %6.2f / %6.2f", p3.center().x, p3.center().y);
+            }
+            sp3 = pixel::to_string(", S3 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s)",
+                p3.score(), p3.peng_inventory(), p3.mine_inventory(), p3.shield_time(), p3.velocity(), c.c_str());
+        }            
+        hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, %s%s%s",
+                        pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
+                        fps, sp1.c_str(), sp2.c_str(), sp3.c_str());
     }
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
