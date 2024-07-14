@@ -204,8 +204,17 @@ class canon_t {
             return true;
         }
 
-        bool change_velocity(const float o) {
+        bool scale_velocity(const float o) {
             m_velocity *= o;
+            if(m_velocity > velocity_max){
+                m_velocity = velocity_max;
+                return false;
+            }
+            return true;
+        }
+        
+        bool add_velocity(const float pct) {
+            m_velocity += velocity_max * pct;
             if(m_velocity > velocity_max){
                 m_velocity = velocity_max;
                 return false;
@@ -328,7 +337,8 @@ void mainloop() {
     set_pixel_color(0, 0, 255, 255);
     if( !event.paused() ) {
         if( event.pressed(input_event_type_t::P1_ACTION1) ) {
-            player.change_velocity(1.05);
+            // 100% (velo_max) in ~1.0s
+            player.add_velocity(dt/1.0f); 
         }
         player.tick(dt);
         UpOrDown = ((sf->m_tl.y < (cart_coord.max_y() - frame_offset)) && UpOrDown) || 

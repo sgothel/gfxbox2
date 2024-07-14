@@ -8,9 +8,8 @@
     <link href="/style-alt1.css" rel="alternate stylesheet" title="default sans-serif font" type="text/css"/>
     <link href="/images/favicon.ico" rel="shortcut icon"/>
     <style>
-      html {padding:0; margin:0; color:#dddddd; background: #303030; }
-      a { color:#dddddd; }
-      a:hover { color:#ffffff; }
+      html {padding:0; margin:0; color:#000000; background: #ffffff; }
+      a { color:#000000; }
 
       table {
         border-collapse: collapse;
@@ -24,14 +23,14 @@
         background-color: #404040;
       } */
       td:nth-child(even), th:nth-child(even) {
-        background-color: #404040;
+        background-color: #c0c0c0;
       }
 
       .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
       div.emscripten { text-align: center; }      
       div.emscripten_border { border: 0px none black; }
       /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
-      canvas.emscripten { border: 0px none; background-color: black; }
+      canvas.emscripten { border: 0px none; background-color: white; }
 
       @-webkit-keyframes rotation {
         from {-webkit-transform: rotate(0deg);}
@@ -83,15 +82,15 @@
         padding-left: 0px;
         padding-right: 0px;
         display: block;
-        background-color: black;
-        color: white;
+        background-color: white;
+        color: black;
         font-family: 'Lucida Console', Monaco, monospace;
         outline: none;
       }
     </style>
   </head>
   <body>
-    <a href="https://jausoft.com"><img src="/images/jaugsweklogo-hp-220x80.png" alt="Jausoft" style="background-color: #555555"/></a>
+    <a href="https://jausoft.com"><img src="/images/jaugsweklogo-hp-220x80.png" alt="Jausoft"/></a>
     <span style="padding:1em; font-size:2em;"><span class="acap">C</span>anonball</span>... a <a href="https://jausoft.com/cgit/cs_class/gfxbox2.git/about/">gfxbox2 example</a>.
 
     <div class="spinner" id='spinner'></div>
