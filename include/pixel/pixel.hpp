@@ -39,6 +39,7 @@
 #include <iostream>
 #include <cctype>
 
+#include <pixel/unit.hpp>
 #include <pixel/version.hpp>
 
 #if defined(__EMSCRIPTEN__)
@@ -113,12 +114,12 @@ namespace pixel {
 
     /** Converts arc-degree to radians */
     inline constexpr float adeg_to_rad(const float arc_degree) noexcept {
-        return arc_degree * (float)M_PI / 180.0f;
+        return arc_degree * std::numbers::pi_v<float> / 180.0f;
     }
 
     /** Converts radians to arc-degree */
     inline constexpr float rad_to_adeg(const float rad) noexcept {
-        return rad * 180.0f / (float)M_PI;
+        return rad * 180.0f / std::numbers::pi_v<float>;
     }
 
     enum class orientation_t {

@@ -31,6 +31,7 @@
 #include <vector>
 
 using namespace pixel;
+using namespace pixel::literals;
 using namespace pixel::f2;
 bool draw_all_orbits = false;
 

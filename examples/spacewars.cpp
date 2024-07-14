@@ -31,6 +31,8 @@
 #include <algorithm>
 #include <random>
 
+using namespace pixel::literals;
+
 static pixel::input_event_t event;
 constexpr static const int player_id_1 = 1;
 constexpr static const int player_id_2 = 2;
@@ -358,7 +360,7 @@ class peng_t {
         pixel::f2::vec_t g = sun->gravity_env(m_peng.p_center);
         m_velo += g * dt;
         m_peng.move( m_velo * dt );
-        m_peng.rotate(pixel::adeg_to_rad(180.0f) * dt);
+        m_peng.rotate(std::numbers::pi_v<float> * dt); // 180 degrees (180_deg)
         m_fuse = std::max(0.0f, m_fuse - dt);
         return !sun->hit( m_peng.p_center ) &&
                !hits_fragment() ;
@@ -596,7 +598,6 @@ class spaceship_t : public pixel::f2::linestrip_t {
 typedef std::shared_ptr<spaceship_t> spaceship_ref_t;
 std::vector<spaceship_ref_t> spaceship;
 
-
 /**
  * Unrotated:
  *
@@ -608,7 +609,7 @@ std::vector<spaceship_ref_t> spaceship;
  */
 spaceship_ref_t make_spaceship1(idscore_t* owner, const pixel::f2::point_t& m, const float h=spaceship_t::height) noexcept
 {
-    spaceship_ref_t lf = std::make_shared<spaceship_t>(owner, m, pixel::adeg_to_rad(90.0f));
+    spaceship_ref_t lf = std::make_shared<spaceship_t>(owner, m, 90_deg);
 
     const float width = 4.0f/5.0f * h;;
 
@@ -650,7 +651,7 @@ spaceship_ref_t make_spaceship1(idscore_t* owner, const pixel::f2::point_t& m, c
  */
 spaceship_ref_t make_spaceship2(idscore_t* owner, const pixel::f2::point_t& m, const float h=spaceship_t::height) noexcept
 {
-    spaceship_ref_t lf = std::make_shared<spaceship_t>(owner, m, pixel::adeg_to_rad(90.0f));
+    spaceship_ref_t lf = std::make_shared<spaceship_t>(owner, m, 90_deg);
 
     const float w = 4.0f / 5.0f * h;
     const float w_s = w / 4.0f;
@@ -711,7 +712,7 @@ spaceship_ref_t make_spaceship2(idscore_t* owner, const pixel::f2::point_t& m, c
  */
 spaceship_ref_t make_spaceship3(idscore_t* owner, const pixel::f2::point_t& m, const float h=spaceship_t::height) noexcept
 {
-    spaceship_ref_t lf = std::make_shared<spaceship_t>(owner, m, pixel::adeg_to_rad(90.0f));
+    spaceship_ref_t lf = std::make_shared<spaceship_t>(owner, m, 90_deg);
 
     const float w = 4.0f / 5.0f * h;
     pixel::f2::point_t p = {m.x - w / 2, m.y - h / 2};
@@ -758,8 +759,8 @@ void reset_asteroids(int count) {
         const float height = height_h + height_h*next_rnd();
         const float angle = pixel::adeg_to_rad(next_rnd() * 360.0f);
         const float velocity = 10.0f + next_rnd() * 10.0f; // m/s
-        const float rot_velocity = ( pixel::adeg_to_rad(15.0f) +
-                                     next_rnd() * pixel::adeg_to_rad(15.0f) )
+        const float rot_velocity = ( 15_deg +
+                                     next_rnd() * 15_deg )
                                    * ( i%2 == 0 ? 1.0f : -1.0f ); // angle/s
         const float jitter = 1.0f / ( 4.0f + 4.0f * next_rnd() );
         pixel::f2::point_t p0(pixel::cart_coord.min_x()+(int)(pixel::cart_coord.width()*next_rnd()),
