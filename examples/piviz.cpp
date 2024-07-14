@@ -617,25 +617,27 @@ void mainloop() {
 
 int main(int argc, char *argv[])
 {
-    unsigned int win_width = 1920, win_height = 1000;
+    int window_width = 1920, window_height = 1000;
     bool use_subsys_primitives = true;
     #if defined(__EMSCRIPTEN__)
-        win_width = 1024, win_height = 576; // 16:9
+        window_width = 1024, window_height = 576; // 16:9
     #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
-                win_width = atoi(argv[i+1]);
+                window_width = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
-                win_height = atoi(argv[i+1]);
+                window_height = atoi(argv[i+1]);
                 ++i;
             }
         }
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("piviz", win_width, win_height, origin_norm, true /* enable_vsync */, use_subsys_primitives);
+        if( !pixel::init_gfx_subsystem("piviz", window_width, window_height, origin_norm, true /* enable_vsync */, use_subsys_primitives) ) {
+            return 1;
+        }
     }
 
     pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());

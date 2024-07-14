@@ -276,8 +276,9 @@ void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static si_time_t tick_ts = 1_month;
-    static const f4::vec_t vec4_text_color = {1, 1, 1, 1};
-    static const int text_height = 30;    
+    static const float text_lum = 0.75f;
+    static const f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f);
+    static const int text_height = 24;    
     static bool animating = true;
     
     const point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
@@ -428,6 +429,9 @@ int main(int argc, char *argv[])
 {
     int window_width = 1920, window_height = 1000;
     pixel::forced_fps = 30;
+    #if defined(__EMSCRIPTEN__)
+        window_width = 1024, window_height = 576; // 16:9
+    #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
@@ -456,7 +460,9 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        init_gfx_subsystem("solarsystem", window_width, window_height, origin_norm);
+        if( !pixel::init_gfx_subsystem("solarsystem", window_width, window_height, origin_norm) ) {
+            return 1;
+        }
     }
     // space_height = n.sfplts + n.pluto_radius; // [km]
     // space_height = n.sfnets; //  + n.neptun_radius; // [km]

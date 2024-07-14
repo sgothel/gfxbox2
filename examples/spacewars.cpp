@@ -1262,7 +1262,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::forced_fps);
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- show_ship_velo %d\n", show_ship_velo);
-        pixel::log_printf(elapsed_ms, "- two_players %d\n", player_count);
+        pixel::log_printf(elapsed_ms, "- players %d\n", player_count);
         pixel::log_printf(elapsed_ms, "- raster %d\n", raster);
         pixel::log_printf(elapsed_ms, "- asteroid_count %d\n", asteroid_count);
         pixel::log_printf(elapsed_ms, "- sun_gravity_scale_env %d -> %f [m/s^2]\n", sun_gravity_scale_env, sun_gravity * (float)sun_gravity_scale_env);
@@ -1272,7 +1272,9 @@ int main(int argc, char *argv[])
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("spacewars", window_width, window_height, origin_norm, enable_vsync, use_subsys_primitives);
+        if( !pixel::init_gfx_subsystem("spacewars", window_width, window_height, origin_norm, enable_vsync, use_subsys_primitives) ) {
+            return 1;
+        }
     }
     pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
 

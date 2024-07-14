@@ -152,18 +152,18 @@ void mainloop() {
 
 int main(int argc, char *argv[])
 {
-    int win_width = 1920, win_height = 1080;
+    int window_width = 1920, window_height = 1080;
     bool enable_vsync = true;
     #if defined(__EMSCRIPTEN__)
-        win_width = 1024, win_height = 576; // 16:9
+        window_width = 1024, window_height = 576; // 16:9
     #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
-                win_width = atoi(argv[i+1]);
+                window_width = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
-                win_height = atoi(argv[i+1]);
+                window_height = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-record", argv[i]) && i+1<argc) {
                 record_bmpseq_basename = argv[i+1];
@@ -184,7 +184,7 @@ int main(int argc, char *argv[])
     {
         const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
         pixel::log_printf(elapsed_ms, "Usage %s -width <int> -height <int> -record <bmp-files-basename> -debug_gfx -fps <int>\n", argv[0]);
-        pixel::log_printf(elapsed_ms, "- win size %d x %d\n", win_width, win_height);
+        pixel::log_printf(elapsed_ms, "- win size %d x %d\n", window_width, window_height);
         pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
@@ -194,7 +194,9 @@ int main(int argc, char *argv[])
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        pixel::init_gfx_subsystem("freefall01", win_width, win_height, origin_norm, enable_vsync, true /* subsys primitives */);
+        if( !pixel::init_gfx_subsystem("freefall01", window_width, window_height, origin_norm, enable_vsync, true /* subsys primitives */) ) {
+            return 1;
+        }
     }
 
     pixel::cart_coord.set_height(0.0f, drop_height+6.0f*thickness);

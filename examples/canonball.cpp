@@ -363,6 +363,9 @@ int main(int argc, char *argv[])
     float adeg=0, velocity=1;
     bool auto_shoot = false;
     pixel::forced_fps = 30;
+    #if defined(__EMSCRIPTEN__)
+        window_width = 1024, window_height = 576; // 16:9
+    #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
@@ -402,7 +405,9 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        init_gfx_subsystem("canonball", window_width, window_height, origin_norm);
+        if( !pixel::init_gfx_subsystem("canonball", window_width, window_height, origin_norm) ) {
+            return 1;
+        }
     }
     pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
     player.resize();
