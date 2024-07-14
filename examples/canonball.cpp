@@ -286,9 +286,10 @@ void mainloop() {
     static pixel::texture_ref hud_text;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
-    float rot_step_default = 20.0f; // [ang-degrees / s]
+    static bool animating = true;
+    float rot_step_default = 45.0f; // [ang-degrees / s]
     
-    const uint64_t t1 = getElapsedMillisecond(); // [ms]
+    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]    
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
     while(pixel::handle_one_event(event)){
