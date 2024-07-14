@@ -1252,6 +1252,9 @@ namespace pixel::f2 {
         float dir_angle;
 
     public:
+        rect_t()
+        : m_tl(), m_tr(), m_bl(), m_br(){}
+        
         rect_t(const point_t& tl_, const float width, const float height, const float radians) noexcept
         {
             m_tl = tl_;
@@ -1640,6 +1643,9 @@ namespace pixel::f2 {
         float m_end_angle;
         float dir_angle = 0;
       public:
+        circle_seg_t()
+        : m_center(), m_radius(), m_start_angle(), m_end_angle() {}
+        
         circle_seg_t(const point_t center, const float radius, 
                      const float start_angle, const float end_angle) noexcept
         : m_center(center), m_radius(radius), m_start_angle(start_angle), m_end_angle(end_angle) {}
