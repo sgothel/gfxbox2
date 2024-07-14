@@ -468,7 +468,8 @@ class spaceship_t : public pixel::f2::linestrip_t {
         void peng() noexcept {
             if(peng_inventory > 0){
                 pixel::f2::point_t p0;
-                if(m_owner->id() == player_id_2){
+                // adjust start posision to geometric ship model
+                if(m_owner->id() == player_id_3){
                     p0 = p_list[4];
                 } else {
                     p0 = p_list[0];
