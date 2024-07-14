@@ -1078,7 +1078,7 @@ namespace pixel::f2 {
         }
 
         void draw() const noexcept override {
-            draw(true);
+            draw(false);
         }
 
         void draw(const bool filled) const noexcept;
