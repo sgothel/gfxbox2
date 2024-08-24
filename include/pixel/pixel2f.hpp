@@ -60,6 +60,12 @@ namespace pixel::f2 {
             const float* p = reinterpret_cast<const float*>(this);
             return p[i];
         }
+        const float* data() const noexcept {
+            return reinterpret_cast<const float*>(this);
+        }
+        float* data() noexcept {
+            return reinterpret_cast<float*>(this);
+        }
 
         constexpr vec_t& set(const float dx, const float dy) noexcept
         { x=dx; y=dy; return *this; }

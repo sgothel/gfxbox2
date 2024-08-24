@@ -55,6 +55,12 @@ namespace pixel::f3 {
                 const float* p = reinterpret_cast<const float*>(this);
                 return p[i];
             }
+            const float* data() const noexcept {
+                return reinterpret_cast<const float*>(this);
+            }
+            float* data() noexcept {
+                return reinterpret_cast<float*>(this);
+            }
 
             constexpr void add(const float dx, const float dy, const float dz) noexcept { x+=dx; y+=dy; z+=dz; }
 
