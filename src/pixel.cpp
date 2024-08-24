@@ -188,7 +188,7 @@ pixel::texture_ref pixel::make_text(const pixel::f2::point_t& tl, const int line
     tex->dest_sy = (float)font_height_usr / (float)font_height;
     tex->dest_x = pixel::cart_coord.to_fb_x(tl.x);
     tex->dest_y = pixel::cart_coord.to_fb_y(
-            tl.y - (int)std::round(lineno * tex->dest_sy * font_height * 1.15f));
+            tl.y - std::round((float)lineno * tex->dest_sy * (float)font_height * 1.15f));
     return tex;
 }
 
@@ -220,21 +220,21 @@ void pixel::f2::lineseg_t::draw(const point_t& p0, const point_t& p1) noexcept {
         const int dy = p1_y - p0_y;
         const int dx_abs = std::abs(dx);
         const int dy_abs = std::abs(dy);
-        float p_x = p0_x, p_y = p0_y;
+        float p_x = (float)p0_x, p_y = (float)p0_y;
         if( dy_abs > dx_abs ) {
             const float a = (float)dx / (float)dy_abs; // [0..1), dy_abs > 0
             const int step_h = dy / dy_abs; // +1 or -1
             for(int i = 0; i <= dy_abs; ++i) {
-                pixel::set_pixel_fbcoord( p_x, (int)(fb_height - p_y) );
-                p_y += step_h; // = p0.y + i * step_h
+                pixel::set_pixel_fbcoord( (int)p_x, fb_height - (int)p_y );
+                p_y += (float)step_h; // = p0.y + i * step_h
                 p_x += a;
             }
         } else if( dx_abs > 0 ) {
             const float a = (float)dy / (float)dx_abs; // [0..1], dx_abs > 0
             const int step_w = dx / dx_abs; // +1 or -1
             for(int i = 0; i <= dx_abs; ++i) {
-                pixel::set_pixel_fbcoord( p_x, (int)(fb_height - p_y) );
-                p_x += step_w; // = p0.x + i * step_w
+                pixel::set_pixel_fbcoord( (int)p_x, fb_height - (int)p_y );
+                p_x += (float)step_w; // = p0.x + i * step_w
                 p_y += a;
             }
         }
@@ -272,7 +272,7 @@ void pixel::f2::rect_t::draw(const bool filled) const noexcept {
         constexpr bool debug = false;
         vec_t ac = m_bl - m_tl;
         ac.normalize();
-        vec_t vunit_per_pixel(pixel::cart_coord.from_fb_dx( 1 ), pixel::cart_coord.from_fb_dy( 1 ));
+        vec_t vunit_per_pixel((float)pixel::cart_coord.from_fb_dx( 1 ), (float)pixel::cart_coord.from_fb_dy( 1 ));
         if( debug ) {
             printf("unit_per_pixel real %s\n", vunit_per_pixel.toString().c_str());
         }
