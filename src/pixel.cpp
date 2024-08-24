@@ -25,6 +25,7 @@
 #include "pixel/pixel2f.hpp"
 #include "pixel/pixel4f.hpp"
 
+#include <cmath>
 #include <cstdint>
 #include <ctime>
 
@@ -100,8 +101,8 @@ void pixel::draw_grid(float raster_sz,
     }                    
     float wl = pixel::cart_coord.min_x();
     float hb = pixel::cart_coord.min_y();
-    float l = (int)(wl / raster_sz) * raster_sz;
-    float b = (int)(hb / raster_sz) * raster_sz;
+    float l = ::floorf(wl / raster_sz) * raster_sz;
+    float b = ::floorf(hb / raster_sz) * raster_sz;
 
     pixel::set_pixel_color(gr, gg, gb, ga);
     pixel::f2::point_t bl(pixel::cart_coord.min_x(), pixel::cart_coord.min_y());
