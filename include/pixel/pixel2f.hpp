@@ -1492,7 +1492,7 @@ namespace pixel::f2 {
                 c += p_list[p_list.size()-1];
                 n++;
             }
-            this->p_center = c / n;
+            this->p_center = c / (float)n;
         }
 
         aabbox_t box() const noexcept override {

@@ -230,7 +230,7 @@ namespace pixel {
             void set_width(float x1_, float x2_) noexcept {
                 m_x1 = x1_;
                 m_x2 = x2_;
-                m_w_to_fbw = width() / fb_width;
+                m_w_to_fbw = width() / (float)fb_width;
                 m_h_to_fbh = m_w_to_fbw;
                 const float h = (float)fb_max_y * m_h_to_fbh;
                 m_y1 = h / -2.0f;
@@ -265,8 +265,8 @@ namespace pixel {
                 m_y1 = y1_;
                 m_x2 = x2_;
                 m_y2 = y2_;
-                m_w_to_fbw = width() / fb_width;
-                m_h_to_fbh = height() / fb_height;
+                m_w_to_fbw = width() / (float)fb_width;
+                m_h_to_fbh = height() / (float)fb_height;
                 printf("coord.set_free: %s\n", toString().c_str());
             }
 
@@ -285,9 +285,9 @@ namespace pixel {
             constexpr float sy_win_to_fb() const noexcept { return m_sy_win_to_fb; }
 
             /** scale x-axis window to fb due to high-dpi. */
-            constexpr float sx_win_to_fb(int x) const noexcept { return m_sx_win_to_fb * x; }
+            constexpr float sx_win_to_fb(int x) const noexcept { return m_sx_win_to_fb * (float)x; }
             /** scale y-axis window to fb due to high-dpi. */
-            constexpr float sy_win_to_fb(int y) const noexcept { return m_sy_win_to_fb * y; }
+            constexpr float sy_win_to_fb(int y) const noexcept { return m_sy_win_to_fb * (float)y; }
 
             /** x-axis width of the cartesian coordinate system. */
             constexpr float width() const noexcept { return m_x2 - m_x1; }
@@ -300,9 +300,9 @@ namespace pixel {
             int to_fb_dy(const float dy) const noexcept { return round_to_int( dy / m_h_to_fbh ); }
 
             /** Convert framebuffer x-axis value in pixels to cartesian pixel value. */
-            int from_fb_dx(const int dx) const noexcept { return (float)dx * m_w_to_fbw; }
+            int from_fb_dx(const int dx) const noexcept { return round_to_int((float)dx * m_w_to_fbw); }
             /** Convert framebuffer y-axis value in pixels to cartesian pixel value. */
-            int from_fb_dy(const int dy) const noexcept { return (float)dy * m_h_to_fbh; }
+            int from_fb_dy(const int dy) const noexcept { return round_to_int((float)dy * m_h_to_fbh); }
 
             /** Convert cartesian x-axis coordinate to framebuffer coordinate in pixels. */
             int to_fb_x(const float x) const noexcept { return round_to_int( ( x - m_x1 ) / m_w_to_fbw ); }
@@ -317,7 +317,7 @@ namespace pixel {
             /** Convert win x-axis coordinate in pixels to cartesian coordinate. */
             float from_win_x(const int x) const noexcept { return sx_win_to_fb(x) * m_w_to_fbw + m_x1; }
             /** Convert win y-axis coordinate in pixels to cartesian coordinate. */
-            float from_win_y(const int y) const noexcept { return (float)(fb_height-sy_win_to_fb(y)) * m_h_to_fbh + m_y1; }
+            float from_win_y(const int y) const noexcept { return ((float)fb_height-sy_win_to_fb(y)) * m_h_to_fbh + m_y1; }
     };
     extern cart_coord_t cart_coord;
 
@@ -404,7 +404,7 @@ namespace pixel {
             subsys_set_pixel_color(rgba[0], rgba[1], rgba[2], rgba[3]);
         }
     }
-    inline float clip_byte(float v) { return std::max<float>(0.0f, std::min(255.0f, v)); }
+    inline uint8_t clip_byte(float v) { return static_cast<uint8_t>(std::max<float>(0.0f, std::min(255.0f, v))); }
     inline void set_pixel_color4f(float r, float g, float b, float a) noexcept {
         set_pixel_color(clip_byte(r*255.0f), clip_byte(g*255.0f), clip_byte(b*255), clip_byte(a*255));
     }
