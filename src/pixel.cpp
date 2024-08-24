@@ -129,6 +129,43 @@ void pixel::draw_grid(float raster_sz,
     }
 }
 
+using namespace pixel::literals;
+
+int64_t pixel::to_unix_seconds(int year, int month, int day) noexcept {
+    struct std::tm tm_0;
+    ::memset(&tm_0, 0, sizeof(tm_0));
+    tm_0.tm_year = year - 1900;
+    tm_0.tm_mon = month - 1;
+    tm_0.tm_mday = day;
+    std::time_t t1 = ::timegm (&tm_0);
+    return static_cast<int64_t>(t1);
+}
+
+int64_t pixel::to_unix_seconds(const std::string& ymd_timestr) noexcept {
+    struct std::tm tm_0; 
+    ::memset(&tm_0, 0, sizeof(tm_0));
+    ::strptime(ymd_timestr.c_str(), "%Y-%m-%d %H:%M:%S", &tm_0);
+    std::time_t t1 = ::timegm (&tm_0);
+    return static_cast<int64_t>(t1);
+}
+
+std::string pixel::to_iso8601_string(int64_t tv_sec, bool withHMS) noexcept {
+    std::time_t t0 = static_cast<std::time_t>(tv_sec);
+    struct std::tm tm_0;
+    if( nullptr == ::gmtime_r( &t0, &tm_0 ) ) {
+        return "1970-01-01T00:00:00.0Z"; // 22 + 1
+    } else {
+        // 2022-05-28 23:23:50
+        char b[30+1];
+        if( withHMS ) {
+            ::strftime(b, sizeof(b), "%Y-%m-%d %H:%M:%S", &tm_0);
+        } else {
+            ::strftime(b, sizeof(b), "%Y-%m-%d", &tm_0);
+        }
+        return std::string(b);
+    }
+}
+
 static std::string to_string_impl(const char* format, va_list args) noexcept {
     size_t nchars;
     std::string str;
