@@ -23,12 +23,11 @@ endif()
 include(Setup.cmake)
 Setup()
 
-if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.clangd)
 # Fixup clangd w/ absolute path
 set (gfxbox2_clangd_source_args "-isystem, ${CMAKE_CURRENT_SOURCE_DIR}/include, -isystem, ${CMAKE_CURRENT_SOURCE_DIR}/src, -isystem, ${CMAKE_CURRENT_SOURCE_DIR}/examples, -isystem, ${CMAKE_CURRENT_SOURCE_DIR}/examples/funcdraw")
 configure_file (${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/clangd.in
-                ${CMAKE_CURRENT_SOURCE_DIR}/.clangd)
-endif()
+                ${CMAKE_CURRENT_BINARY_DIR}/.clangd)
+file(COPY_FILE ${CMAKE_CURRENT_BINARY_DIR}/.clangd ${CMAKE_CURRENT_SOURCE_DIR}/.clangd)
 
 # this is the library version, derived from git tag and revision
 set (gfxbox2_VERSION_MAJOR      ${VERSION_MAJOR})
