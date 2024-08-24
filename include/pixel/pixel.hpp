@@ -406,13 +406,28 @@ namespace pixel {
     }
     inline uint8_t clip_byte(float v) { return static_cast<uint8_t>(std::max<float>(0.0f, std::min(255.0f, v))); }
     inline void set_pixel_color4f(float r, float g, float b, float a) noexcept {
-        set_pixel_color(clip_byte(r*255.0f), clip_byte(g*255.0f), clip_byte(b*255), clip_byte(a*255));
+        set_pixel_color(clip_byte(r*255.0f), clip_byte(g*255.0f), clip_byte(b*255), clip_byte(a*255));        
+    }
+    inline void set_pixel_color(const float rgba[/*4*/]) noexcept {
+        set_pixel_color4f(rgba[0], rgba[1], rgba[2], rgba[3]);
+    }
+    template<typename T>
+    void set_pixel_color(const T& rgba) noexcept {
+        set_pixel_color4f(rgba[0], rgba[1], rgba[2], rgba[3]);
     }
 
     void draw_grid(float raster_sz,
                    uint8_t gr, uint8_t gg, uint8_t gb, uint8_t ga,
                    uint8_t cr, uint8_t cg, uint8_t cb, uint8_t ca);
 
+    /// Returns seconds since Unix Epoch `00:00:00 UTC on 1970-01-01` of given date
+    int64_t to_unix_seconds(int year, int month, int day) noexcept;
+    /// Returns seconds since Unix Epoch `00:00:00 UTC on 1970-01-01` of given Y-M-D date string
+    int64_t to_unix_seconds(const std::string& ymd_timestr) noexcept;
+    
+    /// Returns date string of given seconds since Unix Epoch `00:00:00 UTC on 1970-01-01`
+    std::string to_iso8601_string(int64_t tv_sec, bool withHMS) noexcept;
+    
     //
     // Texture
     //
@@ -509,6 +524,7 @@ namespace pixel {
         P1_ACTION1,
         P1_ACTION2,
         P1_ACTION3,
+        P1_ACTION4,
         PAUSE, // 11
         P2_UP,
         P2_DOWN,
@@ -517,6 +533,7 @@ namespace pixel {
         P2_ACTION1,
         P2_ACTION2,
         P2_ACTION3,
+        P2_ACTION4,
         P3_UP,
         P3_DOWN,
         P3_RIGHT,
@@ -524,6 +541,7 @@ namespace pixel {
         P3_ACTION1,
         P3_ACTION2,
         P3_ACTION3,
+        P3_ACTION4,
         RESET, // 26
         /** Request to close window, which then should be closed by caller */
         WINDOW_CLOSE_REQ,
@@ -552,7 +570,8 @@ namespace pixel {
                     bitmask(input_event_type_t::P1_LEFT) |
                     bitmask(input_event_type_t::P1_ACTION1) |
                     bitmask(input_event_type_t::P1_ACTION2) |
-                    bitmask(input_event_type_t::P1_ACTION3);
+                    bitmask(input_event_type_t::P1_ACTION3) |
+                    bitmask(input_event_type_t::P1_ACTION4);
 
             constexpr static const uint32_t p2_mask =
                     bitmask(input_event_type_t::P2_UP) |
@@ -561,7 +580,8 @@ namespace pixel {
                     bitmask(input_event_type_t::P2_LEFT) |
                     bitmask(input_event_type_t::P2_ACTION1) |
                     bitmask(input_event_type_t::P2_ACTION2) |
-                    bitmask(input_event_type_t::P2_ACTION3);
+                    bitmask(input_event_type_t::P2_ACTION3) |
+                    bitmask(input_event_type_t::P2_ACTION4);
                     
             constexpr static const uint32_t p3_mask =
                     bitmask(input_event_type_t::P3_UP) |
@@ -570,7 +590,8 @@ namespace pixel {
                     bitmask(input_event_type_t::P3_LEFT) |
                     bitmask(input_event_type_t::P3_ACTION1) |
                     bitmask(input_event_type_t::P3_ACTION2) |
-                    bitmask(input_event_type_t::P3_ACTION3);
+                    bitmask(input_event_type_t::P3_ACTION3) |
+                    bitmask(input_event_type_t::P3_ACTION4);
             uint32_t m_pressed; // [P1_UP..RESET]
             uint32_t m_lifted; // [P1_UP..RESET]
             bool m_paused;
