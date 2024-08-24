@@ -576,6 +576,12 @@ namespace pixel::f2 {
             p1.rotate(radians);
         }
         
+        void rotate(const float radians, point_t p) noexcept {
+            p1.rotate(radians);
+            p1.rotate(radians, p);
+            p0.rotate(radians, p);
+        }
+        
         void add(float length) {
             // extend center points p0, p1 with radius in moving direction
             const float a_move = angle();
@@ -876,7 +882,7 @@ namespace pixel::f2 {
             return false;
         }
     };
-
+    typedef std::shared_ptr<lineseg_t> lineseg_ref_t;
 
     /**
      * Simple compound denoting a ray.
@@ -905,7 +911,7 @@ namespace pixel::f2 {
      */
     class ageom_t : public geom_t {
     public:
-        virtual ~ageom_t() = default;
+        ~ageom_t() override = default;
 
         virtual void rotate(const float rad) noexcept = 0;
         virtual void move_dir(const float d) noexcept = 0;
@@ -940,6 +946,9 @@ namespace pixel::f2 {
         float dir_angle;
 
     public:
+        triangle_t() noexcept
+        : p_a(), p_b(), p_c(), p_center(){}
+        
         triangle_t(const point_t& a_, const point_t& b_, const point_t& c_) noexcept
         : p_a(a_), p_b(b_), p_c(c_)
         {
@@ -980,6 +989,15 @@ namespace pixel::f2 {
             p_a.rotate(sin, cos, p_center);
             p_b.rotate(sin, cos, p_center);
             p_c.rotate(sin, cos, p_center);
+            dir_angle += radians;
+        }
+
+        void rotate(const float radians, const point_t p) noexcept {
+            const float cos = std::cos(radians);
+            const float sin = std::sin(radians);
+            p_a.rotate(sin, cos, p);
+            p_b.rotate(sin, cos, p);
+            p_c.rotate(sin, cos, p);
             dir_angle += radians;
         }
 
@@ -1129,6 +1147,9 @@ namespace pixel::f2 {
 
         disk_t(const point_t& c_, const float r_, const float thickness_)
         : center( c_), radius(r_), thickness(thickness_), dir_angle(0.0f) {}
+
+        disk_t(const point_t& c_, const point_t& p_)
+        : center( c_), radius((c_ - p_).length()), dir_angle(0.0f) {}
 
         disk_t(float x, float y, const float r_)
         : center(x, y), radius(r_), dir_angle(0.0f) {}
@@ -1292,7 +1313,14 @@ namespace pixel::f2 {
             p_center = { ( m_tl.x + m_tr.x ) / 2.0f  , ( m_tl.y + m_bl.y ) / 2.0f  };
             dir_angle = 0.0f;
         }
-
+        
+        bool operator==(const rect_t &o) const {
+            return m_tl == o.m_tl &&
+                   m_tr == o.m_tr &&
+                   m_bl == o.m_bl &&
+                   m_br == o.m_br;
+        }
+        
         aabbox_t box() const noexcept override {
             return aabbox_t().resize(m_tl).resize(m_tr).resize(m_bl).resize(m_br);
         }
@@ -1752,6 +1780,12 @@ namespace pixel::f2 {
         void rotate(const float radians) noexcept override {
             m_start_angle += radians;
             m_end_angle += radians;
+        }
+
+        void rotate(const float radians, point_t p) noexcept {
+            m_start_angle += radians;
+            m_end_angle += radians;
+            m_center.rotate(radians, p);
         }
 
         void move_dir(const float d) noexcept override {
