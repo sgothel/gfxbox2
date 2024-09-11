@@ -144,9 +144,18 @@ int64_t pixel::to_unix_seconds(int year, int month, int day) noexcept {
 int64_t pixel::to_unix_seconds(const std::string& ymd_timestr) noexcept {
     struct std::tm tm_0; 
     ::memset(&tm_0, 0, sizeof(tm_0));
-    ::strptime(ymd_timestr.c_str(), "%Y-%m-%d %H:%M:%S", &tm_0);
-    std::time_t t1 = ::timegm (&tm_0);
-    return static_cast<int64_t>(t1);
+    const char* r = ::strptime(ymd_timestr.c_str(), "%Y-%m-%d %H:%M:%S", &tm_0);
+    if( nullptr != r ) {
+        std::time_t t1 = ::timegm (&tm_0);
+        return static_cast<int64_t>(t1);
+    }
+    ::memset(&tm_0, 0, sizeof(tm_0));
+    r = ::strptime(ymd_timestr.c_str(), "%Y-%m-%d", &tm_0);
+    if( nullptr != r ) {
+        std::time_t t1 = ::timegm (&tm_0);
+        return static_cast<int64_t>(t1);
+    }
+    return 0;
 }
 
 std::string pixel::to_iso8601_string(int64_t tv_sec, bool withHMS) noexcept {
