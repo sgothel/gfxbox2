@@ -25,6 +25,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <string>
 
@@ -41,10 +42,10 @@ extern "C" {
 }
 
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
-static const uint8_t rgba_gray[/*4*/] = { 170, 170, 170, 255 };
+// static const uint8_t rgba_gray[/*4*/] = { 170, 170, 170, 255 };
 static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
-static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
-static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
+// static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
+// static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
 // static const uint8_t rgba_blue[/*4*/] = { 0, 0, 255, 255 };
 
 static bool show_cbody_velo = false;
@@ -184,10 +185,10 @@ std::string to_magnitude_timestr(si_time_t v) {
 #include "solarsystem_cbodies.hpp"
 
 ssize_t findSolarData(int64_t time_min, int64_t time_max) {
-    for(ssize_t i=0; i < solarDataSet.setCount; ++i ) {
+    for(size_t i=0; i < solarDataSet.setCount; ++i ) {
         const SolarData& sd = solarDataSet.set[i];
         if( time_min <= sd.time_u && sd.time_u <= time_max ) {
-            return i;
+            return static_cast<ssize_t>(i);
         }
     }
     return -1;
