@@ -406,7 +406,7 @@ namespace pixel {
     }
     inline uint8_t clip_byte(float v) { return static_cast<uint8_t>(std::max<float>(0.0f, std::min(255.0f, v))); }
     inline void set_pixel_color4f(float r, float g, float b, float a) noexcept {
-        set_pixel_color(clip_byte(r*255.0f), clip_byte(g*255.0f), clip_byte(b*255), clip_byte(a*255));        
+        set_pixel_color(clip_byte(r*255.0f), clip_byte(g*255.0f), clip_byte(b*255), clip_byte(a*255));
     }
     inline void set_pixel_color(const float rgba[/*4*/]) noexcept {
         set_pixel_color4f(rgba[0], rgba[1], rgba[2], rgba[3]);
@@ -420,14 +420,6 @@ namespace pixel {
                    uint8_t gr, uint8_t gg, uint8_t gb, uint8_t ga,
                    uint8_t cr, uint8_t cg, uint8_t cb, uint8_t ca);
 
-    /// Returns seconds since Unix Epoch `00:00:00 UTC on 1970-01-01` of given date
-    int64_t to_unix_seconds(int year, int month, int day) noexcept;
-    /// Returns seconds since Unix Epoch `00:00:00 UTC on 1970-01-01` of given Y-M-D date string
-    int64_t to_unix_seconds(const std::string& ymd_timestr) noexcept;
-    
-    /// Returns date string of given seconds since Unix Epoch `00:00:00 UTC on 1970-01-01`
-    std::string to_iso8601_string(int64_t tv_sec, bool withHMS) noexcept;
-    
     //
     // Texture
     //
@@ -582,7 +574,7 @@ namespace pixel {
                     bitmask(input_event_type_t::P2_ACTION2) |
                     bitmask(input_event_type_t::P2_ACTION3) |
                     bitmask(input_event_type_t::P2_ACTION4);
-                    
+
             constexpr static const uint32_t p3_mask =
                     bitmask(input_event_type_t::P3_UP) |
                     bitmask(input_event_type_t::P3_DOWN) |
@@ -651,7 +643,7 @@ namespace pixel {
                     m_pressed &= ~m;
                 }
                 this->last = e;
-                this->last_key_code = key_code;                
+                this->last_key_code = key_code;
                 if( input_event_type_t::PAUSE == e ) {
                     m_paused = !m_paused;
                 }
@@ -717,14 +709,14 @@ namespace pixel {
         }
         return one;
     }
-    
+
     /**
      * Event callback function pointer.
      *
-     * @return true to continue event polling, otherwise end event polling to return immediately 
+     * @return true to continue event polling, otherwise end event polling to return immediately
      */
     typedef bool (*event_callback)(input_event_t& event) noexcept;
-    
+
     inline bool handle_events(input_event_t& event, event_callback cb) noexcept {
         bool cont = true;
         bool one = false;
@@ -735,7 +727,7 @@ namespace pixel {
         }
         return one;
     }
-    
+
     void save_snapshot(const std::string& fname) noexcept;
 
     //

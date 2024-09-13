@@ -24,6 +24,7 @@
 #include "pixel/pixel.hpp"
 #include "pixel/pixel2f.hpp"
 #include "pixel/pixel4f.hpp"
+#include "pixel/unit.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -98,7 +99,7 @@ void pixel::draw_grid(float raster_sz,
                       uint8_t cr, uint8_t cg, uint8_t cb, uint8_t ca){
     if( is_zero( raster_sz ) ) {
         return;
-    }                    
+    }
     float wl = pixel::cart_coord.min_x();
     float hb = pixel::cart_coord.min_y();
     float l = ::floorf(wl / raster_sz) * raster_sz;
@@ -130,50 +131,6 @@ void pixel::draw_grid(float raster_sz,
 }
 
 using namespace pixel::literals;
-
-int64_t pixel::to_unix_seconds(int year, int month, int day) noexcept {
-    struct std::tm tm_0;
-    ::memset(&tm_0, 0, sizeof(tm_0));
-    tm_0.tm_year = year - 1900;
-    tm_0.tm_mon = month - 1;
-    tm_0.tm_mday = day;
-    std::time_t t1 = ::timegm (&tm_0);
-    return static_cast<int64_t>(t1);
-}
-
-int64_t pixel::to_unix_seconds(const std::string& ymd_timestr) noexcept {
-    struct std::tm tm_0; 
-    ::memset(&tm_0, 0, sizeof(tm_0));
-    const char* r = ::strptime(ymd_timestr.c_str(), "%Y-%m-%d %H:%M:%S", &tm_0);
-    if( nullptr != r ) {
-        std::time_t t1 = ::timegm (&tm_0);
-        return static_cast<int64_t>(t1);
-    }
-    ::memset(&tm_0, 0, sizeof(tm_0));
-    r = ::strptime(ymd_timestr.c_str(), "%Y-%m-%d", &tm_0);
-    if( nullptr != r ) {
-        std::time_t t1 = ::timegm (&tm_0);
-        return static_cast<int64_t>(t1);
-    }
-    return 0;
-}
-
-std::string pixel::to_iso8601_string(int64_t tv_sec, bool withHMS) noexcept {
-    std::time_t t0 = static_cast<std::time_t>(tv_sec);
-    struct std::tm tm_0;
-    if( nullptr == ::gmtime_r( &t0, &tm_0 ) ) {
-        return "1970-01-01T00:00:00.0Z"; // 22 + 1
-    } else {
-        // 2022-05-28 23:23:50
-        char b[30+1];
-        if( withHMS ) {
-            ::strftime(b, sizeof(b), "%Y-%m-%d %H:%M:%S", &tm_0);
-        } else {
-            ::strftime(b, sizeof(b), "%Y-%m-%d", &tm_0);
-        }
-        return std::string(b);
-    }
-}
 
 static std::string to_string_impl(const char* format, va_list args) noexcept {
     size_t nchars;
@@ -544,3 +501,124 @@ std::string pixel::input_event_t::to_string() const noexcept {
         }
 
 #endif
+
+using pixel::fraction_timespec;
+
+std::string fraction_timespec::to_string() const noexcept {
+    return std::to_string(tv_sec) + "s + " + std::to_string(tv_nsec) + "ns";
+}
+
+std::string fraction_timespec::to_iso8601_string(bool space_separator, bool muteTime) const noexcept {
+    std::time_t t0 = static_cast<std::time_t>(tv_sec);
+    struct std::tm tm_0;
+    if( nullptr == ::gmtime_r(&t0, &tm_0) ) {
+        if( muteTime ) {
+            if( space_separator ) {
+                return "1970-01-01";
+            } else {
+                return "1970-01-01Z";
+            }
+        } else {
+            if( space_separator ) {
+                return "1970-01-01 00:00:00";
+            } else {
+                return "1970-01-01T00:00:00Z";
+            }
+        }
+    } else {
+        // 2022-05-28T23:23:50Z 20+1
+        //
+        // 1655994850s + 228978909ns
+        // 2022-06-23T14:34:10.228978909Z 30+1
+        char b[30 + 1];
+        size_t p;
+        if( muteTime || ( 0 == tm_0.tm_hour && 0 == tm_0.tm_min && 0 == tm_0.tm_sec && 0 == tv_nsec ) ) {
+            p = ::strftime(b, sizeof(b), "%Y-%m-%d", &tm_0);
+        } else {
+            if( space_separator ) {
+                p = ::strftime(b, sizeof(b), "%Y-%m-%d %H:%M:%S", &tm_0);
+            } else {
+                p = ::strftime(b, sizeof(b), "%Y-%m-%dT%H:%M:%S", &tm_0);
+            }
+        }
+        if( 0 < p && p < sizeof(b) - 1 ) {
+            size_t q = 0;
+            const size_t remaining = sizeof(b) - p;
+            if( !muteTime && 0 < tv_nsec ) {
+                q = ::snprintf(b + p, remaining, ".%09" PRIi64, tv_nsec);
+            }
+            if( !space_separator ) {
+                ::snprintf(b + p + q, remaining-q, "Z");
+            }
+        }
+        return std::string(b);
+    }
+}
+
+fraction_timespec fraction_timespec::from(int year, unsigned month, unsigned day,
+                                          unsigned hour, unsigned minute,
+                                          unsigned seconds, uint64_t nano_seconds) noexcept {
+    fraction_timespec res;
+    if( !( 1<=month && month<=12 &&
+           1<=day && day<=31 &&
+           hour<=23 &&
+           minute<=59 && seconds<=60 ) ) {
+        return res; // error
+    }
+    struct std::tm tm_0;
+    ::memset(&tm_0, 0, sizeof(tm_0));
+    tm_0.tm_year = year - 1900; // years since 1900
+    tm_0.tm_mon = static_cast<int>(month) - 1; // months since Janurary [0-11]
+    tm_0.tm_mday = static_cast<int>(day);      // day of the month [1-31]
+    tm_0.tm_hour = static_cast<int>(hour);     // hours since midnight [0-23]
+    tm_0.tm_min = static_cast<int>(minute);    // minutes after the hour [0-59]
+    tm_0.tm_sec = static_cast<int>(seconds);   // seconds after the minute [0-60], including one leap second
+    std::time_t t1 = ::timegm (&tm_0);
+    res.tv_sec = static_cast<int64_t>(t1);
+    res.tv_nsec = static_cast<int64_t>(nano_seconds);
+    return res;
+}
+
+fraction_timespec fraction_timespec::from(const char *datestr, size_t datestr_len) noexcept {
+    if( nullptr == datestr || 0 == datestr_len) {
+        return fraction_timespec(); // error
+    }
+    int char_count1=0;
+    int y=0,M=0,d=0;
+    int items = std::sscanf(datestr, "%d-%d-%d%n", &y, &M, &d, &char_count1);
+    // INFO_PRINT("X01: items %d, chars %d, len %zu, str: '%s'", items, char_count1, datestr_len, datestr);
+    if( 3 != items || !(5 <= char_count1 && static_cast<size_t>(char_count1) <= datestr_len) ) {
+        return fraction_timespec(); // error
+    }
+    if( static_cast<size_t>(char_count1) == datestr_len ||
+        ( datestr[char_count1] != 'T' && datestr[char_count1] != ' ' ) ) {
+        return fraction_timespec::from(y, M, d); // EOS or remainder not matching
+    }
+    ++char_count1;
+    if( static_cast<size_t>(char_count1) == datestr_len ) {
+        return fraction_timespec::from(y, M, d); // EOS post 'T' or ' '
+    }
+
+    int h=0,m=0;
+    double s=0.0f;
+    const char *datestr2 = datestr + char_count1;
+    const size_t len2 = datestr_len - char_count1;
+    int char_count2=0;
+    items = std::sscanf(datestr2, "%d:%d:%lf%n", &h, &m, &s, &char_count2);
+    // INFO_PRINT("X02: items %d, chars %d, len %zu, str: '%s'", items, char_count2, len2, datestr2);
+    if( 3 != items || !(5 <= char_count2 && static_cast<size_t>(char_count2) <= len2) ) {
+        return fraction_timespec::from(y, M, d); // error in remainder
+    }
+    if(static_cast<size_t>(char_count2) == len2 || datestr2[char_count2] == 'Z' ) {
+        return fraction_timespec::from(y, M, d, h, m, s); // EOS
+    }
+
+    int oh=0,om=0;
+    items = std::sscanf(datestr2+char_count2, "%d:%d", &oh, &om);
+    // INFO_PRINT("X03: items %d, chars %d, len %zu, str: '%s'", items, 0, len2, datestr2+char_count2);
+    if(1 <= items && items <= 2) {
+        h += oh; // timezone offset
+        m += om;
+    }
+    return fraction_timespec::from(y, M, d, h, m, s);
+}
