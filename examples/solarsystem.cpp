@@ -37,9 +37,13 @@ using namespace pixel::literals;
 static bool draw_all_orbits = false;
 static bool ref_cbody_stop = false;
 static bool show_cbody_velo = false;
+static float gravity_scale = 1;
 
 extern "C" {
     EMSCRIPTEN_KEEPALIVE void set_draw_all_orbits(bool v) noexcept { draw_all_orbits = v; }
+    EMSCRIPTEN_KEEPALIVE void set_data_stop(bool v) noexcept { ref_cbody_stop = v; }
+    EMSCRIPTEN_KEEPALIVE void set_showvelo(bool v) noexcept { show_cbody_velo = v; }
+    EMSCRIPTEN_KEEPALIVE void set_gravityscale(int v) noexcept { gravity_scale = static_cast<float>(v); }
 }
 
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
@@ -162,7 +166,7 @@ static cbodyid_t max_planet_id = cbodyid_t::mars;
 static float space_height; // [m]
 
 static float _global_scale = 20;
-static void global_scale(float s) noexcept { _global_scale *= s; }
+static void global_scale(float s) noexcept { _global_scale = std::max(1.0f, _global_scale * s); }
 static float global_scale() noexcept { return _global_scale; }
 
 class CBody;
@@ -266,8 +270,12 @@ class CBody {
     fraction_timespec world_time() const noexcept { return _world_time; }
 
     float sun_dist() const noexcept { return _d_sun; }
-    float orbit_extend() const noexcept { return _d_sun + _radius; }
-    
+    float space_height() const noexcept {
+        // return ( _d_sun + _radius ) * 1.075f;
+        // prefer using average sun distance for same screen layout at any given time
+        return ( CBodyConstants[number(_id)].d_sun + CBodyConstants[number(_id)].radius ) * 1.075f;
+    }
+
     f2::point_t position() const noexcept { return _body.center; }
 
     pixel::f2::vec_t gravity(const pixel::f2::point_t& p) {
@@ -286,11 +294,15 @@ class CBody {
         if( _id == cbodyid_t::sun ) {
             return;
         }
-        // std::vector<cbody_ref_t> cbodies;
-        for(const auto& cb : cbodies) {
-             if( this != cb.get() ) {
+        for( size_t i = 0; i < cbodies.size(); ++i ) {
+            const CBodyRef& cb = cbodies[i];
+            if( this != cb.get() ) {
                 const f2::vec_t g = cb->gravity(_body.center);
-                _velo += g * dt;
+                if( 0 != i++ ) {
+                    _velo += g * dt * gravity_scale;
+                } else {
+                    _velo += g * dt;
+                }
             }
         }
         _body.move(_velo * dt);
@@ -393,7 +405,7 @@ void mainloop() {
             _global_scale = 20;
             info_id = cbodyid_t::earth;
             max_planet_id = cbodyid_t::mars;
-            space_height = cbodies[number(max_planet_id)]->orbit_extend();
+            space_height = cbodies[number(max_planet_id)]->space_height();
             pixel::cart_coord.set_height(-space_height, space_height);
             tick_ts = 1_month;
             pl.clear();
@@ -413,7 +425,7 @@ void mainloop() {
                 bool reset_space_height = false;
                 if( event.pressed(input_event_type_t::P1_ACTION1) ) {
                     if (event.released_and_clr(input_event_type_t::P1_UP)) {
-                        global_scale(1.5f);
+                        global_scale(2.0f);
                     } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
                         global_scale(0.5f);
                     }
@@ -437,7 +449,7 @@ void mainloop() {
                     }
                 }
                 if( reset_space_height ) {
-                    space_height = cbodies[number(max_planet_id)]->orbit_extend();
+                    space_height = cbodies[number(max_planet_id)]->space_height();
                     pixel::cart_coord.set_height(-space_height, space_height);
                 }
             }
@@ -613,6 +625,8 @@ int main(int argc, char *argv[])
                 draw_all_orbits = true;
             } else if( 0 == strcmp("-data_stop", argv[i])) {
                 ref_cbody_stop = true;
+            } else if( 0 == strcmp("-gravity_scale", argv[i]) && i+1<argc) {
+                gravity_scale = static_cast<float>(atoi(argv[i+1]));
             }
         }
     }
@@ -620,6 +634,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(0, "- win size %d x %d\n", window_width, window_height);
         pixel::log_printf(0, "- forced_fps %d\n", pixel::forced_fps);
         pixel::log_printf(0, "- data_stop %d\n", ref_cbody_stop);
+        pixel::log_printf(0, "- gravity_scale %f\n", gravity_scale);
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
@@ -635,7 +650,7 @@ int main(int argc, char *argv[])
         printf("%s\n", cb->toString().c_str());
     }
 
-    space_height = cbodies[number(max_planet_id)]->orbit_extend();
+    space_height = cbodies[number(max_planet_id)]->space_height();
     pixel::cart_coord.set_height(-space_height, space_height);
 
     std::vector<texture_ref> texts;

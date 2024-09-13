@@ -28,7 +28,7 @@
       }
 
       .emscripten { padding-right: 0; margin-left: auto; margin-right: auto; display: block; }
-      div.emscripten { text-align: center; }      
+      div.emscripten { text-align: center; }
       div.emscripten_border { border: 0px none black; }
       /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
       canvas.emscripten { border: 0px none; background-color: black; }
@@ -99,7 +99,10 @@
 
 <span id='controls'>
   <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
+  <span><input type="checkbox" id="DataStop" onclick="setDataStop(this.checked)">data-stop</span>
   <span><input type="checkbox" id="AllOrbits" onclick="setDrawAllOrbits(this.checked)">all-orbits</span>
+  <span><input type="checkbox" id="ShowVelo" onclick="setShowVelo(this.checked)">velo-vec</span>
+  <span><input type="number" id="SetGravityScale" min="1" max="1000" step="100" value="1" style="width: 3em;" onchange="setGravityScale(this.value)"/>g-scale</span>
   <span><input type="number" id="SetFPS" min="0" max="60" step="10" value="0" style="width: 3em;" onchange="setForcedFPS(this.value)"/>fps</span>
 </span>
 
@@ -140,7 +143,7 @@
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
       var wasm_set_showvelo, wasm_set_forced_fps, wasm_set_window_size;
-      var wasm_set_draw_all_orbits;
+      var wasm_set_draw_all_orbits, wasm_set_data_stop, wasm_set_gravityscale;
 
       var Module = {
         onRuntimeInitialized: function() {
@@ -148,6 +151,8 @@
             wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
             wasm_set_draw_all_orbits = Module.cwrap('set_draw_all_orbits', 'null', ['boolean'])
+            wasm_set_data_stop = Module.cwrap('set_data_stop', 'null', ['boolean'])
+            wasm_set_gravityscale = Module.cwrap('set_gravityscale', 'null', ['number'])
             maximizeCanvas();
         },
         preRun: [],
@@ -216,6 +221,11 @@
               wasm_set_draw_all_orbits(v);
           }
       }
+      function setDataStop(v) {
+          if( null != wasm_set_data_stop ) {
+              wasm_set_data_stop(v);
+          }
+      }
       function setShowVelo(v) {
           if( null != wasm_set_showvelo ) {
               wasm_set_showvelo(v);
@@ -224,6 +234,11 @@
       function setForcedFPS(v) {
           if( null != wasm_set_forced_fps ) {
               wasm_set_forced_fps(v);
+          }
+      }
+      function setGravityScale(v) {
+          if( null != wasm_set_gravityscale ) {
+              wasm_set_gravityscale(v);
           }
       }
       function maximizeCanvas() {

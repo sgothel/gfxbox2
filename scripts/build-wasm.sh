@@ -30,7 +30,7 @@ buildit() {
     if [ -x /usr/bin/time ] ; then
         time_cmd="time"
         echo "time command available: ${time_cmd}"
-    else 
+    else
         time_cmd=""
         echo "time command not available"
     fi
@@ -45,7 +45,6 @@ buildit() {
     # CLANG_ARGS="-DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_CXX_CLANG_TIDY=/usr/bin/clang-tidy;-p;$rootdir/$build_dir"
 
     emcmake cmake $CLANG_ARGS -DCMAKE_INSTALL_PREFIX=$rootdir/$dist_dir ..
-    # emcmake cmake $CLANG_ARGS -DCMAKE_INSTALL_PREFIX=$rootdir/$dist_dir -DUSE_SFML=ON ..
     # emcmake cmake $CLANG_ARGS -DCMAKE_INSTALL_PREFIX=$rootdir/$dist_dir -DDEBUG=ON ..
 
     # emcmake cmake $CLANG_ARGS -DCMAKE_INSTALL_PREFIX=$rootdir/$dist_dir -DUSE_STRIP=OFF ..
