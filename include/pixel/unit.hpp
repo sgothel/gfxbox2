@@ -67,6 +67,36 @@ namespace pixel {
 
         constexpr si_angle_t operator ""_rad(long double __v)   { return (si_angle_t)__v; }
         constexpr si_angle_t operator ""_deg(long double __v)   { return (si_angle_t)(__v / 180.0 * std::numbers::pi_v<long double>); }
+
+        /** Literal for signed int8_t */
+        constexpr int8_t operator ""_i8(unsigned long long int __v)   { return (int8_t)__v; }
+
+        /** Literal for unsigned uint8_t */
+        constexpr uint8_t operator ""_u8(unsigned long long int __v)  { return (uint8_t)__v; }
+
+        /** Literal for signed int16_t */
+        constexpr int16_t operator ""_i16(unsigned long long int __v)   { return (int16_t)__v; }
+
+        /** Literal for unsigned uint16_t */
+        constexpr uint16_t operator ""_u16(unsigned long long int __v)  { return (uint16_t)__v; }
+
+        /** Literal for signed int32_t */
+        constexpr int32_t operator ""_i32(unsigned long long int __v)   { return (int32_t)__v; }
+
+        /** Literal for unsigned uint32_t */
+        constexpr uint32_t operator ""_u32(unsigned long long int __v)  { return (uint32_t)__v; }
+
+        /** Literal for signed int64_t */
+        constexpr int64_t operator ""_i64(unsigned long long int __v)   { return (int64_t)__v; }
+
+        /** Literal for unsigned uint64_t */
+        constexpr uint64_t operator ""_u64(unsigned long long int __v)  { return (uint64_t)__v; }
+
+        /** Literal for signed ssize_t */
+        constexpr ssize_t operator ""_iz(unsigned long long int __v)  { return (ssize_t)__v; }
+
+        /** Literal for unsigned size_t */
+        constexpr size_t operator ""_uz(unsigned long long int __v)  { return (size_t)__v; }
     }
 
     /**
@@ -86,15 +116,6 @@ namespace pixel {
      * - 32-bit signed integer only last for 68 years or until year 2038, starting from 1970 Unix Epoch
      * - [System call conversion for year 2038](https://lwn.net/Articles/643234/)
      * - test/test_fractions_01.cpp `struct timespec type validation Test 03.00`
-     *
-     * @see to_timespec()
-     * @see to_fraction_i64()
-     * @see sleep_until()
-     * @see sleep_for()
-     * @see wait_until()
-     * @see wait_for()
-     * @see getMonotonicTime()
-     * @see getWallClockTime()
      */
     struct fraction_timespec {
         /**
@@ -127,55 +148,6 @@ namespace pixel {
         explicit constexpr fraction_timespec(const double seconds) noexcept
         : tv_sec( static_cast<int64_t>(seconds) ),
           tv_nsec( static_cast<int64_t>( (seconds - static_cast<double>(tv_sec)) * 1e+9) ) { }
-
-        /**
-         * Conversion constructor from an ISO8601 time string,
-         * as produced via to_iso8601_string().
-         */
-        static fraction_timespec from(const char *datestr, size_t datestr_len) noexcept;
-
-        static fraction_timespec from(const char *datestr) noexcept {
-            return from(datestr, nullptr != datestr ? std::strlen(datestr) : 0);
-        }
-
-        /**
-         * Conversion constructor from an ISO8601 time string,
-         * as produced via to_iso8601_string().
-         */
-        static fraction_timespec from(const std::string& datestr) noexcept {
-            return from(datestr.c_str(), datestr.length());
-        }
-
-        /**
-         * Conversion constructor from broken down values assuming UTC
-         * @param year year number, 0 as 0 A.D.
-         * @param month month number [1-12]
-         * @param day day of the month [1-31]
-         * @param hour hours since midnight [0-23]
-         * @param minute minutes after the hour [0-59]
-         * @param seconds seconds after the minute including one leap second [0-60]
-         * @param nano_seconds nanoseconds [0, 1'000'000'000)
-        */
-        static fraction_timespec from(int year, unsigned month, unsigned day,
-                                      unsigned hour=0, unsigned minute=0,
-                                      unsigned seconds=0, uint64_t nano_seconds=0) noexcept;
-
-        /**
-         * Conversion constructor from broken down values assuming UTC
-         * @param year year number, 0 as 0 A.D.
-         * @param month month number [1-12]
-         * @param day day of the month [1-31]
-         * @param hour hours since midnight [0-23]
-         * @param minute minutes after the hour [0-59]
-         * @param seconds seconds after the minute including one leap second [0-60[.[0-999'999'999]]] and fractionals
-        */
-        static fraction_timespec from(int year, unsigned month, unsigned day,
-                                      unsigned hour, unsigned minute,
-                                      double seconds) noexcept {
-            const unsigned seconds_u = static_cast<unsigned>(seconds);
-            const uint64_t nano_seconds = static_cast<uint64_t>( (seconds - static_cast<double>(seconds_u)) * 1e+9);
-            return from(year, month, day, hour, minute, seconds_u, nano_seconds);
-        }
 
         /**
          * Normalize tv_nsec with its absolute range [0..1'000'000'000[ or [0..1'000'000'000)
@@ -244,12 +216,6 @@ namespace pixel {
             using ns_type = decltype(timespec::tv_nsec);
             return { static_cast<std::time_t>( tv_sec ), static_cast<ns_type>( tv_nsec ) };
         }
-
-        /** Returns tv_nsec portion converted to milliseconds */
-        constexpr int64_t to_ms() const noexcept { return tv_nsec / 1'000'000l; }
-
-        /** Returns tv_nsec portion converted to microseconds */
-        constexpr int64_t to_us() const noexcept { return tv_nsec / 1'000l; }
 
         /**
          * Return simple string representation in seconds and nanoseconds.
