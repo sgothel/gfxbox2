@@ -11,8 +11,9 @@ This project provides a C++ sandbox for computer graphics for our computer scien
 Its examples demonstrate basic usage and physics simulations.
 
 ## Supported Platforms
-C++20 and better where the [SDL2 library](https://www.libsdl.org/) is supported, 
-optionally SDL2 with [emscripten](https://emscripten.org/) or [SFML library](https://www.sfml-dev.org/).
+C++20 and better where the [SDL2 library](https://www.libsdl.org/) is supported.
+
+Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten.org/).
 
 ## Online WebAssembly Examples
 * [solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html)
@@ -34,7 +35,7 @@ optionally SDL2 with [emscripten](https://emscripten.org/) or [SFML library](htt
   - gcc >= 10
   - clang >= 15
 - [SDL2 library](https://www.libsdl.org/) 
-- [emscripten](https://emscripten.org/) **optional** for WebAssembly
+- [emscripten >= 3.1.59](https://emscripten.org/) **optional** for WebAssembly (Wasm)
 - [SFML library](https://www.sfml-dev.org/) **optional**
 - Example funcdraw
     - Parser generator
@@ -59,13 +60,22 @@ apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev
 apt install libsfml-dev
 apt install bison flex
 apt install doxygen graphviz
-apt install emscripten
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Perhaps change the clang version-suffix of above clang install line to the appropriate version.
 
 After complete clang installation, you might want to setup the latest version as your default.
 For Debian you can use this [clang alternatives setup script](https://jausoft.com/cgit/cs_class/gfxbox2.git/tree/scripts/setup_clang_alternatives.sh).
+
+#### WebAssembly (via emscripten)
+At time of writing (Debian 12), it is recommended to install
+[emscripten >= 3.1.59](https://emscripten.org/) for WebAssembly (Wasm)
+from [its upstream source](https://emscripten.org/docs/getting_started/downloads.html).
+
+At a later time (more recent Debian > 12 deployment) the Debian default may be functional:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
+apt install emscripten
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ### Build Procedure
 The following is covered with [a convenient build script](https://jausoft.com/cgit/cs_class/gfxbox2.git/tree/scripts/build.sh).
@@ -110,6 +120,8 @@ To build documentation run:
 ~~~~~~~~~~~~~
 make doc
 ~~~~~~~~~~~~~
+
+#### WebAssembly (via emscripten)
 
 ### IDE Integration
 
