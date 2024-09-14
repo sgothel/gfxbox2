@@ -28,6 +28,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <cinttypes>
 #include <ctime>
 
 bool pixel::use_subsys_primitives_val = true;

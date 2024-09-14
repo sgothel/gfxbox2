@@ -21,6 +21,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#include <iostream>
 #include <memory>
 #include <pixel/pixel3f.hpp>
 #include <pixel/pixel4f.hpp>
@@ -30,6 +31,7 @@
 
 #include <algorithm>
 #include <random>
+#include <cinttypes>
 
 using namespace pixel::literals;
 
@@ -763,7 +765,7 @@ void reset_asteroids(int count) {
                                      next_rnd() * 15_deg )
                                    * ( i%2 == 0 ? 1.0f : -1.0f ); // angle/s
         const float jitter = 1.0f / ( 4.0f + 4.0f * next_rnd() );
-        pixel::f2::point_t p0(pixel::cart_coord.min_x()+(int)(pixel::cart_coord.width()*next_rnd()),
+        pixel::f2::point_t p0(pixel::cart_coord.min_x()+(pixel::cart_coord.width()*next_rnd()),
                               i%2 == 0 ? pixel::cart_coord.min_y()+height/2 : pixel::cart_coord.max_y()-height/2);
         fragment_ref_t asteroid1 = make_asteroid(p0, height,
                 angle, velocity, rot_velocity, jitter );

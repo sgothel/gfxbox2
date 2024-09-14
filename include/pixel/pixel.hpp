@@ -24,19 +24,18 @@
 #ifndef PIXEL_HPP_
 #define PIXEL_HPP_
 
-#include <cinttypes>
+#include <limits>
+#include <memory>
+#include <functional> // NOLINT(unused-includes): Used in other header
+#include <string>
+#include <type_traits>
+#include <vector>
+
 #include <cmath>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <functional>
-#include <limits>
-#include <memory>
-#include <string>
-#include <type_traits>
-#include <vector>
-#include <iostream>
 #include <cctype>
 
 #include <pixel/unit.hpp>
