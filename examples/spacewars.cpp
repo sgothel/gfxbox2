@@ -483,15 +483,15 @@ class spaceship_t : public pixel::f2::linestrip_t {
                 --peng_inventory;
             }
         }
-        
-        void mine() noexcept {     
+
+        void mine() noexcept {
             if(mine_inventory <= 0){
                 return;
             }
             pengs.emplace_back(m_owner, p_center, peng_diag);
             --mine_inventory;
         }
-        
+
         void velo_up(const float dv = vel_step) noexcept {
             pixel::f2::vec_t v = velocity;
             v += pixel::f2::vec_t::from_length_angle(dv, dir_angle);
@@ -706,9 +706,9 @@ spaceship_ref_t make_spaceship2(idscore_t* owner, const pixel::f2::point_t& m, c
 
 /**
  * Unrotated:
- *    
- *    /\ 
- *   /  \ 
+ *
+ *    /\
+ *   /  \
  *|  |  |  |
  *----------
  */
@@ -962,7 +962,7 @@ void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
     static bool animating = true;
-    
+
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -982,7 +982,7 @@ void mainloop() {
             }
             animating = true;
         }
-    
+
         if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
             pengs.clear();
             reset_asteroids(asteroid_count);
@@ -994,7 +994,7 @@ void mainloop() {
                 p3.reset();
             }
         }
-    
+
         // Tick all animated objects
         if( animating ) {
             // ship1 tick
@@ -1015,7 +1015,7 @@ void mainloop() {
                     ship->set_shield( event.pressed(pixel::input_event_type_t::P1_DOWN) );
                 }
             }
-    
+
             // ship2 tick
             if(1 < player_count) {
                 spaceship_ref_t ship = p2.ship();
@@ -1053,10 +1053,10 @@ void mainloop() {
             }
         }
     }
-    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]    
+    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]
     const float dt = (float)(t1 - t_last) / 1000.0f; // [s]
     t_last = t1;
-    
+
     if(animating) {
         if(2 < player_count) {
             spaceship_ref_t ship = p3.ship();
@@ -1140,7 +1140,7 @@ void mainloop() {
         sun->tick(dt);
     }
     pixel::clear_pixel_fb(0, 0, 0, 255);
-    
+
     // Draw all objects
     pixel::set_pixel_color(rgba_white);
     p1.draw();
@@ -1158,10 +1158,10 @@ void mainloop() {
     }
     sun->draw();
 
-    float fps = pixel::get_gpu_fps();    
+    float fps = pixel::get_gpu_fps();
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     {
-        std::string sp1, sp2, sp3;        
+        std::string sp1, sp2, sp3;
         {
             std::string c;
             if( cloak_enabled ) {
@@ -1185,7 +1185,7 @@ void mainloop() {
             }
             sp3 = pixel::to_string(", S3 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s)",
                 p3.score(), p3.peng_inventory(), p3.mine_inventory(), p3.shield_time(), p3.velocity(), c.c_str());
-        }            
+        }
         hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, %s%s%s",
                         pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
                         fps, sp1.c_str(), sp2.c_str(), sp3.c_str());
@@ -1292,7 +1292,7 @@ int main(int argc, char *argv[])
     sun = std::make_shared<star_t>(pixel::f2::point_t(0, 0), spaceship_height,
                                    sun_gravity * (float)sun_gravity_scale_env,
                                    sun_gravity * (float)sun_gravity_scale_ships);
-    /*    
+    /*
     const float peng_diag = spaceship_height;
     for(int i = 0; i < 5; ++i){
         const float x = next_rnd() * pixel::cart_coord.width();
