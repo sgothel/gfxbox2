@@ -70,7 +70,8 @@ enum class cbodyid_t : size_t {
     saturn,
     uranus,
     neptun,
-    pluto
+    pluto,
+    oobj
 };
 constexpr size_t number(const cbodyid_t rhs) noexcept {
     return static_cast<size_t>(rhs);
@@ -121,6 +122,9 @@ class CBodyConst {
 
 static constexpr float light_second = 299792458.0f;
 static constexpr float light_minute = 60 * light_second;
+si_accel_t oobj_gravity = 1_m_s2;
+si_velo_t oobj_velo = 0;
+si_mass_t oobj_mass = 10_t;
 static cbodyid_t max_planet_id = cbodyid_t::mars;
 
 static constexpr double M_G = 6.6743015e-11; // [N⋅m2⋅kg−2]
@@ -146,6 +150,8 @@ CBodyConst CBodyConstants[] {
    {0, 0, 1, 1}, "Neptun", 102e+24},
   { 1151_km, 7300000000_km, 58_cm_s2, 17064_km_h,
    {0.7f, 0.5f, 0.7f, 0.5f}, "Pluto", 0.0130e+24}
+  , { 6211.4, cart_coord.width(), oobj_gravity, -oobj_velo,
+  {1, 1, 1, 1}, "oobj", oobj_mass}
 };
 
 static float space_height; // [m]
@@ -372,6 +378,8 @@ static cbodyid_t info_id = cbodyid_t::earth;
 std::vector<f2::point_t> pl;
 std::vector<f2::point_t> ipl;
 bool tick_ts_down = false;
+bool with_oobj = false;
+bool oobjinfo = false;
 
 void mainloop() {
     // scale_all_numbers(0.000001f);
@@ -385,6 +393,7 @@ void mainloop() {
     static cbodyid_t selPlanetNextPosCBodyID = info_id;
     static fraction_timespec ref_cbody_t0;
     const f2::point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
+    static CBodyRef oobj = std::make_shared<CBody>( cbodyid_t::oobj );
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
 
     while (pixel::handle_one_event(event)) {
@@ -462,6 +471,12 @@ void mainloop() {
             if( event.has_any_p2() ) {
                 if (event.released_and_clr(input_event_type_t::P2_ACTION1)) {
                     draw_all_orbits = !draw_all_orbits;
+                } else if (event.pressed(input_event_type_t::P2_ACTION2)) {
+                    if (event.released_and_clr(input_event_type_t::P1_UP)) {
+                        oobj_gravity *= 2;
+                    } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
+                        oobj_gravity /= 2;
+                    }
                 }
             }
             if( event.has_any_p3() ) {
@@ -478,6 +493,12 @@ void mainloop() {
                     }
                     for(CBodyRef &cb : cbodies){
                         cb->clear_orbit();
+                    }
+                } else if (event.pressed(input_event_type_t::P1_ACTION4)) {
+                    if (event.released_and_clr(input_event_type_t::P1_UP)) {
+                        oobj_velo *= 2;
+                    } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
+                        oobj_velo /= 2;
                     }
                 }
             }
@@ -522,6 +543,9 @@ void mainloop() {
         }
         for(CBodyRef &cb : cbodies){
             cb->tick(dt, tick_ts);
+        }
+        if(with_oobj){
+            oobj->tick(dt, tick_ts);
         }
         if( !ref_cbody_t0.isZero() && world_t0 >= ref_cbody_t0 ) {
             animating = false;
@@ -593,6 +617,9 @@ void mainloop() {
     for(size_t i = 0; i <= number(max_planet_id); ++i){
         cbodies[i]->draw(true, draw_all_orbits || info_id == cbodies[i]->id());
     }
+    if(with_oobj){
+        oobj->draw(true, oobjinfo);
+    }
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
@@ -633,6 +660,10 @@ int main(int argc, char *argv[])
                 ref_cbody_stop = true;
             } else if( 0 == strcmp("-gravity_scale", argv[i]) && i+1<argc) {
                 gravity_scale = static_cast<float>(atoi(argv[i+1]));
+            } else if( 0 == strcmp("-woobj", argv[i])) {
+                with_oobj = true;
+            } else if( 0 == strcmp("-infoid=oobj", argv[i])) {
+                oobjinfo = true;
             }
         }
     }
