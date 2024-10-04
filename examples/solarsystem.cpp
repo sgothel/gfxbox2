@@ -49,7 +49,7 @@ extern "C" {
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
 // static const uint8_t rgba_gray[/*4*/] = { 170, 170, 170, 255 };
 static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
-// static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
+static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
 // static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
 // static const uint8_t rgba_blue[/*4*/] = { 0, 0, 255, 255 };
 
@@ -110,58 +110,43 @@ float normal_scale[] {
 
 class CBodyConst {
   public:
-    si_length_t radius;
-    si_length_t d_sun;
-    si_accel_t g_s;
-    si_velo_t v;
+    si_length_t radius; // [m]
+    si_length_t d_sun; // [m]
+    si_accel_t g_s; // [m/s^2]
+    si_velo_t v; // [m/s]
     f4::vec_t color;
     std::string name;
+    double mass; // [kg]
 };
-
-/**
-                  |  Radius [km]  | Abstand zur Sonne [km] |     Gravitation [m/s²]     | Geschwindigkeit [km/h]  |
-Sun               |      695 700  |                      0 |    132 615 586 260 000     |                        0|
-Mercury           |         2440  |             58 000 000 |             22 028 320     |                  172 800|
-Venus             |        6 051,8|            108 000 000 |            324 857 392,339 |                  126 072|
-Earth             |        6 371  |            149 600 000 |            398 062 609,287 |                  108 000|
-Mars              |        3 389,5|            227 900 000 |             42 393 340,8225|                   86 652|
-Jupiter           |       69 911  |            778 000 000 |        121 162 312 962     |                   47 160|
-Saturn            |       69 911  |          1 486 000 000 |         51 026 000 295,2   |                   34 884|
-Uranus            |       25 362  |          2 900 000 000 |          5 705 459 360,28  |                   24 516|
-Neptune           |       24 622  |          4 500 000 000 |          6 759 608 156,6   |                   20 000|
-Pluto             |        1 151  |          7 300 000 000 |                768 384,58  |                   17 064|
-
-Abstand vom Ringsystem des Saturns zur Saturnoberflaeche = ca. 11000000 km
-Dicke vom Ringsystem des Saturns = ca. 1700 km
-*/
 
 static constexpr float light_second = 299792458.0f;
 static constexpr float light_minute = 60 * light_second;
+static cbodyid_t max_planet_id = cbodyid_t::mars;
+
+static constexpr double M_G = 6.6743015e-11; // [N⋅m2⋅kg−2]
 
 CBodyConst CBodyConstants[] {
-  { 695700_km, 0_km, 274_m_s2, 0,
-   {1, 1, 0, 1}, "Sun"},
+  { 695700_km, 0_km, 274199_mm_s2, 0,
+   {1, 1, 0, 1}, "Sun", 1988400e+24},
   { 2440_km, 58000000_km, 3700_mm_s2, 172800_km_h,
-   {0.5f, 0.5f, 0.5f, 0.5f}, "Mercury"},
+   {0.5f, 0.5f, 0.5f, 0.5f}, "Mercury", 330e+24},
   { 6051800_m, 108000000_km, 887_cm_s2, 126072_km_h,
-   {1, 0.5f, 0, 1}, "Venus"},
-  { 6371_km, 149600000_km, 9807_mm_s2, 108000_km_h,
-   {0, 0, 1, 1}, "Earth"},
+   {1, 0.5f, 0, 1}, "Venus", 4.87e+24},
+  { 6371_km, 149600000_km, 9820_mm_s2, 108000_km_h,
+   {0, 0, 1, 1}, "Earth", 5.97e+24},
   { 3389500_m, 227900000_km, 369_cm_s2, 86652_km_h,
-   {1, 0, 0, 1}, "Mars"},
+   {1, 0, 0, 1}, "Mars", 642e+24},
   { 69911_km, 778000000_km, 2479_cm_s2, 47160_km_h,
-   {0.7f, 0.5f, 0.5f, 0.5f}, "Jupiter"},
+   {0.7f, 0.5f, 0.5f, 0.5f}, "Jupiter", 1898e+24},
   { 69911_km, 1486000000_km, 1044_cm_s2, 34884_km_h,
-   {0.7f, 0.7f, 0.5f, 0.5f}, "Saturn"},
+   {0.7f, 0.7f, 0.5f, 0.5f}, "Saturn", 568e+24},
   { 25362_km, 2900000000_km, 887_cm_s2, 24516_km_h,
-   {0, 0, 1, 1}, "Uranus"},
+   {0, 0, 1, 1}, "Uranus", 86.8e+24},
   { 24622_km, 45000000000_km, 1115_cm_s2, 20000_km_h,
-   {0, 0, 1, 1}, "Neptun"},
+   {0, 0, 1, 1}, "Neptun", 102e+24},
   { 1151_km, 7300000000_km, 58_cm_s2, 17064_km_h,
-   {0.7f, 0.5f, 0.7f, 0.5f}, "Pluto"}
+   {0.7f, 0.5f, 0.7f, 0.5f}, "Pluto", 0.0130e+24}
 };
-
-static cbodyid_t max_planet_id = cbodyid_t::mars;
 
 static float space_height; // [m]
 
@@ -207,22 +192,23 @@ ssize_t findSolarData(const fraction_timespec& time_min, const fraction_timespec
 class CBody {
   private:
     cbodyid_t _id;
-    f2::vec_t _velo;
-    float _g_c;
     f4::vec_t _color;
     float _scale;
     float _d_sun; // [m]
     float _radius; // [m]
-    f2::disk_t _body;
-    std::vector<f2::point_t> _orbit_points;
+    double _mass; // [kg]
+    f3::vec_t _velo; // [m/s]    
+    float _GM; // GM = g * r^2 = [m^3 / s^2]
+    f3::point_t _center;
     std::string _id_s;
     fraction_timespec _world_time;
     fraction_timespec _orbit_world_time_last;
     si_time_t _time_scale_last = 1_day;
+    std::vector<f2::point_t> _orbit_points;
 
   public:
     CBody()
-    : _id(cbodyid_t::none), _radius(), _body() {}
+    : _id(cbodyid_t::none), _radius() {}
 
     CBody(const CBody&) = default;
     CBody(CBody&&) = default;
@@ -230,24 +216,26 @@ class CBody {
     CBody& operator=(CBody&&) = default;
     CBody(cbodyid_t id_, size_t dataset_idx=0)
     : _id(id_) {
-        f2::point_t center;
+        f3::point_t center;
         float g_0;
         {
             CBodyConst cbc = CBodyConstants[number(_id)];
             size_t id_idx = number(_id);
-            if( 0 < id_idx && dataset_idx < solarDataSet.setCount ) { // not sun
+            if( 0 < id_idx && dataset_idx < solarDataSet.setCount && id_idx < 9) { // not sun or not oobj
                 const SolarData& solar_data = solarDataSet.set[dataset_idx];
                 _world_time.tv_sec = solar_data.time_u; // [s]
                 const CBodyData& planet = solar_data.planets[id_idx - 1];
                 center.x = static_cast<float>(planet.position[0]*1000.0);
                 center.y = static_cast<float>(planet.position[1]*1000.0);
+                center.z = static_cast<float>(planet.position[2]*1000.0);
                 _velo.x = static_cast<float>(planet.velocity[0]*1000.0);
                 _velo.y = static_cast<float>(planet.velocity[1]*1000.0);
+                _velo.z = static_cast<float>(planet.velocity[2]*1000.0);
             } else {
                 _world_time.tv_sec = solarDataSet.set[0].time_u; // [s]
-                center = {cbc.d_sun, 0};
-                float angle = (f2::point_t(0, 0) - center).angle() - (float)M_PI_2;
-                _velo = f2::vec_t::from_length_angle(cbc.v, angle);
+                center = {cbc.d_sun, 0, 0};
+                //float angle = (f2::point_t(0, 0) - center).angle() - (float)M_PI_2;
+                _velo = {cbc.v, 0, 0};
             }
             _d_sun = center.length();
             _radius = cbc.radius;
@@ -255,11 +243,11 @@ class CBody {
             _color = cbc.color;
             _id_s = cbc.name;
             _orbit_world_time_last = _world_time;
+            _center = center;
+            _mass = cbc.mass;
         }
-
-        _g_c = g_0 * _radius * _radius;
+        _GM = g_0 * _radius * _radius; // m^3 / s^2
         _scale = default_scale[number(_id)];
-        _body = f2::disk_t(center, _radius);
     }
 
     cbodyid_t id() const noexcept { return _id; }
@@ -276,18 +264,35 @@ class CBody {
         return ( CBodyConstants[number(_id)].d_sun + CBodyConstants[number(_id)].radius ) * 1.075f;
     }
 
-    f2::point_t position() const noexcept { return _body.center; }
+    f3::point_t position() const noexcept { return _center; }
 
-    pixel::f2::vec_t gravity(const pixel::f2::point_t& p) {
-        pixel::f2::vec_t v_d = _body.center - p;
+    // Returns gravity [m/s^2] acceleration from given center `p` towards this body
+    // @param p center of attracted object towards this body
+    pixel::f3::vec_t gravity(const pixel::f3::point_t& p) {
+        pixel::f3::vec_t v_d = _center - p;
         const float d = v_d.length();
         if( pixel::is_zero(d) ) {
-            return pixel::f2::vec_t();
+            return pixel::f3::vec_t();
         } else {
             // v.normalize() -> v / d
-            // return v.normalize() * ( g0 / ( d * d ) );
-            return ( v_d /= d ) *= ( _g_c / ( d * d ) ); // same as above but reusing vector 'v'
+            // return v.normalize() * ( _GM / ( d * d ) );
+            return ( v_d /= d ) *= ( _GM / ( d * d ) ); // same as above but reusing vector 'v'
         }
+    }
+
+    // Returns gravity [m/s^2] acceleration from given body `o` towards this body
+    // @param o attracted body towards this body
+    pixel::f3::vec_t gravity(const CBody& o) {
+        pixel::f3::vec_t v_d = _center - o._center;
+        const double d = v_d.length();
+        if( pixel::is_zero(d) ) {
+            v_d = { 0, 0, 0};
+        } else {
+            // v.normalize() -> v / d
+            const double F = M_G * (_mass * o._mass) / ( d * d );
+            ( v_d /= (float)d ) *= (float)( F / o._mass); // same as above but reusing vector 'v'
+        }
+        return v_d;
     }
 
     void sub_tick(const float dt, const fraction_timespec& wts) {
@@ -297,7 +302,8 @@ class CBody {
         for( size_t i = 0; i < cbodies.size(); ++i ) {
             const CBodyRef& cb = cbodies[i];
             if( this != cb.get() ) {
-                const f2::vec_t g = cb->gravity(_body.center);
+                const f3::vec_t g = cb->gravity(_center);
+                // const f3::vec_t g = cb->gravity(*this);
                 if( 0 != i++ ) {
                     _velo += g * dt * gravity_scale;
                 } else {
@@ -305,10 +311,10 @@ class CBody {
                 }
             }
         }
-        _body.move(_velo * dt);
+        _center += _velo * dt;
 
         if( (float)(wts - _orbit_world_time_last).tv_sec >= 1_week ) {
-            _orbit_points.push_back(_body.center);
+            _orbit_points.emplace_back(_center.x, _center.y);
             _orbit_world_time_last = wts;
         }
     }
@@ -325,7 +331,7 @@ class CBody {
             wts += fraction_timespec(step);
             sub_tick( step, wts);
         }
-        _d_sun = _body.center.length();
+        _d_sun = _center.length();
 
         _world_time += fraction_timespec(dt_world);
     }
@@ -337,21 +343,21 @@ class CBody {
                 p.draw();
             }
         }
+        f2::vec_t v = {_velo.x, _velo.y};
+        f2::point_t c = {_center.x, _center.y};
         set_pixel_color(_color);
-        const float r = _body.radius;
-        _body.radius *= _scale * global_scale();
-        _body.draw(filled);
-        _body.radius = r;
+        f2::disk_t body = f2::disk_t(c, _radius * _scale * global_scale());
+        body.draw(filled);
         if( show_cbody_velo ) {
-            set_pixel_color(rgba_yellow);
-            f2::lineseg_t::draw(_body.center, _body.center+_velo*_time_scale_last);
+            set_pixel_color(rgba_yellow);            
+            f2::lineseg_t::draw(c, c +v*_time_scale_last);            
         }
     }
     void clear_orbit() {
         _orbit_points.clear();
     }
 
-    std::string toString() noexcept {
+    std::string toString() const noexcept {
         fraction_timespec t(_world_time);
         t.tv_nsec = 0;
         return pixel::to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s]",
@@ -468,7 +474,7 @@ void mainloop() {
                     if(info_id < max_planet_id){
                         ++info_id;
                     } else {
-                        info_id = cbodyid_t::mercury;
+                        info_id = cbodyid_t::sun;
                     }
                     for(CBodyRef &cb : cbodies){
                         cb->clear_orbit();
@@ -522,9 +528,9 @@ void mainloop() {
             event.set_paused(true);
             ref_cbody_t0.clear();
             const fraction_timespec t_diff_s = sel_cbody.world_time() - selPlanetNextPos->world_time();
-            const f2::point_t p_has = sel_cbody.position();
-            const f2::point_t p_exp = selPlanetNextPos->position();
-            const f2::point_t v_err = ( p_has - p_exp ); // [m]
+            const f3::point_t p_has = sel_cbody.position();
+            const f3::point_t p_exp = selPlanetNextPos->position();
+            const f3::point_t v_err = ( p_has - p_exp ); // [m]
             const float l_err = v_err.length(); // [m]
             const float diam = sel_cbody.radius() * 2.0f;
             const float circum = sel_cbody.sun_dist() * 2.0f * std::numbers::pi_v<float>;
@@ -649,7 +655,6 @@ int main(int argc, char *argv[])
         cbodies.push_back(cb);
         printf("%s\n", cb->toString().c_str());
     }
-
     space_height = cbodies[number(max_planet_id)]->space_height();
     pixel::cart_coord.set_height(-space_height, space_height);
 
