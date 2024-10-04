@@ -358,6 +358,8 @@ static input_event_type_t to_event_type(SDL_Scancode scancode) {
             return input_event_type_t::P1_ACTION2;
         case SDL_SCANCODE_RALT:
             return input_event_type_t::P1_ACTION3;
+        case SDL_SCANCODE_RCTRL:
+            return input_event_type_t::P1_ACTION4;
             /**
         case SDL_SCANCODE_RGUI:
             return input_event_type_t::P1_ACTION4; */
@@ -375,6 +377,8 @@ static input_event_type_t to_event_type(SDL_Scancode scancode) {
             return input_event_type_t::P2_ACTION2;
         case SDL_SCANCODE_LALT:
             return input_event_type_t::P2_ACTION3;
+        case SDL_SCANCODE_Z:
+            return input_event_type_t::P2_ACTION4;
             /**
         case SDL_SCANCODE_LGUI:
             return input_event_type_t::P2_ACTION4; */
@@ -392,6 +396,8 @@ static input_event_type_t to_event_type(SDL_Scancode scancode) {
             return input_event_type_t::P3_ACTION2;
         case SDL_SCANCODE_N:
             return input_event_type_t::P3_ACTION3;
+        case SDL_SCANCODE_M:
+            return input_event_type_t::P3_ACTION4;
         case SDL_SCANCODE_R:
             return input_event_type_t::RESET;
         default:
