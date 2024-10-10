@@ -95,7 +95,7 @@ constexpr cbodyid_t& operator--(cbodyid_t& rhs) noexcept {
 
 static float default_scale[] {
   1.0f, 5*5, 5*5, 5*5, 5*5,
-  5, 5, 5, 5, 10*5
+  5, 5, 5, 5, 10*5, 5*5
 };
 
 float default2_scale[] {
@@ -122,9 +122,9 @@ class CBodyConst {
 
 static constexpr float light_second = 299792458.0f;
 static constexpr float light_minute = 60 * light_second;
-si_accel_t oobj_gravity = 1_m_s2;
-si_velo_t oobj_velo = 0;
-si_mass_t oobj_mass = 10_t;
+si_accel_t oobj_gravity = 2479_m_s2 * 100;
+si_velo_t oobj_velo = 108000_km_h;
+double oobj_mass = 5.97e+24; // [kg]
 static cbodyid_t max_planet_id = cbodyid_t::mars;
 
 static constexpr double M_G = 6.6743015e-11; // [N⋅m2⋅kg−2]
@@ -150,7 +150,7 @@ CBodyConst CBodyConstants[] {
    {0, 0, 1, 1}, "Neptun", 102e+24},
   { 1151_km, 7300000000_km, 58_cm_s2, 17064_km_h,
    {0.7f, 0.5f, 0.7f, 0.5f}, "Pluto", 0.0130e+24}
-  , { 6211.4, cart_coord.width(), oobj_gravity, -oobj_velo,
+  , { 6211400_m, 227900000_km, oobj_gravity, -oobj_velo,
   {1, 1, 1, 1}, "oobj", oobj_mass}
 };
 
@@ -227,7 +227,10 @@ class CBody {
         {
             CBodyConst cbc = CBodyConstants[number(_id)];
             size_t id_idx = number(_id);
-            if( 0 < id_idx && dataset_idx < solarDataSet.setCount && id_idx < 9) { // not sun or not oobj
+            if( 0 < id_idx && 
+                dataset_idx < solarDataSet.setCount 
+                && id_idx <= number(cbodyid_t::pluto)) 
+            { // not sun and not oobj
                 const SolarData& solar_data = solarDataSet.set[dataset_idx];
                 _world_time.tv_sec = solar_data.time_u; // [s]
                 const CBodyData& planet = solar_data.planets[id_idx - 1];
@@ -240,8 +243,11 @@ class CBody {
             } else {
                 _world_time.tv_sec = solarDataSet.set[0].time_u; // [s]
                 center = {cbc.d_sun, 0, 0};
-                //float angle = (f2::point_t(0, 0) - center).angle() - (float)M_PI_2;
-                _velo = {cbc.v, 0, 0};
+                f2::point_t center2(center.x, center.y);
+                float angle = (f2::point_t(0, 0) - center2).angle() - (float)M_PI_2;
+                f2::vec_t velo2 = f2::vec_t::from_length_angle(cbc.v, angle);
+                _velo = {velo2.x, velo2.y, 0};
+                // _velo = {cbc.v, 0, 0};
             }
             _d_sun = center.length();
             _radius = cbc.radius;
@@ -379,7 +385,6 @@ std::vector<f2::point_t> pl;
 std::vector<f2::point_t> ipl;
 bool tick_ts_down = false;
 bool with_oobj = false;
-bool oobjinfo = false;
 
 void mainloop() {
     // scale_all_numbers(0.000001f);
@@ -393,7 +398,6 @@ void mainloop() {
     static cbodyid_t selPlanetNextPosCBodyID = info_id;
     static fraction_timespec ref_cbody_t0;
     const f2::point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
-    static CBodyRef oobj = std::make_shared<CBody>( cbodyid_t::oobj );
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
 
     while (pixel::handle_one_event(event)) {
@@ -431,6 +435,11 @@ void mainloop() {
             selPlanetNextPosCBodyID = info_id;
             for(size_t i = 0; i <= number(cbodyid_t::pluto); ++i){
                 CBodyRef cb = std::make_shared<CBody>( static_cast<cbodyid_t>( i ) );
+                cbodies.push_back(cb);
+                printf("%s\n", cb->toString().c_str());
+            }
+            if(with_oobj) {
+                CBodyRef cb = std::make_shared<CBody>( cbodyid_t::oobj );
                 cbodies.push_back(cb);
                 printf("%s\n", cb->toString().c_str());
             }
@@ -474,8 +483,10 @@ void mainloop() {
                 } else if (event.pressed(input_event_type_t::P2_ACTION2)) {
                     if (event.released_and_clr(input_event_type_t::P1_UP)) {
                         oobj_gravity *= 2;
+                        oobj_mass *= 2;
                     } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
                         oobj_gravity /= 2;
+                        oobj_mass /= 2;
                     }
                 }
             }
@@ -544,9 +555,6 @@ void mainloop() {
         for(CBodyRef &cb : cbodies){
             cb->tick(dt, tick_ts);
         }
-        if(with_oobj){
-            oobj->tick(dt, tick_ts);
-        }
         if( !ref_cbody_t0.isZero() && world_t0 >= ref_cbody_t0 ) {
             animating = false;
             event.set_paused(true);
@@ -614,11 +622,11 @@ void mainloop() {
     if( nullptr != selPlanetNextPos ) {
         selPlanetNextPos->draw(false, false);
     }
-    for(size_t i = 0; i <= number(max_planet_id); ++i){
-        cbodies[i]->draw(true, draw_all_orbits || info_id == cbodies[i]->id());
-    }
-    if(with_oobj){
-        oobj->draw(true, oobjinfo);
+    for(CBodyRef &cb : cbodies) {
+        const cbodyid_t id = cb->id();
+        if( number(id) <= number(max_planet_id) || id == cbodyid_t::oobj ) {
+            cb->draw(true, draw_all_orbits || info_id == id);
+        }
     }
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
@@ -662,8 +670,13 @@ int main(int argc, char *argv[])
                 gravity_scale = static_cast<float>(atoi(argv[i+1]));
             } else if( 0 == strcmp("-woobj", argv[i])) {
                 with_oobj = true;
-            } else if( 0 == strcmp("-infoid=oobj", argv[i])) {
-                oobjinfo = true;
+            } else if( 0 == strcmp("-oobj_gravity", argv[i]) && i+1<argc) {
+                oobj_gravity = static_cast<float>(atoi(argv[i+1]));
+            } else if( 0 == strcmp("-oobj_mass", argv[i]) && i+1<argc) {
+                oobj_mass = atof(argv[i+1]);
+            } else {
+                pixel::log_printf(0, "ERROR: Unknown argument %s\n", argv[i]);
+                return 1;
             }
         }
     }
@@ -683,6 +696,11 @@ int main(int argc, char *argv[])
     // space_height = n.sfnets; //  + n.neptun_radius; // [km]
     for(size_t i = 0; i <= number(cbodyid_t::pluto); ++i){
         CBodyRef cb = std::make_shared<CBody>( static_cast<cbodyid_t>( i ) );
+        cbodies.push_back(cb);
+        printf("%s\n", cb->toString().c_str());
+    }
+    if(with_oobj) {
+        CBodyRef cb = std::make_shared<CBody>( cbodyid_t::oobj );
         cbodies.push_back(cb);
         printf("%s\n", cb->toString().c_str());
     }
