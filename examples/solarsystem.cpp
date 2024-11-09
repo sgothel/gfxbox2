@@ -10,6 +10,7 @@
 #include <cassert>
 
 #include <cstdlib>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <numbers>
@@ -34,19 +35,8 @@
 using namespace pixel;
 using namespace pixel::literals;
 
-static bool draw_all_orbits = false;
-static bool ref_cbody_stop = false;
-static bool show_cbody_velo = false;
-static float gravity_scale = 1;
-
-extern "C" {
-    EMSCRIPTEN_KEEPALIVE void set_draw_all_orbits(bool v) noexcept { draw_all_orbits = v; }
-    EMSCRIPTEN_KEEPALIVE void set_data_stop(bool v) noexcept { ref_cbody_stop = v; }
-    EMSCRIPTEN_KEEPALIVE void set_showvelo(bool v) noexcept { show_cbody_velo = v; }
-    EMSCRIPTEN_KEEPALIVE void set_gravityscale(int v) noexcept { gravity_scale = static_cast<float>(v); }
-}
-
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
+static const uint8_t rgba_black[/*4*/] = { 0, 0, 0, 255 };
 // static const uint8_t rgba_gray[/*4*/] = { 170, 170, 170, 255 };
 static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
 static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
@@ -55,9 +45,44 @@ static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
 
 static const float text_lum0 = 0.75f;
 static const float text_lum1 = 0.85f;
-static const f4::vec_t vec4_text_color0(text_lum0, text_lum0, text_lum0, 1.0f);
-static const f4::vec_t vec4_text_color1(text_lum1, text_lum1, text_lum1, 1.0f);
 static const int text_height = 24;
+
+static bool draw_all_orbits = false;
+static bool ref_cbody_stop = false;
+static bool show_cbody_velo = false;
+static float gravity_scale = 1;
+static bool color_inverse = false;
+
+static f4::vec_t vec4_text_color0(text_lum0, text_lum0, text_lum0, 1.0f);
+static f4::vec_t vec4_text_color1(text_lum1, text_lum1, text_lum1, 1.0f);
+static uint8_t rgba_orbit[/*4*/] = { 255, 255, 255, 255 };
+static uint8_t rgba_dbg_velo[/*4*/] = { 255, 255, 0, 255 };
+
+static void set_colorinv(bool v) noexcept {
+    float lum0, lum1;
+     if(v) {
+        color_inverse = true;
+        lum0 = 1.0f - text_lum0;
+        lum1 = 1.0f - text_lum1;
+        ::memcpy(rgba_orbit, rgba_black, sizeof(rgba_black));
+        ::memcpy(rgba_dbg_velo, rgba_red, sizeof(rgba_red));
+     } else {
+        color_inverse = false;
+        lum0 = text_lum0;
+        lum1 = text_lum1;
+        ::memcpy(rgba_orbit, rgba_white, sizeof(rgba_white));
+        ::memcpy(rgba_dbg_velo, rgba_yellow, sizeof(rgba_yellow));
+     }
+    vec4_text_color0 = f4::vec_t(lum0, lum0, lum0, 1.0f);
+    vec4_text_color1 = f4::vec_t(lum1, lum1, lum1, 1.0f);
+}
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_draw_all_orbits(bool v) noexcept { draw_all_orbits = v; }
+    EMSCRIPTEN_KEEPALIVE void set_data_stop(bool v) noexcept { ref_cbody_stop = v; }
+    EMSCRIPTEN_KEEPALIVE void set_showvelo(bool v) noexcept { show_cbody_velo = v; }
+    EMSCRIPTEN_KEEPALIVE void set_gravityscale(int v) noexcept { gravity_scale = static_cast<float>(v); }
+}
 
 enum class cbodyid_t : size_t {
     none = std::numeric_limits<size_t>::max(),
@@ -203,7 +228,7 @@ class CBody {
     float _d_sun; // [m]
     float _radius; // [m]
     double _mass; // [kg]
-    f3::vec_t _velo; // [m/s]    
+    f3::vec_t _velo; // [m/s]
     float _GM; // GM = g * r^2 = [m^3 / s^2]
     f3::point_t _center;
     std::string _id_s;
@@ -227,9 +252,9 @@ class CBody {
         {
             CBodyConst cbc = CBodyConstants[number(_id)];
             size_t id_idx = number(_id);
-            if( 0 < id_idx && 
-                dataset_idx < solarDataSet.setCount 
-                && id_idx <= number(cbodyid_t::pluto)) 
+            if( 0 < id_idx &&
+                dataset_idx < solarDataSet.setCount
+                && id_idx <= number(cbodyid_t::pluto))
             { // not sun and not oobj
                 const SolarData& solar_data = solarDataSet.set[dataset_idx];
                 _world_time.tv_sec = solar_data.time_u; // [s]
@@ -325,7 +350,8 @@ class CBody {
         }
         _center += _velo * dt;
 
-        if( (float)(wts - _orbit_world_time_last).tv_sec >= 1_week ) {
+        const si_time_t orbit_th = color_inverse ? 0 : 1_day;
+        if( (float)(wts - _orbit_world_time_last).tv_sec > orbit_th ) {
             _orbit_points.emplace_back(_center.x, _center.y);
             _orbit_world_time_last = wts;
         }
@@ -350,7 +376,7 @@ class CBody {
 
     void draw(bool filled, bool orbit) {
         if( orbit ) {
-            set_pixel_color(rgba_white);
+            set_pixel_color(rgba_orbit);
             for(f2::point_t &p : _orbit_points){
                 p.draw();
             }
@@ -361,8 +387,8 @@ class CBody {
         f2::disk_t body = f2::disk_t(c, _radius * _scale * global_scale());
         body.draw(filled);
         if( show_cbody_velo ) {
-            set_pixel_color(rgba_yellow);            
-            f2::lineseg_t::draw(c, c +v*_time_scale_last);            
+            set_pixel_color(rgba_dbg_velo);
+            f2::lineseg_t::draw(c, c +v*_time_scale_last);
         }
     }
     void clear_orbit() {
@@ -615,9 +641,13 @@ void mainloop() {
     }
 
     // black background
-    clear_pixel_fb( 0, 0, 0, 0);
-
-    set_pixel_color(255, 255, 255, 255);
+    if(color_inverse) {
+        clear_pixel_fb( 255, 255, 255, 255);
+        set_pixel_color(rgba_black);
+    } else {
+        clear_pixel_fb( 0, 0, 0, 0);
+        set_pixel_color(rgba_white);
+    }
 
     if( nullptr != selPlanetNextPos ) {
         selPlanetNextPos->draw(false, false);
@@ -654,6 +684,8 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
                 pixel::forced_fps = atoi(argv[i+1]);
                 ++i;
+            } else if( 0 == strcmp("-color_inv", argv[i]) ) {
+                set_colorinv(true);
             } else if( 0 == strcmp("-show_velo", argv[i]) ) {
                 show_cbody_velo = true;
             } else if( 0 == strcmp("-max_planet_id", argv[i]) && i+1<argc) {
