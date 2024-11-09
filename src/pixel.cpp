@@ -505,6 +505,30 @@ std::string pixel::input_event_t::to_string() const noexcept {
 
 using pixel::fraction_timespec;
 
+fraction_timespec fraction_timespec::from(int year, unsigned month, unsigned day,
+                                          unsigned hour, unsigned minute,
+                                          unsigned seconds, uint64_t nano_seconds) noexcept {
+    fraction_timespec res;
+    if( !( 1<=month && month<=12 &&
+           1<=day && day<=31 &&
+           hour<=23 &&
+           minute<=59 && seconds<=60 ) ) {
+        return res; // error
+    }
+    struct std::tm tm_0;
+    ::memset(&tm_0, 0, sizeof(tm_0));
+    tm_0.tm_year = year - 1900; // years since 1900
+    tm_0.tm_mon = static_cast<int>(month) - 1; // months since Janurary [0-11]
+    tm_0.tm_mday = static_cast<int>(day);      // day of the month [1-31]
+    tm_0.tm_hour = static_cast<int>(hour);     // hours since midnight [0-23]
+    tm_0.tm_min = static_cast<int>(minute);    // minutes after the hour [0-59]
+    tm_0.tm_sec = static_cast<int>(seconds);   // seconds after the minute [0-60], including one leap second
+    std::time_t t1 = ::timegm (&tm_0);
+    res.tv_sec = static_cast<int64_t>(t1);
+    res.tv_nsec = static_cast<int64_t>(nano_seconds);
+    return res;
+}
+
 std::string fraction_timespec::to_string() const noexcept {
     return std::to_string(tv_sec) + "s + " + std::to_string(tv_nsec) + "ns";
 }

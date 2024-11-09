@@ -148,6 +148,20 @@ namespace pixel {
         explicit constexpr fraction_timespec(const double seconds) noexcept
         : tv_sec( static_cast<int64_t>(seconds) ),
           tv_nsec( static_cast<int64_t>( (seconds - static_cast<double>(tv_sec)) * 1e+9) ) { }
+          
+        /**
+         * Conversion constructor from broken down values assuming UTC
+         * @param year year number, 0 as 0 A.D.
+         * @param month month number [1-12]
+         * @param day day of the month [1-31]
+         * @param hour hours since midnight [0-23]
+         * @param minute minutes after the hour [0-59]
+         * @param seconds seconds after the minute including one leap second [0-60]
+         * @param nano_seconds nanoseconds [0, 1'000'000'000)
+        */
+        static fraction_timespec from(int year, unsigned month, unsigned day,
+                                      unsigned hour=0, unsigned minute=0,
+                                      unsigned seconds=0, uint64_t nano_seconds=0) noexcept;
 
         /**
          * Normalize tv_nsec with its absolute range [0..1'000'000'000[ or [0..1'000'000'000)
@@ -237,6 +251,10 @@ namespace pixel {
          * @param muteTime if true, always mute time
          */
         std::string to_iso8601_string(bool space_separator=false, bool muteTime=false) const noexcept;
+    
+        int64_t days(){
+            return tv_sec / (int64_t)(3600*24);
+        }
     };
 
     inline std::string to_string(const fraction_timespec& v) noexcept { return v.to_string(); }
