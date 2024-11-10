@@ -29,8 +29,8 @@
 /**
  * 3D computer graphics math based upon four float components.
  */
-namespace pixel::f4 {
-
+namespace pixel {
+namespace f4 {
     class vec_t {
         public:
             float x;
@@ -195,5 +195,11 @@ namespace pixel::f4 {
         return r;
     }
 } // namespace pixel_4f
+
+    inline void set_pixel_color(const f4::vec_t& rgba) noexcept {
+        set_pixel_color4f(rgba[0], rgba[1], rgba[2], rgba[3]);
+    }
+
+} // namespace pixel
 
 #endif /*  PIXEL3F_HPP_ */

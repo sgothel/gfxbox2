@@ -410,11 +410,6 @@ namespace pixel {
     inline void set_pixel_color(const float rgba[/*4*/]) noexcept {
         set_pixel_color4f(rgba[0], rgba[1], rgba[2], rgba[3]);
     }
-    template<typename T>
-    void set_pixel_color(const T& rgba) noexcept {
-        set_pixel_color4f(rgba[0], rgba[1], rgba[2], rgba[3]);
-    }
-
     void draw_grid(float raster_sz,
                    uint8_t gr, uint8_t gg, uint8_t gb, uint8_t ga,
                    uint8_t cr, uint8_t cg, uint8_t cb, uint8_t ca);
