@@ -700,12 +700,15 @@ int main(int argc, char *argv[])
                 ref_cbody_stop = true;
             } else if( 0 == strcmp("-gravity_scale", argv[i]) && i+1<argc) {
                 gravity_scale = static_cast<float>(atoi(argv[i+1]));
+                ++i;
             } else if( 0 == strcmp("-woobj", argv[i])) {
                 with_oobj = true;
             } else if( 0 == strcmp("-oobj_gravity", argv[i]) && i+1<argc) {
                 oobj_gravity = static_cast<float>(atoi(argv[i+1]));
+                ++i;
             } else if( 0 == strcmp("-oobj_mass", argv[i]) && i+1<argc) {
                 oobj_mass = atof(argv[i+1]);
+                ++i;
             } else {
                 pixel::log_printf(0, "ERROR: Unknown argument %s\n", argv[i]);
                 return 1;
