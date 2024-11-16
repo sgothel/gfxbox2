@@ -53,6 +53,8 @@ namespace pixel::f2 {
         constexpr vec_t& operator=(const vec_t&) noexcept = default;
         constexpr vec_t& operator=(vec_t&&) noexcept = default;
 
+        constexpr vec_t copy() noexcept { return vec_t(*this); }
+
         /**
          * Returns component value, this reinterpreted as `float*` w/o boundary check
          */
@@ -268,6 +270,12 @@ namespace pixel::f2 {
     constexpr vec_t operator-(const vec_t& lhs, const vec_t& rhs ) noexcept {
         vec_t r(lhs);
         r -= rhs;
+        return r;
+    }
+
+    constexpr vec_t operator-(const vec_t& lhs) noexcept {
+        vec_t r(lhs);
+        r *= -1;
         return r;
     }
 
@@ -575,13 +583,13 @@ namespace pixel::f2 {
         void rotate(const float radians) noexcept {
             p1.rotate(radians);
         }
-        
+
         void rotate(const float radians, point_t p) noexcept {
             p1.rotate(radians);
             p1.rotate(radians, p);
             p0.rotate(radians, p);
         }
-        
+
         void add(float length) {
             // extend center points p0, p1 with radius in moving direction
             const float a_move = angle();
@@ -948,7 +956,7 @@ namespace pixel::f2 {
     public:
         triangle_t() noexcept
         : p_a(), p_b(), p_c(), p_center(){}
-        
+
         triangle_t(const point_t& a_, const point_t& b_, const point_t& c_) noexcept
         : p_a(a_), p_b(b_), p_c(c_)
         {
@@ -1070,7 +1078,7 @@ namespace pixel::f2 {
             return false;
         }
 
-        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in, 
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in,
                           const float in_radius) const noexcept {
             {
                 // tl .. tr
@@ -1153,9 +1161,9 @@ namespace pixel::f2 {
 
         disk_t(float x, float y, const float r_)
         : center(x, y), radius(r_), dir_angle(0.0f) {}
-        
+
         ~disk_t() override = default;
-        
+
         std::string toString() const noexcept override {
             return "disk[c " + center.toString() +
                     ", r " + std::to_string(radius) +
@@ -1177,11 +1185,11 @@ namespace pixel::f2 {
         }
 
         bool intersects(const lineseg_t& line ) const noexcept override {
-            /** Buggy 
+            /** Buggy
             const float min_distance = triangle_t::area(center, line.p0, line.p1) /
                                        (line.p1 - line.p0).length();
             return min_distance <= radius;
-            */            
+            */
             return line.intersects( box() );
         }
 
@@ -1210,7 +1218,7 @@ namespace pixel::f2 {
             draw(true);
         }
         void draw(const bool filled) const noexcept;
-        
+
         void draw_with_thickness(){
             const float r1 = radius;
             const float r2 = radius - thickness;
@@ -1226,7 +1234,7 @@ namespace pixel::f2 {
                         p.draw();
                     }
                 }
-            }        
+            }
         }
         bool on_screen() const noexcept override {
             return box().on_screen();
@@ -1285,7 +1293,7 @@ namespace pixel::f2 {
     public:
         rect_t()
         : m_tl(), m_tr(), m_bl(), m_br(){}
-        
+
         rect_t(const point_t& tl_, const float width, const float height, const float radians) noexcept
         {
             m_tl = tl_;
@@ -1313,14 +1321,14 @@ namespace pixel::f2 {
             p_center = { ( m_tl.x + m_tr.x ) / 2.0f  , ( m_tl.y + m_bl.y ) / 2.0f  };
             dir_angle = 0.0f;
         }
-        
+
         bool operator==(const rect_t &o) const {
             return m_tl == o.m_tl &&
                    m_tr == o.m_tr &&
                    m_bl == o.m_bl &&
                    m_br == o.m_br;
         }
-        
+
         aabbox_t box() const noexcept override {
             return aabbox_t().resize(m_tl).resize(m_tr).resize(m_bl).resize(m_br);
         }
@@ -1672,7 +1680,7 @@ namespace pixel::f2 {
 
         return lf;
     }
-    
+
     class circle_seg_t : public ageom_t {
       private:
         point_t m_center;
@@ -1683,11 +1691,11 @@ namespace pixel::f2 {
       public:
         circle_seg_t()
         : m_center(), m_radius(), m_start_angle(), m_end_angle() {}
-        
-        circle_seg_t(const point_t center, const float radius, 
+
+        circle_seg_t(const point_t center, const float radius,
                      const float start_angle, const float end_angle) noexcept
         : m_center(center), m_radius(radius), m_start_angle(start_angle), m_end_angle(end_angle) {}
-        
+
         circle_seg_t(const point_t center, const float radius,
                      const float an_angle, const float winkel, const bool b) noexcept
         : m_center(center), m_radius(radius)
@@ -1709,13 +1717,13 @@ namespace pixel::f2 {
         void set_center(const point_t &new_center) {
             m_center = new_center;
         }
-        
+
         aabbox_t box() const noexcept override {
             point_t bl = { m_center.x - m_radius, m_center.y - m_radius};
             point_t tr = { m_center.x + m_radius, m_center.y + m_radius};
             return aabbox_t(bl, tr);
         }
-        
+
         bool contains(const point_t& o) const noexcept override {
             return box().contains(o);
             // return box().contains(o);
@@ -1732,8 +1740,8 @@ namespace pixel::f2 {
         bool intersects(const geom_t &o) const noexcept override {
             return box().intersects(o);
         }
-        
-        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, 
+
+        bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point,
                           const lineseg_t& in) const noexcept override {
             if( !in.intersects( box() ) ) {
                 return false;
@@ -1746,7 +1754,7 @@ namespace pixel::f2 {
             reflect_out = -1.0f * v_in;
             return true;
         }
-        
+
         void draw(pixel::f2::point_t pm, float r, float alpha1, float alpha2) const noexcept {
             float x;
             float y;
@@ -1772,11 +1780,11 @@ namespace pixel::f2 {
                 p0.draw();
             }
         }
-        
+
         bool on_screen() const noexcept override {
             return box().on_screen();
         }
-        
+
         void rotate(const float radians) noexcept override {
             m_start_angle += radians;
             m_end_angle += radians;
@@ -1802,28 +1810,28 @@ namespace pixel::f2 {
         }
     };
     typedef std::shared_ptr<circle_seg_t> circle_seg_ref_t;
-    
+
     class dashed_lineseg_t : public lineseg_t {
       public:
         float distance_length;
         float quantity;
         dashed_lineseg_t()
         : lineseg_t(), distance_length(), quantity() {}
-        
+
         dashed_lineseg_t(dashed_lineseg_t& bl) noexcept;
-        dashed_lineseg_t(const point_t p0_, const point_t p1_, const float distance_length_, 
+        dashed_lineseg_t(const point_t p0_, const point_t p1_, const float distance_length_,
                          const float quantity_)
             : lineseg_t(p0_, p1_), distance_length(distance_length_), quantity(quantity_) {}
-        
+
         dashed_lineseg_t(const lineseg_t &l, const float distance_length_, const float quantity_)
             : lineseg_t(l), distance_length(distance_length_), quantity(quantity_) {}
-        
+
         dashed_lineseg_t& operator=(const dashed_lineseg_t& bl) noexcept = default;
-        
+
         bool error() const {
             return quantity * distance_length >= length();
         }
-        
+
         void draw() const noexcept override {
             const float a = (length() - quantity * distance_length) / (quantity + 1);
             point_t pa = p0;
@@ -1833,7 +1841,7 @@ namespace pixel::f2 {
             pb += v1;
             lineseg_t::draw(pa, pb);
             pa = pb + v2;
-            
+
             for(float i = 0; i < quantity; ++i){
                 pb += (v1 + v2);
                 lineseg_t::draw(pa, pb);
