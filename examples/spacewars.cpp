@@ -41,7 +41,7 @@ constexpr static const int player_id_2 = 2;
 constexpr static const int player_id_3 = 3;
 constexpr static const float spaceship_height = 10.0f; // [m]
 constexpr static const float space_height = spaceship_height*30.0f; // [m]
-constexpr static const float sun_gravity = 28 * 10.0f; // [m/s^2]
+constexpr static const float sun_gravity = 28 * 8.0f; // [m/s^2]
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
 static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
 static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
@@ -319,7 +319,9 @@ fragment_ref_t make_asteroid(const pixel::f2::point_t& center, float height,
 class peng_t {
   private:
     idscore_t* m_owner;
-    float m_fuse = 0.25f; // [s]
+    float m_fuse; // [s]
+    constexpr static float fuse2_max = 30_s;
+    float m_fuse2 = fuse2_max;
 
     bool hits_fragment() noexcept {
         bool hit = false;
@@ -346,34 +348,37 @@ class peng_t {
     pixel::f2::rect_t m_peng;
 
     peng_t(idscore_t* owner,
-           const pixel::f2::point_t& p0, const float diag, const float fuse = 1) noexcept
-    : m_owner(owner), m_fuse(fuse), m_velo(),
-      m_peng(p0 + pixel::f2::point_t(-diag/2, +diag/2), diag, diag, 0)
-    { }
-    peng_t(idscore_t* owner,
-           const pixel::f2::point_t& p0, const float diag, const pixel::f2::vec_t& v) noexcept
-    : m_owner(owner), m_velo( v ),
+           const pixel::f2::point_t& p0, const float diag, const pixel::f2::vec_t& v,
+           const float fuse = 0.25f) noexcept
+    : m_owner(owner), m_fuse(fuse), m_velo( v ),
       m_peng(p0 + pixel::f2::point_t(-diag/2, +diag/2), diag, diag, v.angle())
     { }
 
     idscore_t& owner() noexcept { return *m_owner; }
 
     bool tick(const float dt) noexcept {
-        pixel::f2::vec_t g = sun->gravity_env(m_peng.p_center);
-        m_velo += g * dt;
-        m_peng.move( m_velo * dt );
+        if(!m_velo.is_zero()){
+            pixel::f2::vec_t g = sun->gravity_env(m_peng.p_center);
+            m_velo += g * dt;
+            m_peng.move( m_velo * dt );
+        }
+        if( armed() ) {
+            m_fuse2 -= dt;
+        }
         m_peng.rotate(std::numbers::pi_v<float> * dt); // 180 degrees (180_deg)
         m_fuse = std::max(0.0f, m_fuse - dt);
-        return !sun->hit( m_peng.p_center ) &&
-               !hits_fragment() ;
+        return m_fuse2 > 0 && !sun->hit( m_peng.p_center ) &&
+               !hits_fragment();
     }
     bool armed() const noexcept { return pixel::is_zero(m_fuse); }
+    float fuse2() const noexcept { return m_fuse2; }
 
     void draw() const noexcept {
-        if( armed() ) {
-            pixel::set_pixel_color(rgba_white);
-        } else {
+        if( !armed() ) {
             pixel::set_pixel_color(rgba_green);
+        } else {
+            const float pct = m_fuse2 / fuse2_max;
+            pixel::set_pixel_color4f(1.0f, pct, pct, 1.0f);
         }
         m_peng.draw(false);
         pixel::set_pixel_color(rgba_white);
@@ -402,8 +407,8 @@ class spaceship_t : public pixel::f2::linestrip_t {
 
         constexpr static const float peng_diag = 0.15f*height;
         constexpr static const float peng_velo_0 = vel_max / 2;
-        constexpr static const int peng_inventory_max = 5000;
-        constexpr static const int mine_inventory_max = 10;
+        constexpr static const int peng_inventory_max = 4000;
+        constexpr static const int mine_inventory_max = 2000;
 
         constexpr static const float shield_radius = spaceship_height * 0.9f;
         constexpr static const float shield_time_max = 10; // [s]
@@ -479,7 +484,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
                     p0 = p_list[0];
                 }
                 pixel::f2::vec_t v_p = velocity + pixel::f2::vec_t::from_length_angle(peng_velo_0, dir_angle);
-                pengs.emplace_back(m_owner, p0, peng_diag, v_p  );
+                pengs.emplace_back(m_owner, p0, peng_diag, v_p);
                 --peng_inventory;
             }
         }
@@ -488,7 +493,15 @@ class spaceship_t : public pixel::f2::linestrip_t {
             if(mine_inventory <= 0){
                 return;
             }
-            pengs.emplace_back(m_owner, p_center, peng_diag);
+            if( true ) {
+                pengs.emplace_back(m_owner,
+                    pixel::f2::point_t(p_center.x, p_center.y-peng_diag)-
+                    5*velocity.copy().normalize(),
+                    peng_diag, pixel::f2::vec_t(), 2);
+            } else {
+                pengs.emplace_back(m_owner,
+                    p_center, peng_diag, -velocity, 2);
+            }
             --mine_inventory;
         }
 
@@ -1004,13 +1017,12 @@ void mainloop() {
                     if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION1) ) {
                             ship->peng();
                     } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION2) ) {
-                        if( event.pressed(pixel::input_event_type_t::P1_ACTION1)) {
-                            ship->mine();
-                        } else {
-                            ship->set_orbit_velocity();
-                        }
+                        ship->set_orbit_velocity();
                     } else if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION3) ) {
                         p1.set_cloak(!p1.cloak());
+                    }
+                    if( event.pressed(pixel::input_event_type_t::P1_ACTION4)) {
+                        ship->mine();
                     }
                     ship->set_shield( event.pressed(pixel::input_event_type_t::P1_DOWN) );
                 }
@@ -1023,13 +1035,12 @@ void mainloop() {
                     if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION1) ) {
                         ship->peng();
                     } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
-                        if( event.pressed(pixel::input_event_type_t::P2_ACTION1)) {
-                            ship->mine();
-                        } else {
-                            ship->set_orbit_velocity();
-                        }
+                        ship->set_orbit_velocity();
                     } else if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION3) ){
                         p2.set_cloak(!p2.cloak());
+                    }
+                    if( event.pressed(pixel::input_event_type_t::P2_ACTION4)) {
+                        ship->mine();
                     }
                     ship->set_shield( event.pressed(pixel::input_event_type_t::P2_DOWN) );
                 }
@@ -1041,13 +1052,12 @@ void mainloop() {
                     if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION1) ) {
                         ship->peng();
                     } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION2) ) {
-                        if( event.pressed(pixel::input_event_type_t::P3_ACTION1)) {
-                            ship->mine();
-                        } else {
-                            ship->set_orbit_velocity();
-                        }
+                        ship->set_orbit_velocity();
                     } else if( event.released_and_clr(pixel::input_event_type_t::P3_ACTION3) ){
-                        p3.set_cloak(!p3.cloak());
+                            p3.set_cloak(!p3.cloak());
+                    }
+                    if( event.pressed(pixel::input_event_type_t::P3_ACTION4)) {
+                        ship->mine();
                     }
                 }
             }
@@ -1156,6 +1166,7 @@ void mainloop() {
     for(auto & peng : pengs) {
         peng.draw();
     }
+    pixel::set_pixel_color(255, 255, 255, 255);
     sun->draw();
 
     float fps = pixel::get_gpu_fps();
@@ -1209,7 +1220,7 @@ int main(int argc, char *argv[])
 {
     int window_width = 1920, window_height = 1080; // 16:9
     bool enable_vsync = true;
-    int sun_gravity_scale_env = 20;    //  20 x 280 =  5600
+    int sun_gravity_scale_env = 200;    //  20 x 280 =  5600
     int sun_gravity_scale_ships = 200; // 200 x 280 = 56000
     bool use_subsys_primitives = true;
     #if defined(__EMSCRIPTEN__)
