@@ -503,32 +503,32 @@ namespace pixel {
         POINTER_BUTTON,
         POINTER_MOTION,
         ANY_KEY, // 3
-        P1_UP, // 4
-        P1_DOWN,
-        P1_RIGHT,
-        P1_LEFT,
-        P1_ACTION1,
-        P1_ACTION2,
-        P1_ACTION3,
-        P1_ACTION4,
-        PAUSE, // 11
-        P2_UP,
-        P2_DOWN,
-        P2_RIGHT,
-        P2_LEFT,
-        P2_ACTION1,
-        P2_ACTION2,
-        P2_ACTION3,
-        P2_ACTION4,
-        P3_UP,
-        P3_DOWN,
-        P3_RIGHT,
-        P3_LEFT,
-        P3_ACTION1,
-        P3_ACTION2,
-        P3_ACTION3,
-        P3_ACTION4,
-        RESET, // 26
+        P1_UP,      ///< UP, 4
+        P1_DOWN,    ///< DOWN
+        P1_RIGHT,   ///< RIGHT
+        P1_LEFT,    ///< LEFT
+        P1_ACTION1, ///< RSHIFT
+        P1_ACTION2, ///< RETURN
+        P1_ACTION3, ///< RALT
+        P1_ACTION4, ///< RCTRL
+        PAUSE,      ///< P, 11
+        P2_UP,      ///< W
+        P2_DOWN,    ///< A
+        P2_RIGHT,   ///< S
+        P2_LEFT,    ///< D
+        P2_ACTION1, ///< LSHIFT
+        P2_ACTION2, ///< LCTRL
+        P2_ACTION3, ///< LALT
+        P2_ACTION4, ///< Z
+        P3_UP,      ///< I
+        P3_DOWN,    ///< J
+        P3_RIGHT,   ///< K
+        P3_LEFT,    ///< L
+        P3_ACTION1, ///< V
+        P3_ACTION2, ///< B
+        P3_ACTION3, ///< N
+        P3_ACTION4, ///< M
+        RESET,      ///< R, 26
         /** Request to close window, which then should be closed by caller */
         WINDOW_CLOSE_REQ,
         WINDOW_RESIZED, // 28
@@ -541,6 +541,58 @@ namespace pixel {
     }
     constexpr uint32_t bitmask(const int bit) noexcept {
         return 1U << bit;
+    }
+
+    enum class player_event_type_t : int {
+        NONE,
+        UP,
+        DOWN,
+        RIGHT,
+        LEFT,
+        ACTION1,
+        ACTION2,
+        ACTION3,
+        ACTION4,
+    };
+    constexpr input_event_type_t to_input_event(int player, player_event_type_t pe) noexcept {
+        if(1 == player) {
+            switch(pe) {
+                case player_event_type_t::UP: return input_event_type_t::P1_UP;
+                case player_event_type_t::DOWN: return input_event_type_t::P1_DOWN;
+                case player_event_type_t::RIGHT: return input_event_type_t::P1_RIGHT;
+                case player_event_type_t::LEFT: return input_event_type_t::P1_LEFT;
+                case player_event_type_t::ACTION1: return input_event_type_t::P1_ACTION1;
+                case player_event_type_t::ACTION2: return input_event_type_t::P1_ACTION2;
+                case player_event_type_t::ACTION3: return input_event_type_t::P1_ACTION3;
+                case player_event_type_t::ACTION4: return input_event_type_t::P1_ACTION4;
+                default: return input_event_type_t::NONE;
+            }
+        } else if(2 == player) {
+            switch(pe) {
+                case player_event_type_t::UP: return input_event_type_t::P2_UP;
+                case player_event_type_t::DOWN: return input_event_type_t::P2_DOWN;
+                case player_event_type_t::RIGHT: return input_event_type_t::P2_RIGHT;
+                case player_event_type_t::LEFT: return input_event_type_t::P2_LEFT;
+                case player_event_type_t::ACTION1: return input_event_type_t::P2_ACTION1;
+                case player_event_type_t::ACTION2: return input_event_type_t::P2_ACTION2;
+                case player_event_type_t::ACTION3: return input_event_type_t::P2_ACTION3;
+                case player_event_type_t::ACTION4: return input_event_type_t::P2_ACTION4;
+                default: return input_event_type_t::NONE;
+            }
+        } else if(3 == player) {
+            switch(pe) {
+                case player_event_type_t::UP: return input_event_type_t::P3_UP;
+                case player_event_type_t::DOWN: return input_event_type_t::P3_DOWN;
+                case player_event_type_t::RIGHT: return input_event_type_t::P3_RIGHT;
+                case player_event_type_t::LEFT: return input_event_type_t::P3_LEFT;
+                case player_event_type_t::ACTION1: return input_event_type_t::P3_ACTION1;
+                case player_event_type_t::ACTION2: return input_event_type_t::P3_ACTION2;
+                case player_event_type_t::ACTION3: return input_event_type_t::P3_ACTION3;
+                case player_event_type_t::ACTION4: return input_event_type_t::P3_ACTION4;
+                default: return input_event_type_t::NONE;
+            }
+        }
+        return input_event_type_t::NONE;
     }
 
     inline bool is_ascii_code(int c) noexcept {
@@ -679,6 +731,14 @@ namespace pixel {
             }
             bool has_any_p3() const noexcept {
                 return 0 != ( ( m_pressed | m_lifted ) & p3_mask );
+            }
+            bool has_any_pn(int player) const noexcept {
+                switch (player) {
+                    case 1: return has_any_p1();
+                    case 2: return has_any_p2();
+                    case 3: return has_any_p3();
+                    default: return false;
+                }
             }
             std::string to_string() const noexcept;
     };
