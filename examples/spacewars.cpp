@@ -36,12 +36,12 @@
 using namespace pixel::literals;
 
 static pixel::input_event_t event;
-constexpr static const int player_id_1 = 1;
-constexpr static const int player_id_2 = 2;
-constexpr static const int player_id_3 = 3;
-constexpr static const float spaceship_height = 10.0f; // [m]
-constexpr static const float space_height = spaceship_height*30.0f; // [m]
-constexpr static const float sun_gravity = 28 * 8.0f; // [m/s^2]
+constexpr static int player_id_1 = 1;
+constexpr static int player_id_2 = 2;
+constexpr static int player_id_3 = 3;
+constexpr static float spaceship_height = 10.0f; // [m]
+constexpr static float space_height = spaceship_height*30.0f; // [m]
+constexpr static float sun_gravity = 28 * 8.0f; // [m/s^2]
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
 static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
 static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
@@ -357,6 +357,9 @@ class peng_t {
     idscore_t& owner() noexcept { return *m_owner; }
 
     bool tick(const float dt) noexcept {
+        if( !m_peng.on_screen() ) {
+            return false;
+        }
         if(!m_velo.is_zero()){
             pixel::f2::vec_t g = sun->gravity_env(m_peng.p_center);
             m_velo += g * dt;
@@ -388,9 +391,6 @@ class peng_t {
         m_velo *= a;
     }
 
-    bool on_screen(){
-        return m_peng.on_screen();
-    }
     bool intersection(const peng_t& o) const {
         return m_peng.intersects(o.m_peng);
     }
@@ -995,7 +995,6 @@ void mainloop() {
     static player_t p2(player_id_2);
     static player_t p3(player_id_3);
 
-    static pixel::texture_ref hud_text;
     static uint64_t frame_count_total = 0;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
@@ -1036,7 +1035,7 @@ void mainloop() {
         // Pass events to all animated objects
         if( animating ) {
             p1.handle_event0();
-            
+
             if(1 < player_count) {
                 p2.handle_event0();
             }
@@ -1089,13 +1088,11 @@ void mainloop() {
         {
             for(auto it = pengs.begin(); it != pengs.end(); ) {
                 peng_t& p = *it;
-                if(p.on_screen()){
-                    if( p.tick(dt) ) {
-                        ++it;
-                        continue;
-                    }
+                if( p.tick(dt) ) {
+                    ++it;
+                } else {
+                    it = pengs.erase(it);
                 }
-                it = pengs.erase(it);
             }
         }
         if( 0 == fragments.size() ) {
