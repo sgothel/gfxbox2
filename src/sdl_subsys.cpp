@@ -91,7 +91,7 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
     {
         SDL_DisplayMode mode;
         const int win_display_idx = SDL_GetWindowDisplayIndex(sdl_win);
-        bzero(&mode, sizeof(mode));
+        ::bzero(&mode, sizeof(mode));
         SDL_GetCurrentDisplayMode(win_display_idx, &mode); // SDL_GetWindowDisplayMode(..) fails on some systems (wrong refresh_rate and logical size
         printf("WindowDisplayMode: %d x %d @ %d Hz @ display %d\n", mode.w, mode.h, mode.refresh_rate, win_display_idx);
         display_frames_per_sec = mode.refresh_rate;
@@ -134,7 +134,7 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
 bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const float origin_norm[2],
                                bool enable_vsync, bool use_subsys_primitives) {
     printf("gfxbox2 version %s\n", pixel::VERSION_LONG);
-                                
+
     pixel::use_subsys_primitives_val = use_subsys_primitives;
 
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) { // SDL_INIT_EVERYTHING
@@ -172,7 +172,7 @@ bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
             SDL_WINDOWPOS_UNDEFINED,
             wwidth, wheight,
             win_flags);
-            
+
     if (nullptr == sdl_win) {
         printf("SDL: Error initializing window: %s\n", SDL_GetError());
         return false;
@@ -184,7 +184,7 @@ bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
         SDL_DestroyWindow(sdl_win);
         return false;
     }
-               
+
     sdl_rend = SDL_CreateRenderer(sdl_win, -1, render_flags);
     if (nullptr == sdl_rend) {
         printf("SDL: Error creating renderer: %s\n", SDL_GetError());
@@ -272,7 +272,7 @@ void pixel::swap_gpu_buffer(int fps) noexcept {
             struct timespec ts;
             ts.tv_sec = static_cast<decltype(ts.tv_sec)>(td_ns/pixel::NanoPerOne); // signed 32- or 64-bit integer
             ts.tv_nsec = td_ns_0 - fudge_ns;
-            nanosleep( &ts, NULL );
+            nanosleep( &ts, nullptr );
             // pixel::log_printf("soft-sync [exp %zd > has %zd]ms, delay %" PRIi64 "ms (%lds, %ldns)\n",
             //         ms_per_frame, ms_this_frame, td_ns/pixel::NanoPerMilli, ts.tv_sec, ts.tv_nsec);
         }
@@ -286,24 +286,66 @@ float pixel::get_gpu_fps() noexcept {
     return gpu_fps;
 }
 
+//
+// Texture
+//
+static constexpr const bool DEBUG_TEX = true;
+
 void pixel::texture_t::destroy() noexcept {
-    SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(data);
-    if( nullptr != tex ) {
+    if( nullptr != m_data && m_owner ) {
+        SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_data);
         SDL_DestroyTexture(tex);
+        m_data = nullptr;
     }
-    data = nullptr;
 }
 
-void pixel::texture_t::draw(const int x_pos, const int y_pos, const float scale_x, const float scale_y) noexcept {
-    SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(data);
-    if( nullptr != tex ) {
+void pixel::texture_t::draw_raw(const int fb_x, const int fb_y, const int fb_w, const int fb_h) const noexcept {
+    if( nullptr != m_data ) {
+        SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_data);
         SDL_Rect src = { .x=x, .y=y, .w=width, .h=height};
-        SDL_Rect dest = { .x=x_pos + dest_x,
-                          .y=y_pos + dest_y,
-                          .w=round_to_int(width*dest_sx*scale_x), .h=round_to_int(height*dest_sy*scale_y) };
+        SDL_Rect dest = { .x=fb_x,
+                          .y=fb_y,
+                          .w=fb_w, .h=fb_h };
         SDL_RenderCopy(sdl_rend, tex, &src, &dest);
     }
 }
+
+pixel::texture_t::texture_t(const std::string& fname) noexcept
+: m_id(counter++)
+{
+    SDL_Surface* surface = IMG_Load(fname.c_str());
+    SDL_Texture* tex_;
+    if( nullptr != surface ) {
+        if( DEBUG_TEX ) {
+            log_printf("texture_t::surface: fmt %u 0x%X, %d x %d pitch %d\n", surface->format->format, surface->format->format, surface->w, surface->h, surface->pitch);
+        }
+        tex_ = SDL_CreateTextureFromSurface(sdl_rend, surface);
+        SDL_FreeSurface(surface);
+        if( nullptr == tex_ ) {
+            log_printf("texture_t: Error loading %s: %s\n", fname.c_str(), SDL_GetError());
+        }
+    } else {
+        tex_ = nullptr;
+        log_printf("texture_t::surface: Error loading %s: %s\n", fname.c_str(), SDL_GetError());
+    }
+    m_data = reinterpret_cast<void*>(tex_);
+    x = 0;
+    y = 0;
+    width = 0;
+    height = 0;
+    Uint32 format = 0;
+    if( nullptr != tex_ ) {
+        SDL_QueryTexture(tex_, &format, nullptr, &width, &height);
+        if( DEBUG_TEX ) {
+            log_printf("texture_t: fmt %u 0x%X, %d x %d\n", format, format, width, height);
+        }
+    }
+    m_owner = true;
+}
+
+//
+// Text Texture
+//
 
 pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
 {
@@ -321,10 +363,15 @@ pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
     }
     SDL_Texture* sdl_tex = SDL_CreateTextureFromSurface(sdl_rend, textSurface);
     texture_ref tex = std::make_shared<texture_t>(reinterpret_cast<void*>(sdl_tex), 0, 0, 0, 0);
-    SDL_QueryTexture(sdl_tex, NULL, NULL, &tex->width, &tex->height);
+    SDL_QueryTexture(sdl_tex, nullptr, nullptr, &tex->width, &tex->height);
     SDL_FreeSurface(textSurface);
     return tex;
 }
+
+
+//
+// Primitives
+//
 
 void pixel::subsys_set_pixel_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
     SDL_SetRenderDrawColor(sdl_rend, r, g, b, a);
@@ -337,6 +384,10 @@ void pixel::subsys_draw_pixel(int x, int y) noexcept {
 void pixel::subsys_draw_line(int x1, int y1, int x2, int y2) noexcept {
     SDL_RenderDrawLine(sdl_rend, x1, y1, x2, y2);
 }
+
+//
+// Events
+//
 
 static input_event_type_t to_event_type(SDL_Scancode scancode) {
     switch ( scancode ) {
@@ -505,7 +556,7 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
                         printf("%s: UP  : %s\n",
                             to_decstring(getElapsedMillisecond(), ',', 9).c_str(),
                             to_string(event).c_str());
-                    }                   
+                    }
                   }
                   break;
 
@@ -515,7 +566,7 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
                     if constexpr ( DEBUG_KEY ) {
                     printf("%s: DOWN: %s\n",
                             to_decstring(getElapsedMillisecond(), ',', 9).c_str(),
-                            to_string(event).c_str());                    
+                            to_string(event).c_str());
                  //       printf("%d", scancode);
                     }
                   }
@@ -548,7 +599,7 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
     void pixel::save_snapshot(const std::string& fname) noexcept {
         SDL_Surface *sshot = SDL_CreateRGBSurface(0, fb_width, fb_height, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000);
         SDL_LockSurface(sshot);
-        SDL_RenderReadPixels(sdl_rend, NULL, SDL_PIXELFORMAT_ARGB8888, sshot->pixels, sshot->pitch);
+        SDL_RenderReadPixels(sdl_rend, nullptr, SDL_PIXELFORMAT_ARGB8888, sshot->pixels, sshot->pitch);
         char * fname2 = strdup(fname.c_str());
         std::thread t(&store_surface, sshot, fname2);
         t.detach();

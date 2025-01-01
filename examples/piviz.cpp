@@ -429,7 +429,7 @@ void mainloop() {
             animating = false;
         } else {
             animating = true;
-        }            
+        }
         if( event.has_any_p1() ) {
             if( event.released_and_clr(pixel::input_event_type_t::P1_UP) ) {
                 manual = true;
@@ -480,13 +480,13 @@ void mainloop() {
     m2 = m2 && anim2;
     anim1 = animating && demo_index == 1;
     anim2 = animating && demo_index == 2;
-    
+
     float fps = pixel::get_gpu_fps();
     texts.push_back( pixel::make_text(
             point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), 0, text_color,
             // "fps "+std::to_string(fps)+", anim[g "+std::to_string(animating)+", a1 "+std::to_string(anim1)+", a2 "+std::to_string(anim2)+"], m "+std::to_string(manual) ));
             "fps "+std::to_string(fps) ) );
-    
+
     // rect_t(point_t(0, 0), max_radius, 100).draw(true);
     if( false ) {
         rect_t r1(point_t(0, 0), max_radius, max_radius);
@@ -608,7 +608,7 @@ void mainloop() {
 
     pixel::swap_pixel_fb(false);
     for(pixel::texture_ref tex : texts) {
-        tex->draw(0, 0);
+        tex->draw_fbcoord(0, 0);
     }
     texts.clear();
     pixel::swap_gpu_buffer();

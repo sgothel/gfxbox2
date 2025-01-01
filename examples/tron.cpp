@@ -46,7 +46,7 @@ void mainloop() {
             // nop for this demo, resize already performed
         }
         animating = !event.paused();
-    
+
         if( event.released_and_clr(pixel::input_event_type_t::RESET) ){
             p1.reset();
             p2.reset();
@@ -121,7 +121,7 @@ void mainloop() {
     }
     // white background
     pixel::clear_pixel_fb( 255, 255, 255, 255);
-    
+
     pixel::set_pixel_color(0, 0, 255, 255);
     p1.draw();
 
@@ -131,7 +131,7 @@ void mainloop() {
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
         const int dx = ( pixel::fb_width - pixel::round_to_int(hud_text->width*hud_text->dest_sx) ) / 2;
-        hud_text->draw(dx, 0);
+        hud_text->draw_fbcoord(dx, 0);
     }
     pixel::swap_gpu_buffer();
 }

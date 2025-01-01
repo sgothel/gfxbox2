@@ -165,6 +165,171 @@ std::string pixel::to_string(const char* format, ...) noexcept {
     return str;
 }
 
+//
+// Texture
+//
+static constexpr const bool DEBUG_TEX = true;
+std::atomic<int> pixel::texture_t::counter = 0;
+
+size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const std::string& filename, int w, int h, int x_off) noexcept
+{
+    std::unique_ptr<texture_t> all = std::make_unique<texture_t>(filename);
+    all->disown();
+    if( DEBUG_TEX ) {
+        log_printf("add_sub_textures: each ( %d + %d ) x %d, all: %s\n", w, x_off, h, all->toString().c_str());
+    }
+    const size_t size_start = storage.size();
+
+    for(int y=0; y<all->height; y+=h) {
+        for(int x=0; x<all->width; x+=w+x_off) {
+            if( storage.size() > size_start ) {
+                storage[ storage.size() - 1 ]->disown(); // only last entry is owner of the SDL_Texture
+            }
+            storage.push_back( std::make_shared<texture_t>(all->data(), x, y, w, h, true /* owner*/) );
+            if( DEBUG_TEX ) {
+                log_printf("add_sub_textures: tex %zd [%d][%d]: %s\n", storage.size()-1, x, y, storage[ storage.size() - 1 ]->toString().c_str());
+            }
+        }
+    }
+    return storage.size() - size_start;
+}
+
+size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const texture_ref& global_texture,
+                               int x_off, int y_off, int w, int h, const std::vector<tex_sub_coord_t>& tex_positions) noexcept
+{
+    if( DEBUG_TEX ) {
+        log_printf("add_sub_textures: each %d x %d, all: %s\n", w, h, global_texture->toString().c_str());
+    }
+    const size_t size_start = storage.size();
+
+    for(tex_sub_coord_t p : tex_positions) {
+        const int x = x_off+p.x;
+        const int y = y_off+p.y;
+        if( 0 <= x && 0 <= y && x+w <= global_texture->width && y+h <= global_texture->height ) {
+            storage.push_back( std::make_shared<texture_t>(global_texture->data(), x, y, w, h, false /* owner*/) );
+        } else {
+            storage.push_back( std::make_shared<texture_t>() );
+        }
+        if( DEBUG_TEX ) {
+            log_printf("add_sub_textures: tex %zd [%d][%d]: %s\n", storage.size()-1, x, y, storage[ storage.size() - 1 ]->toString().c_str());
+        }
+    }
+    return storage.size() - size_start;
+}
+
+pixel::texture_ref pixel::add_sub_texture(const texture_ref& global_texture, int x_off, int y_off, int w, int h) noexcept {
+    if( DEBUG_TEX ) {
+        log_printf("add_sub_texture: %d x %d, all: %s\n", w, h, global_texture->toString().c_str());
+    }
+
+    pixel::texture_ref res;
+    {
+        const int x = x_off;
+        const int y = y_off;
+        if( 0 <= x && 0 <= y && x+w <= global_texture->width && y+h <= global_texture->height ) {
+            res = std::make_shared<texture_t>(global_texture->data(), x, y, w, h, false /* owner*/);
+        } else {
+            res = std::make_shared<texture_t>();
+        }
+        if( DEBUG_TEX ) {
+            log_printf("add_sub_texture: tex[%d][%d]: %s\n", x, y, res->toString().c_str());
+        }
+    }
+    return res;
+}
+
+//
+// animtex_t
+//
+
+pixel::animtex_t::animtex_t(std::string name, float sec_per_atex, const std::vector<texture_ref>& textures) noexcept
+: m_name( std::move(name) )
+{
+    for(const texture_ref& t : textures) {
+        m_textures.push_back( std::make_shared<texture_t>(t->data(), t->x, t->y, t->width, t->height, false /* owner */) );
+    }
+    m_sec_per_atex = sec_per_atex;
+    m_atex_sec_left = 0;
+    m_animation_index = 0;
+    m_paused = false;
+}
+
+pixel::animtex_t::animtex_t(std::string name, float sec_per_atex, const std::vector<const char*>& filenames) noexcept
+: m_name( std::move(name) )
+{
+    for(const char* fname : filenames) {
+        m_textures.push_back( std::make_shared<texture_t>(fname) );
+    }
+    m_sec_per_atex = sec_per_atex;
+    m_atex_sec_left = 0;
+    m_animation_index = 0;
+    m_paused = false;
+}
+
+pixel::animtex_t::animtex_t(std::string name, float sec_per_atex, const std::string& filename, int w, int h, int x_off) noexcept
+: m_name( std::move(name) )
+{
+    add_sub_textures(m_textures, filename, w, h, x_off);
+    m_sec_per_atex = sec_per_atex;
+    m_atex_sec_left = 0;
+    m_animation_index = 0;
+    m_paused = false;
+}
+
+pixel::animtex_t::animtex_t(std::string name, float sec_per_atex, const texture_ref& global_texture,
+                            int x_off, int y_off, int w, int h, const std::vector<tex_sub_coord_t>& tex_positions) noexcept
+: m_name(std::move(name))
+{
+    add_sub_textures(m_textures, global_texture, x_off, y_off, w, h, tex_positions);
+    m_sec_per_atex = sec_per_atex;
+    m_atex_sec_left = 0;
+    m_animation_index = 0;
+    m_paused = false;
+}
+
+void pixel::animtex_t::destroy() noexcept {
+    for(const texture_ref& t : m_textures) {
+        t->destroy();
+    }
+    m_textures.clear();
+}
+
+void pixel::animtex_t::pause(bool enable) noexcept {
+    m_paused = enable;
+    if( enable ) {
+        m_animation_index = 0;
+    }
+}
+
+void pixel::animtex_t::reset() noexcept {
+    m_animation_index = 0;
+    m_atex_sec_left = m_sec_per_atex;
+}
+
+void pixel::animtex_t::tick(const float dt) noexcept {
+    if( !m_paused ) {
+        if( 0 < m_atex_sec_left ) {
+            m_atex_sec_left = std::max( 0.0f, m_atex_sec_left - dt );
+        }
+        if( pixel::is_zero(m_atex_sec_left) ) {
+            m_atex_sec_left = m_sec_per_atex;
+            if( m_textures.size() > 0 ) {
+                m_animation_index = ( m_animation_index + 1 ) % m_textures.size();
+            } else {
+                m_animation_index = 0;
+            }
+        }
+    }
+}
+
+std::string pixel::animtex_t::toString() const noexcept {
+    std::shared_ptr<const texture_t> tex = texture();
+    std::string tex_s = nullptr != tex ? tex->toString() : "null";
+    return m_name+"[anim "+std::to_string(m_atex_sec_left)+"/"+std::to_string(m_sec_per_atex)+
+            " s, paused "+std::to_string(m_paused)+", idx "+std::to_string(m_animation_index)+"/"+std::to_string(m_textures.size())+
+            ", textures["+tex_s+"]]";
+}
+
 pixel::texture_ref pixel::make_text_texture(const char* format, ...) noexcept {
     va_list args;
     va_start (args, format);

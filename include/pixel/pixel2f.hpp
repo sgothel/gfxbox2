@@ -305,6 +305,13 @@ namespace pixel::f2 {
         return pixel::is_zero(lhs.x - rhs.x) && pixel::is_zero(lhs.x - rhs.x);
     } */
 
+    constexpr vec_t min(const vec_t& lhs, const vec_t& rhs) noexcept {
+        return vec_t(std::min(lhs.x, rhs.x), std::min(lhs.y, rhs.y));
+    }
+    constexpr vec_t max(const vec_t& lhs, const vec_t& rhs) noexcept {
+        return vec_t(std::max(lhs.x, rhs.x), std::max(lhs.y, rhs.y));
+    }
+
     inline std::ostream& operator<<(std::ostream& out, const vec_t& v) {
         return out << v.toString();
     }
@@ -360,6 +367,8 @@ namespace pixel::f2 {
 
         virtual void draw() const noexcept = 0;
         virtual bool on_screen() const noexcept = 0;
+        /** Returns whether this object is fully inside the given aabbox_t. */
+        virtual bool inside(const aabbox_t& o) const noexcept = 0;
 
         virtual std::string toString() const noexcept = 0;
     };
@@ -481,6 +490,9 @@ namespace pixel::f2 {
 
         aabbox_t box() const noexcept override { return *this; }
 
+        float width() const noexcept { return tr.x - bl.x; }
+        float height() const noexcept { return tr.y - bl.y; }
+
         /**
          * Check if the point is bounded/contained by this AABBox
          * @return true if  x belong to (low.x, high.x) and y belong to (low.y, high.y)
@@ -490,13 +502,29 @@ namespace pixel::f2 {
                       p.y<bl.y || p.y>tr.y );
         }
 
+        /** Returns whether this object is fully inside the given aabbox_t. */
+        bool inside(const aabbox_t& o) const noexcept override {
+            return o.tr.x >= tr.x &&
+                   o.tr.y >= tr.y &&
+                   o.bl.x <= bl.x &&
+                   o.bl.y <= bl.y;
+        }
+
         bool intersects(const lineseg_t & o) const noexcept override;
 
         bool intersects(const aabbox_t& o) const noexcept override {
-            return !( tr.x < o.bl.x ||
-                      tr.y < o.bl.y ||
-                      bl.x > o.tr.x ||
-                      bl.y > o.tr.y );
+            /**
+             * Traditional boolean equation leads to multiple branches,
+             * using max/min approach allowing for branch-less optimizations.
+             *
+                return !( tr.x < o.bl.x ||
+                          tr.y < o.bl.y ||
+                          bl.x > o.tr.x ||
+                          bl.y > o.tr.y );
+             */
+            const point_t lo = max(bl, o.bl);
+            const point_t hi = min(tr, o.tr);
+            return lo.x <= hi.x && lo.y <= hi.y;
         }
 
 #if 0
@@ -685,6 +713,11 @@ namespace pixel::f2 {
                 return false;
             }
             return is_on_line(p2);
+        }
+
+        /** Returns whether this object is fully inside the given aabbox_t. */
+        bool inside(const aabbox_t& o) const noexcept override {
+            return box().inside(o);
         }
 
     private:
@@ -1045,6 +1078,11 @@ namespace pixel::f2 {
             }
         }
 
+        /** Returns whether this object is fully inside the given aabbox_t. */
+        bool inside(const aabbox_t& o) const noexcept override {
+            return box().inside(o);
+        }
+
         bool intersects(const lineseg_t & o) const noexcept override {
             return o.intersects(box());
         }
@@ -1187,6 +1225,11 @@ namespace pixel::f2 {
         bool contains(const point_t& o) const noexcept override {
             return center.dist(o) <= radius;
             // return box().contains(o);
+        }
+
+        /** Returns whether this object is fully inside the given aabbox_t. */
+        bool inside(const aabbox_t& o) const noexcept override {
+            return box().inside(o);
         }
 
         bool intersects(const lineseg_t& line ) const noexcept override {
@@ -1389,6 +1432,11 @@ namespace pixel::f2 {
 
         bool contains(const point_t& o) const noexcept override {
             return box().contains(o);
+        }
+
+        /** Returns whether this object is fully inside the given aabbox_t. */
+        bool inside(const aabbox_t& o) const noexcept override {
+            return box().inside(o);
         }
 
         bool intersects(const lineseg_t & o) const noexcept override {
@@ -1602,6 +1650,11 @@ namespace pixel::f2 {
             return box().contains(o);
         }
 
+        /** Returns whether this object is fully inside the given aabbox_t. */
+        bool inside(const aabbox_t& o) const noexcept override {
+            return box().inside(o);
+        }
+
         bool intersects(const lineseg_t & o) const noexcept override {
             return o.intersects(box());
         }
@@ -1732,6 +1785,11 @@ namespace pixel::f2 {
         bool contains(const point_t& o) const noexcept override {
             return box().contains(o);
             // return box().contains(o);
+        }
+
+        /** Returns whether this object is fully inside the given aabbox_t. */
+        bool inside(const aabbox_t& o) const noexcept override {
+            return box().inside(o);
         }
 
         bool intersects(const lineseg_t &o) const noexcept override {

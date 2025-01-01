@@ -24,6 +24,7 @@
 #ifndef PIXEL_HPP_
 #define PIXEL_HPP_
 
+#include <atomic>
 #include <limits>
 #include <memory>
 #include <functional> // NOLINT(unused-includes): Used in other header
@@ -298,6 +299,11 @@ namespace pixel {
             /** Convert cartesian y-axis value to framebuffer pixel value. */
             int to_fb_dy(const float dy) const noexcept { return round_to_int( dy / m_h_to_fbh ); }
 
+            /** Convert cartesian x-axis value to framebuffer pixel value. */
+            float to_fb_dx_f(const float dx) const noexcept { return dx / m_w_to_fbw; }
+            /** Convert cartesian y-axis value to framebuffer pixel value. */
+            float to_fb_dy_f(const float dy) const noexcept { return dy / m_h_to_fbh; }
+
             /** Convert framebuffer x-axis value in pixels to cartesian pixel value. */
             int from_fb_dx(const int dx) const noexcept { return round_to_int((float)dx * m_w_to_fbw); }
             /** Convert framebuffer y-axis value in pixels to cartesian pixel value. */
@@ -420,7 +426,10 @@ namespace pixel {
 
     class texture_t {
         private:
-            void* data;
+            static std::atomic_int counter;
+            int m_id;
+            void* m_data;
+            bool m_owner;
         public:
             /** source texture pos-x */
             int x;
@@ -439,11 +448,16 @@ namespace pixel {
             /** dest texture scale-y */
             float dest_sy;
 
-            texture_t(void* data_, const int x_, const int y_, const int width_, const int height_) noexcept
-            : data(data_), x(x_), y(y_), width(width_), height(height_), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+            texture_t(void* data_, const int x_, const int y_, const int width_, const int height_, bool owner=true) noexcept
+            : m_id(counter++), m_data(data_), m_owner(owner), x(x_), y(y_), width(width_), height(height_), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+
+            texture_t(void* data_, int width_, int height_, bool owner=true) noexcept
+            : m_id(counter++), m_data(data_), m_owner(owner), x(0), y(0), width(width_), height(height_), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
             texture_t() noexcept
-            : data(nullptr), x(0), y(0), width(0), height(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+            : m_id(counter++), m_data(nullptr), m_owner(false), x(0), y(0), width(0), height(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+
+            texture_t(const std::string& fname) noexcept;
 
             texture_t(const texture_t&) = delete;
             void operator=(const texture_t&) = delete;
@@ -454,9 +468,135 @@ namespace pixel {
 
             void destroy() noexcept;
 
-            void draw(const int x_pos, const int y_pos, const float scale_x=1.0f, const float scale_y=1.0f) noexcept;
+            constexpr void* data() noexcept { return m_data; }
+            constexpr bool is_owner() const noexcept { return m_owner; }
+            void disown() noexcept { m_owner = false; }
+
+            /// draw using FB coordinates and dimension
+            void draw_raw(const int fb_x, const int fb_y, const int fb_w, const int fb_h) const noexcept;
+            /// draw using FB coordinates and optional scale
+            void draw_fbcoord(const int x_pos, const int y_pos, const float scale_x=1.0f, const float scale_y=1.0f) const noexcept {
+                draw_raw(x_pos + dest_x, y_pos + dest_y,
+                         round_to_int((float)width*dest_sx*scale_x),
+                         round_to_int((float)height*dest_sy*scale_y));
+            }
+            /// draw using cartesian coordinates and dimension
+            void draw(const float x_pos, const float y_pos, const float w, const float h) const noexcept {
+                draw_raw(pixel::cart_coord.to_fb_x( x_pos ), pixel::cart_coord.to_fb_y( y_pos ),
+                         pixel::cart_coord.to_fb_dy(w), pixel::cart_coord.to_fb_dy(h));
+            }
+
+            std::string toString() const noexcept {
+                return "id "+std::to_string(m_id) + " " + std::to_string(x)+"/"+std::to_string(y) + " " + std::to_string(width)+"x"+std::to_string(height) +
+                       ", owner " + std::to_string(m_owner);
+            }
     };
     typedef std::shared_ptr<texture_t> texture_ref;
+
+    struct tex_sub_coord_t {
+        int x;
+        int y;
+    };
+
+    /**
+     * Add sub-textures to the storage list of texture_t from file,
+     * where the last one is the sole owner of the common SDL_Texture instance.
+     * @param storage
+     * @param filename
+     * @param w
+     * @param h
+     * @param x_off
+     * @return number of added sub-textures, last one is owner of the SDL_Texture instance
+     */
+    size_t add_sub_textures(std::vector<texture_ref>& storage,
+                            const std::string& filename, int w, int h, int x_off) noexcept;
+
+    /**
+     * Add sub-textures to the storage list of texture_t from given global texture owner.
+     *
+     * None of the sub-textures is the owner of the common SDL_Texture instance.
+     * @param storage
+     * @param global_texture
+     * @param x_off
+     * @param y_off
+     * @param w
+     * @param h
+     * @param tex_positions
+     * @return number of added sub-textures
+     */
+    size_t add_sub_textures(std::vector<texture_ref>& storage,
+                            const texture_ref& global_texture, int x_off, int y_off, int w, int h,
+                            const std::vector<tex_sub_coord_t>& tex_positions) noexcept;
+
+    /**
+     * Returns a sub-texture from given global texture owner.
+     *
+     * The sub-texture is not the owner of the common SDL_Texture instance.
+     * @param global_texture
+     * @param x_off
+     * @param y_off
+     * @param w
+     * @param h
+     * @return sub-texture ref
+     */
+    texture_ref add_sub_texture(const texture_ref& global_texture, int x_off, int y_off, int w, int h) noexcept;
+
+    class animtex_t {
+        private:
+            std::string m_name;
+            std::vector<texture_ref> m_textures;
+
+            float m_sec_per_atex;
+            float m_atex_sec_left;
+            size_t m_animation_index;
+            bool m_paused;
+
+        public:
+            animtex_t(std::string name, float sec_per_atex, const std::vector<texture_ref>& textures) noexcept;
+
+            animtex_t(std::string name, float sec_per_atex, const std::vector<const char*>& filenames) noexcept;
+
+            animtex_t(std::string name, float sec_per_atex, const std::string& filename, int w, int h, int x_off) noexcept;
+
+            animtex_t(std::string name, float sec_per_atex, const texture_ref& global_texture,
+                     int x_off, int y_off, int w, int h, const std::vector<tex_sub_coord_t>& tex_positions) noexcept;
+
+            animtex_t(const animtex_t& o) noexcept = default;
+            animtex_t(animtex_t&& o) noexcept = default;
+
+            ~animtex_t() noexcept {
+                destroy();
+            }
+
+            void destroy() noexcept;
+
+            const texture_ref texture(const size_t idx) const noexcept { return idx < m_textures.size() ? m_textures[idx] : nullptr; }
+            const texture_ref texture() const noexcept { return m_animation_index < m_textures.size() ? m_textures[m_animation_index] : nullptr; }
+
+            int width() noexcept { texture_ref tex = texture(); return nullptr!=tex ? tex->width : 0; }
+            int height() noexcept { texture_ref tex = texture(); return nullptr!=tex ? tex->height : 0; }
+
+            void reset() noexcept;
+            void pause(bool enable) noexcept;
+            void tick(const float dt) noexcept;
+
+            /// draw using cartesian coordinates and dimension
+            void draw(const float x_pos, const float y_pos, const float w, const float h) const noexcept {
+                texture_ref tex = texture();
+                if( nullptr != tex ) {
+                    tex->draw(x_pos, y_pos, w, h);
+                }
+            }
+            /// draw using cartesian coordinates with scaled texture-source-dimension to FB
+            void draw(const float x_pos, const float y_pos) const noexcept {
+                texture_ref tex = texture();
+                if( nullptr != tex ) {
+                    tex->draw(x_pos, y_pos, (float)tex->width, (float)tex->height);
+                }
+            }
+
+            std::string toString() const noexcept;
+    };
 
     //
     // gfx toolkit dependent API
@@ -503,32 +643,32 @@ namespace pixel {
         POINTER_BUTTON,
         POINTER_MOTION,
         ANY_KEY, // 3
-        P1_UP, // 4
-        P1_DOWN,
-        P1_RIGHT,
-        P1_LEFT,
-        P1_ACTION1,
-        P1_ACTION2,
-        P1_ACTION3,
-        P1_ACTION4,
-        PAUSE, // 11
-        P2_UP,
-        P2_DOWN,
-        P2_RIGHT,
-        P2_LEFT,
-        P2_ACTION1,
-        P2_ACTION2,
-        P2_ACTION3,
-        P2_ACTION4,
-        P3_UP,
-        P3_DOWN,
-        P3_RIGHT,
-        P3_LEFT,
-        P3_ACTION1,
-        P3_ACTION2,
-        P3_ACTION3,
-        P3_ACTION4,
-        RESET, // 26
+        P1_UP,      ///< UP, 4
+        P1_DOWN,    ///< DOWN
+        P1_RIGHT,   ///< RIGHT
+        P1_LEFT,    ///< LEFT
+        P1_ACTION1, ///< RSHIFT
+        P1_ACTION2, ///< RETURN
+        P1_ACTION3, ///< RALT
+        P1_ACTION4, ///< RCTRL
+        PAUSE,      ///< P, 11
+        P2_UP,      ///< W
+        P2_DOWN,    ///< A
+        P2_RIGHT,   ///< S
+        P2_LEFT,    ///< D
+        P2_ACTION1, ///< LSHIFT
+        P2_ACTION2, ///< LCTRL
+        P2_ACTION3, ///< LALT
+        P2_ACTION4, ///< Z
+        P3_UP,      ///< I
+        P3_DOWN,    ///< J
+        P3_RIGHT,   ///< K
+        P3_LEFT,    ///< L
+        P3_ACTION1, ///< V
+        P3_ACTION2, ///< B
+        P3_ACTION3, ///< N
+        P3_ACTION4, ///< M
+        RESET,      ///< R, 26
         /** Request to close window, which then should be closed by caller */
         WINDOW_CLOSE_REQ,
         WINDOW_RESIZED, // 28
@@ -541,6 +681,58 @@ namespace pixel {
     }
     constexpr uint32_t bitmask(const int bit) noexcept {
         return 1U << bit;
+    }
+
+    enum class player_event_type_t : int {
+        NONE,
+        UP,
+        DOWN,
+        RIGHT,
+        LEFT,
+        ACTION1,
+        ACTION2,
+        ACTION3,
+        ACTION4,
+    };
+    constexpr input_event_type_t to_input_event(int player, player_event_type_t pe) noexcept {
+        if(1 == player) {
+            switch(pe) {
+                case player_event_type_t::UP: return input_event_type_t::P1_UP;
+                case player_event_type_t::DOWN: return input_event_type_t::P1_DOWN;
+                case player_event_type_t::RIGHT: return input_event_type_t::P1_RIGHT;
+                case player_event_type_t::LEFT: return input_event_type_t::P1_LEFT;
+                case player_event_type_t::ACTION1: return input_event_type_t::P1_ACTION1;
+                case player_event_type_t::ACTION2: return input_event_type_t::P1_ACTION2;
+                case player_event_type_t::ACTION3: return input_event_type_t::P1_ACTION3;
+                case player_event_type_t::ACTION4: return input_event_type_t::P1_ACTION4;
+                default: return input_event_type_t::NONE;
+            }
+        } else if(2 == player) {
+            switch(pe) {
+                case player_event_type_t::UP: return input_event_type_t::P2_UP;
+                case player_event_type_t::DOWN: return input_event_type_t::P2_DOWN;
+                case player_event_type_t::RIGHT: return input_event_type_t::P2_RIGHT;
+                case player_event_type_t::LEFT: return input_event_type_t::P2_LEFT;
+                case player_event_type_t::ACTION1: return input_event_type_t::P2_ACTION1;
+                case player_event_type_t::ACTION2: return input_event_type_t::P2_ACTION2;
+                case player_event_type_t::ACTION3: return input_event_type_t::P2_ACTION3;
+                case player_event_type_t::ACTION4: return input_event_type_t::P2_ACTION4;
+                default: return input_event_type_t::NONE;
+            }
+        } else if(3 == player) {
+            switch(pe) {
+                case player_event_type_t::UP: return input_event_type_t::P3_UP;
+                case player_event_type_t::DOWN: return input_event_type_t::P3_DOWN;
+                case player_event_type_t::RIGHT: return input_event_type_t::P3_RIGHT;
+                case player_event_type_t::LEFT: return input_event_type_t::P3_LEFT;
+                case player_event_type_t::ACTION1: return input_event_type_t::P3_ACTION1;
+                case player_event_type_t::ACTION2: return input_event_type_t::P3_ACTION2;
+                case player_event_type_t::ACTION3: return input_event_type_t::P3_ACTION3;
+                case player_event_type_t::ACTION4: return input_event_type_t::P3_ACTION4;
+                default: return input_event_type_t::NONE;
+            }
+        }
+        return input_event_type_t::NONE;
     }
 
     inline bool is_ascii_code(int c) noexcept {
@@ -679,6 +871,14 @@ namespace pixel {
             }
             bool has_any_p3() const noexcept {
                 return 0 != ( ( m_pressed | m_lifted ) & p3_mask );
+            }
+            bool has_any_pn(int player) const noexcept {
+                switch (player) {
+                    case 1: return has_any_p1();
+                    case 2: return has_any_p2();
+                    case 3: return has_any_p3();
+                    default: return false;
+                }
             }
             std::string to_string() const noexcept;
     };

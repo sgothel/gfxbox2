@@ -30,7 +30,7 @@
 void rebuild_objects() {
     pixel::f2::ageom_list_t& list = pixel::f2::agobjects();
     list.clear();
-    
+
     pixel::f2::point_t bl = { pixel::cart_coord.min_x(), pixel::cart_coord.min_y() };
     const float sz = 50;
     const float radius = sz/2.0f;
@@ -55,14 +55,14 @@ void rebuild_objects() {
         pixel::f2::point_t c = { sz2, -sz2 };
         std::shared_ptr<pixel::f2::triangle_t> o = std::make_shared<pixel::f2::triangle_t>(a, b, c);
         list.push_back(o);
-    }    
+    }
 }
 
 void mainloop() {
     // static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static bool animating = true;
-    
+
     static const pixel::i2::point_t p0_i = { 0, 0 };
     static const pixel::f2::point_t p0_f = { 0, 0 };
     static pixel::f2::lineseg_t la = { p0_f, { 0.0f, pixel::cart_coord.max_y()*2.0f } };
@@ -72,7 +72,7 @@ void mainloop() {
     static pixel::f2::point_t blob0_home { pixel::cart_coord.min_x()+300.0f, pixel::cart_coord.min_y()+200.0f };
     static pixel::f2::rect_t hero(blob0_home, 200, 100);
     static int blob0_speed = 1;
-        
+
     while(pixel::handle_one_event(event)){
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -97,13 +97,13 @@ void mainloop() {
         pixel::f2::point_t p_old = hero.m_tl;
         if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
             hero.move_dir((float)blob0_speed);
-            blob0_speed += 1;            
+            blob0_speed += 1;
         } else if( event.pressed(pixel::input_event_type_t::P1_DOWN) ) {
             hero.move_dir((float)-blob0_speed);
             blob0_speed += 1;
         } else {
-            blob0_speed = 1;            
-        }            
+            blob0_speed = 1;
+        }
         if( event.pressed(pixel::input_event_type_t::P1_LEFT) ) {
             hero.rotate(pixel::adeg_to_rad(2.0f));
             // hero.move(-blob0_speed, 0);
@@ -118,13 +118,13 @@ void mainloop() {
             }
         }
     }
-    
+
     // const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
     // const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     // t_last = t1;
-    
+
     bool blob1_hit = false;
-       
+
     pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
     pixel::texture_ref hud_text = pixel::make_text_texture("fps "+std::to_string(pixel::get_gpu_fps()));
 
@@ -157,22 +157,22 @@ void mainloop() {
         const pixel::i2::lineseg_t l1 = { p0_i, { (int)-pixel::cart_coord.max_x(), (int) pixel::cart_coord.max_y() } };
         const pixel::i2::lineseg_t l2 = { p0_i, { (int)-pixel::cart_coord.max_x(), (int)-pixel::cart_coord.max_y() } };
         const pixel::i2::lineseg_t l3 = { p0_i, { (int) pixel::cart_coord.max_x(), (int)-pixel::cart_coord.max_y() } };
-    
+
         pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
         l0.draw();
-    
+
         pixel::set_pixel_color(255 /* r */,   0 /* g */,   0 /* b */, 255 /* a */);
         l1.draw();
-    
+
         pixel::set_pixel_color(  0 /* r */,   0 /* g */, 255 /* b */, 255 /* a */);
         l2.draw();
-    
+
         pixel::set_pixel_color(  0 /* r */, 255 /* g */,   0 /* b */, 255 /* a */);
         l3.draw();
         pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
     }
 
-    if( animating ) {            
+    if( animating ) {
         blob1_hit = false; // blob1.intersects(hero);
         if( blob1_hit ) {
             printf("XXX coll.blob %d, 0: %s, 1: %s\n",
@@ -217,7 +217,7 @@ void mainloop() {
     hero.box().draw();
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
-        hud_text->draw(0, 0);
+        hud_text->draw_fbcoord(0, 0);
     }
     pixel::swap_gpu_buffer();
 }
@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
     }
 
     rebuild_objects();
-    
+
     #if defined(__EMSCRIPTEN__)
         emscripten_set_main_loop(mainloop, 0, 1);
     #else

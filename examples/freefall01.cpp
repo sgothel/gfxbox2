@@ -102,7 +102,7 @@ void mainloop() {
     }
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
-    
+
     // white background
     pixel::clear_pixel_fb(255, 255, 255, 255);
 
@@ -138,7 +138,7 @@ void mainloop() {
         const int small_gap_pixel = pixel::cart_coord.to_fb_dy(small_gap);
         const int text_height = thickness_pixel - 2;
         const float sy = (float)text_height / (float)hud_text->height;
-        hud_text->draw(small_gap_pixel*2.0f, small_gap_pixel+1, sy, sy);
+        hud_text->draw_fbcoord(small_gap_pixel*2, small_gap_pixel+1, sy, sy);
     }
     pixel::swap_gpu_buffer();
     if( record_bmpseq_basename.size() > 0 ) {
@@ -207,32 +207,32 @@ int main(int argc, char *argv[])
             pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
         }
 
-        std::shared_ptr<physiks::ball_t> ball_1 = physiks::ball_t::create( 
-            "one", 
-            pixel::f2::point_t(-4.0f*ball_height, drop_height-ball_radius), 
+        std::shared_ptr<physiks::ball_t> ball_1 = physiks::ball_t::create(
+            "one",
+            pixel::f2::point_t(-4.0f*ball_height, drop_height-ball_radius),
             ball_radius,
-            0.0f /* [m/s] */, 
-            pixel::adeg_to_rad(90), 
-            earth_accel, 
-            drop_height, 
+            0.0f /* [m/s] */,
+            pixel::adeg_to_rad(90),
+            earth_accel,
+            drop_height,
             debug_gfx);
-        std::shared_ptr<physiks::ball_t> ball_2 = physiks::ball_t::create( 
-            "two", 
-            pixel::f2::point_t(+2.0f*ball_height, drop_height-ball_radius), 
+        std::shared_ptr<physiks::ball_t> ball_2 = physiks::ball_t::create(
+            "two",
+            pixel::f2::point_t(+2.0f*ball_height, drop_height-ball_radius),
             ball_radius,
-            0.0f /* [m/s] */, 
-            pixel::adeg_to_rad(90), 
-            earth_accel, 
-            drop_height, 
+            0.0f /* [m/s] */,
+            pixel::adeg_to_rad(90),
+            earth_accel,
+            drop_height,
             debug_gfx);
-        std::shared_ptr<physiks::ball_t> ball_3 = physiks::ball_t::create( 
-            "can", 
-            pixel::f2::point_t(pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height), 
+        std::shared_ptr<physiks::ball_t> ball_3 = physiks::ball_t::create(
+            "can",
+            pixel::f2::point_t(pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height),
             ball_radius,
-            6.8f /* [m/s] */, 
-            pixel::adeg_to_rad(64), 
-            earth_accel, 
-            0, 
+            6.8f /* [m/s] */,
+            pixel::adeg_to_rad(64),
+            earth_accel,
+            0,
             debug_gfx);
                         // 6.1f /* [m/s] */, pixel::adeg_to_rad(78));
         pixel::f2::geom_list_t& list = pixel::f2::gobjects();
