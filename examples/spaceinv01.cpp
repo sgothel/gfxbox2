@@ -21,6 +21,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#include <cstddef>
 #include <pixel/pixel3f.hpp>
 #include <pixel/pixel4f.hpp>
 #include <pixel/pixel2f.hpp>
@@ -129,61 +130,11 @@ static void load_textures() {
     }
 }
 
-class peng_t {
-  private:
-    pixel::f2::vec_t m_dim;
-    pixel::f2::point_t m_tl;
-
-    bool hits_fragment() noexcept {
-        bool hit = false;
-        return hit;
-    }
-
-  public:
-    pixel::f2::vec_t m_velo; // [m/s]
-
-    peng_t(const pixel::f2::point_t& center, const pixel::f2::vec_t& v) noexcept
-    : m_dim((float)tex_peng->width, (float)tex_peng->height),
-      m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ), m_velo( v )
-    { }
-
-    pixel::f2::aabbox_t box() const noexcept {
-        return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
-    }
-
-    bool tick(const float dt) noexcept {
-        if( !box().inside(field_box) ) {
-            return false;
-        }
-        if(!m_velo.is_zero()){
-            m_tl += m_velo * dt;
-        }
-        return !hits_fragment();
-    }
-
-    void draw() const noexcept {
-        tex_peng->draw(m_tl.x, m_tl.y, m_dim.x, m_dim.y);
-    }
-
-    bool on_screen(){
-        return box().inside(field_box);
-    }
-    bool intersection(const peng_t& o) const {
-        return box().intersects(o.box());
-    }
-};
-std::vector<peng_t> pengs;
-
 class alient_t {
   private:
     pixel::animtex_t m_atex;
     pixel::f2::vec_t m_dim;
     pixel::f2::point_t m_tl;
-
-    bool hits_fragment() noexcept {
-        bool hit = false;
-        return hit;
-    }
 
   public:
     pixel::f2::vec_t m_velo; // [m/s]
@@ -199,7 +150,7 @@ class alient_t {
         return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
     }
 
-    bool tick(const float dt) noexcept {
+    void tick(const float dt) noexcept {
         m_atex.tick(dt);
         if(!m_velo.is_zero()){
             m_tl += m_velo * dt;
@@ -208,16 +159,17 @@ class alient_t {
                 m_tl += 2 * m_velo * dt;
             }
         }
-        return !hits_fragment();
     }
 
     void draw() const noexcept {
+        // printf("XXX: alien %s\n", m_atex.toString().c_str());
         m_atex.draw(m_tl.x, m_tl.y);
     }
 
     bool on_screen(){
         return box().inside(field_box);
     }
+
     bool intersection(const alient_t& o) const {
         return box().intersects(o.box());
     }
@@ -251,8 +203,8 @@ class bunker_t {
     bool on_screen(){
         return box().inside(field_box);
     }
-    bool intersection(const peng_t& o) const {
-        return box().intersects(o.box());
+    bool intersection(const pixel::f2::aabbox_t& o) const {
+        return box().intersects(o);
     }
 };
 std::vector<bunker_t> bunks;
@@ -307,6 +259,62 @@ void reset_items() {
     reset_bunks();
     reset_aliens();
 }
+
+class peng_t {
+  private:
+    pixel::f2::vec_t m_dim;
+    pixel::f2::point_t m_tl;
+
+    bool hits_aliens() {
+        pixel::f2::aabbox_t b = box();
+        for(auto it = aliens.begin(); it != aliens.end(); ) {
+            alient_t& a = *it;
+            if( !a.box().intersects(b) ) {
+                ++it;
+            } else {
+                it = aliens.erase(it);
+                printf("XXX: Peng: Killed ALien\n");
+                return true;
+            }
+        }
+        return false;
+    }
+  public:
+    pixel::f2::vec_t m_velo; // [m/s]
+
+    peng_t(const pixel::f2::point_t& center, const pixel::f2::vec_t& v) noexcept
+    : m_dim((float)tex_peng->width, (float)tex_peng->height),
+      m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ), m_velo( v )
+    { }
+
+    pixel::f2::aabbox_t box() const noexcept {
+        return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
+    }
+
+    bool tick(const float dt) noexcept {
+        if( !box().inside(field_box) ) {
+            return false;
+        }
+        if(!m_velo.is_zero()){
+            m_tl += m_velo * dt;
+        }
+        return !hits_aliens();
+    }
+
+    void draw() const noexcept {
+        tex_peng->draw(m_tl.x, m_tl.y, m_dim.x, m_dim.y);
+    }
+
+    bool on_screen(){
+        return box().inside(field_box);
+    }
+
+    bool intersection(const peng_t& o) const {
+        return box().intersects(o.box());
+    }
+};
+std::vector<peng_t> pengs;
+
 class spaceship_t {
     public:
         constexpr static const float height = base_height; // [m]
@@ -317,10 +325,6 @@ class spaceship_t {
     private:
         pixel::f2::vec_t m_dim;
         pixel::f2::point_t m_tl, m_tc;
-        bool hits_fragment(const pixel::f2::aabbox_t& /*box*/) noexcept {
-            bool hit = false;
-            return hit;
-        }
 
     public:
         int peng_inventory;
@@ -355,8 +359,7 @@ class spaceship_t {
             }
         }
         bool tick(const float /*dt*/) noexcept {
-            pixel::f2::aabbox_t b = box();
-            return !hits_fragment(b);
+            return true;
         }
 
         void draw() const noexcept {
@@ -422,17 +425,18 @@ class player_t {
         }
         void handle_event0() noexcept {
             if( nullptr != m_ship && event.has_any_p1() ) {
-                if( event.released_and_clr(pixel::input_event_type_t::P1_ACTION1) ) {
+                if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
                     m_ship->peng();
                 }
             }
         }
         void handle_event1(const float dt /* [s] */) noexcept {
+            const float v = 35.0f;
             if( nullptr != m_ship && event.has_any_p1() ) {
                 if( event.pressed(pixel::input_event_type_t::P1_LEFT) ){
-                    m_ship->move( { -24.0f * dt, 0 } );
+                    m_ship->move( { -v * dt, 0 } );
                 } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
-                    m_ship->move( { 24.0f * dt, 0 } );
+                    m_ship->move( { v * dt, 0 } );
                 }
             }
         }
@@ -441,6 +445,7 @@ class player_t {
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
 static bool raster = false;
+
 
 void mainloop() {
     static player_t p1;
@@ -493,9 +498,20 @@ void mainloop() {
         if (raster) {
             pixel::draw_grid(50, 255, 0, 0, 0, 255, 0, 0, 0);
         }
-
-        for(auto & alien : aliens) {
-            alien.tick(dt);
+/*
+        for(size_t i = 0; i < aliens.size(); ++i){
+            alient_t& alien = aliens[i];
+            if(i == 0){
+                continue;
+            }
+            if(!aliens[i-1].on_screen()){
+                alien.m_velo.x *= -1;
+            }
+        }
+*/
+        // alien tick
+        for(alient_t& a: aliens) {
+            a.tick(dt);
         }
 
         // pengs tick
@@ -518,6 +534,7 @@ void mainloop() {
     for(auto & bunk : bunks) {
         bunk.draw();
     }
+    // printf("XXX: aliens %zu\n", aliens.size());
     for(auto & alien : aliens) {
         alien.draw();
     }

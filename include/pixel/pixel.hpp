@@ -564,6 +564,9 @@ namespace pixel {
             animtex_t(const animtex_t& o) noexcept = default;
             animtex_t(animtex_t&& o) noexcept = default;
 
+            animtex_t& operator=(const animtex_t&) = default;
+            animtex_t& operator=(animtex_t&&) = default;
+
             ~animtex_t() noexcept {
                 destroy();
             }

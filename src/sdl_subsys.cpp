@@ -297,6 +297,7 @@ void pixel::texture_t::destroy() noexcept {
         SDL_DestroyTexture(tex);
         m_data = nullptr;
     }
+    // m_data = nullptr; FIXME
 }
 
 void pixel::texture_t::draw_raw(const int fb_x, const int fb_y, const int fb_w, const int fb_h) const noexcept {

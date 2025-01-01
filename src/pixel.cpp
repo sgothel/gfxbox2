@@ -326,7 +326,8 @@ std::string pixel::animtex_t::toString() const noexcept {
     std::shared_ptr<const texture_t> tex = texture();
     std::string tex_s = nullptr != tex ? tex->toString() : "null";
     return m_name+"[anim "+std::to_string(m_atex_sec_left)+"/"+std::to_string(m_sec_per_atex)+
-            " s, paused "+std::to_string(m_paused)+", idx "+std::to_string(m_animation_index)+"/"+std::to_string(m_textures.size())+
+            " s, paused "+std::to_string(m_paused)+", idx "+std::to_string(m_animation_index)+
+            "/"+std::to_string(m_textures.size())+
             ", textures["+tex_s+"]]";
 }
 
