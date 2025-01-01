@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
             }
         }
         // resized = event.has_and_clr( pixel::input_event_type_t::WINDOW_RESIZED );
-    
+
         if( true ) {
             float fps = pixel::get_gpu_fps();
             texts.push_back( pixel::make_text(tl_text, 0, text_color,
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
 
         pixel::swap_pixel_fb(false);
         for(pixel::texture_ref tex : texts) {
-            tex->draw(0, 0);
+            tex->draw_fbcoord(0, 0);
         }
         texts.clear();
         pixel::swap_gpu_buffer(30);

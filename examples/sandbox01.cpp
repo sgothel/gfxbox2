@@ -72,7 +72,7 @@ void mainloop() {
 
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
-        hud_text->draw(0, 0);
+        hud_text->draw_fbcoord(0, 0);
     }
     pixel::swap_gpu_buffer();
 }

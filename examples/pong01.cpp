@@ -90,7 +90,7 @@ void reset_playfield() {
     player_pads.push_back(pad_r);
 
     if(!one_player){
-        pixel::f2::point_t p0 = {tl.x + (pixel::cart_coord.width()-7.0f*pad_thickness) / 2, 
+        pixel::f2::point_t p0 = {tl.x + (pixel::cart_coord.width()-7.0f*pad_thickness) / 2,
                                        tl.y - pad_thickness};
         pixel::f2::point_t p1 = {p0.x, p0.y - pixel::cart_coord.height() + 4*pad_thickness};
         divider = pixel::f2::dashed_lineseg_t(pixel::f2::lineseg_t(p0, p1), pad_thickness, 20.0f);
@@ -122,7 +122,7 @@ void reset_playfield() {
                 pixel::log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
             }
         }
-    }    
+    }
 }
 
 extern "C" {
@@ -155,21 +155,21 @@ void mainloop() {
                 t_last = pixel::getElapsedMillisecond(); // [ms]
             }
             animating = true;
-        }        
-    }    
+        }
+    }
     uint64_t t1; // [ms]
     float dt; // [s]
-    
+
     if(animating){
         t1 = pixel::getElapsedMillisecond();
         dt = (float)( t1 - t_last ) / 1000.0f; // [s]
-        
+
         const float pad_rot_step = 180.0f; // [ang-degrees / s]
         // move field height in 1.0s
         const float step_delta = field_height*dt/1.0f;
         const pixel::f2::vec_t pad_step_up(0.0f, step_delta); // [m]
         const pixel::f2::vec_t pad_step_down(0.0f, -step_delta); // [m]
-        
+
         if( event.has_any_p1() ){
             if( event.pressed(pixel::input_event_type_t::P1_UP) ) {
                 pad_r->move(pad_step_up);
@@ -203,7 +203,7 @@ void mainloop() {
             } else if( event.pressed(pixel::input_event_type_t::P2_RIGHT) ) {
                 pad_l->rotate(pixel::adeg_to_rad(-pad_rot_step*dt));
             }
-        }        
+        }
     } else {
         t1 = t_last;
         if( event.has_any_p1() ) {
@@ -231,7 +231,7 @@ void mainloop() {
         hud_s.append( pixel::to_string(", score %d : %d", l_score, r_score) );
         hud_text = pixel::make_text_texture(hud_s);
     }
-    
+
     // move ball_1
     ball->tick(dt);
     if(!ball->on_screen()){
@@ -261,14 +261,14 @@ void mainloop() {
     if(!one_player){
         divider.draw();
     }
-    
+
     fflush(nullptr);
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
         const int thickness_pixel = pixel::cart_coord.to_fb_dy(pad_thickness);
         const int text_height = thickness_pixel;
         const float sy = (float)text_height / (float)hud_text->height;
-        hud_text->draw(pixel::fb_width/2.0f-((float)hud_text->width*sy/2.0f), thickness_pixel, sy, sy);
+        hud_text->draw_fbcoord(pixel::fb_width/2.0f-((float)hud_text->width*sy/2.0f), thickness_pixel, sy, sy);
     }
 
     pixel::swap_gpu_buffer();
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
     pixel::cart_coord.set_height(-field_height/2.0f, field_height/2.0f);
 
     ball = physiks::ball_t::create("one", pixel::f2::point_t(0.0f, 0.0f), ball_radius,
-                                    4.0f /* [m/s] */, pixel::adeg_to_rad(0), 
+                                    4.0f /* [m/s] */, pixel::adeg_to_rad(0),
                                     max_velocity, false, player_pads);
 
     reset_playfield();

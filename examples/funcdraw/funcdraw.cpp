@@ -246,7 +246,7 @@ void mainloop() {
     }
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
-        hud_text->draw(0, 0);
+        hud_text->draw_fbcoord(0, 0);
     }
     pixel::swap_gpu_buffer();
 }
@@ -287,9 +287,9 @@ int main(int argc, char *argv[])
     if( !commandfile.empty() ) {
         infix_calc::compiler cc;
         std::cout << "Processing command input file: " << commandfile << std::endl;
-        
+
         size_t lineno = 0;
-        std::ifstream fin(commandfile);        
+        std::ifstream fin(commandfile);
         std::string line;
         while( !exit_raised && std::getline(fin, line) ) {
             ++lineno;
@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
             }
             std::cout << std::endl;
         }
-        if( false ) {                
+        if( false ) {
         const bool pok = cc.parse (commandfile);
         if( !pok ) {
             std::cerr << "Error occurred @ parsing: " << cc.location() << std::endl;

@@ -1125,6 +1125,7 @@ void mainloop() {
 
     float fps = pixel::get_gpu_fps();
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
+    pixel::texture_ref hud_text;
     {
         std::string sp1, sp2, sp3;
         {
@@ -1156,9 +1157,9 @@ void mainloop() {
                         fps, sp1.c_str(), sp2.c_str(), sp3.c_str());
     }
     pixel::swap_pixel_fb(false);
-    if( nullptr != hud_text ) {
+    {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
-        hud_text->draw(dx, 0);
+        hud_text->draw_fbcoord(dx, 0);
     }
     pixel::swap_gpu_buffer();
     if( record_bmpseq_basename.size() > 0 ) {

@@ -78,14 +78,14 @@ class canon_t {
         constexpr static const float velocity_max = 24; // 14;
         constexpr static const float radius = cannon_height*0.8f;
         constexpr static const float velocity_min = 1.0f; // [m/s]
-        
+
         #if 0
-        rect_t aabbox = {point_t(cart_coord.min_x() + frame_gap + frame_thickness, 
-                                 cart_coord.min_y() + frame_gap + frame_thickness + cannon_height), 
+        rect_t aabbox = {point_t(cart_coord.min_x() + frame_gap + frame_thickness,
+                                 cart_coord.min_y() + frame_gap + frame_thickness + cannon_height),
                          cannon_width, cannon_height};
         #endif
         point_t m_center_half_circle;
-        
+
         float m_velocity; // [m/s]
         int m_ball;
         rect_t m_barrel_start; // Abschussrohr
@@ -102,46 +102,46 @@ class canon_t {
             cart_coord.min_x() + frame_gap + frame_thickness + cannon_width *0.5f,
             cart_coord.min_y() + frame_gap + frame_thickness),
         m_velocity(velocity_min),
-        m_ball(player_balls_min),   
+        m_ball(player_balls_min),
         m_barrel_start(point_t(0, radius*0.5f), barrel_start_width, barrel_start_height),
-        m_barrel_end(point_t(m_barrel_start.m_tr.x, m_barrel_start.m_tr.y - barrel_start_height * ((1.0f / 3) / 2)), 
+        m_barrel_end(point_t(m_barrel_start.m_tr.x, m_barrel_start.m_tr.y - barrel_start_height * ((1.0f / 3) / 2)),
                      barrel_end_width, barrel_end_height) {
             m_barrel_start.move(m_center_half_circle);
             m_barrel_end.move(m_center_half_circle);
             rot_point = point_t(m_barrel_start.m_tl.x, m_barrel_start.m_tl.y - barrel_start_height * 0.5f);
-            m_platform = std::make_shared<circle_seg_t>(m_center_half_circle, radius, 0.0f, 
+            m_platform = std::make_shared<circle_seg_t>(m_center_half_circle, radius, 0.0f,
                                                         std::numbers::pi_v<float>);
             agobjects().push_back(m_platform);
         }
-        
+
         void resize() {
             vec_t reverse = -1*m_center_half_circle;
             m_barrel_start.move(reverse);
             m_barrel_end.move(reverse);
-            m_center_half_circle.set( 
+            m_center_half_circle.set(
                 cart_coord.min_x() + frame_gap + frame_thickness + cannon_width *0.5f,
                 cart_coord.min_y() + frame_gap + frame_thickness);
             m_barrel_start.move(m_center_half_circle);
             m_barrel_end.move(m_center_half_circle);
-            m_platform->set_center(m_center_half_circle);            
+            m_platform->set_center(m_center_half_circle);
             rot_point = point_t(m_barrel_start.m_tl.x, m_barrel_start.m_tl.y - barrel_start_height * 0.5f);
         }
-        
+
         int score() const noexcept { return m_score; }
-        
+
         void removePengs() {
             // erase_all_one<geom_ref_t>(pengs, gobjects());
             geom_list_t& list = gobjects();
             for(geom_ref_t p : m_pengs_flying ) {
                 erase_one(list, p);
             }
-            m_pengs_flying.clear();           
-            m_pengs_all.clear();           
+            m_pengs_flying.clear();
+            m_pengs_all.clear();
         }
-        
+
         void reset(bool doRemovePengs=true){
-            m_barrel_start.rotate(-m_barrel_start.dir_angle, rot_point); 
-            m_barrel_end.rotate(-m_barrel_end.dir_angle, rot_point); 
+            m_barrel_start.rotate(-m_barrel_start.dir_angle, rot_point);
+            m_barrel_end.rotate(-m_barrel_end.dir_angle, rot_point);
             m_velocity = velocity_min;
             m_ball = player_balls_min;
             if( doRemovePengs ) {
@@ -149,15 +149,15 @@ class canon_t {
                 m_score = 0;
             }
         }
-        
+
         float adeg() { return rad_to_adeg(m_barrel_start.dir_angle); }
-        
+
         void rotate_adeg(const float adeg){
             const float rad = adeg_to_rad(adeg);
             m_barrel_start.rotate(rad, rot_point);
             m_barrel_end.rotate(rad, rot_point);
         }
-        
+
         long pow(const int a, const int b){
             long result = 1;
             for(int i = 0; i < b; ++i){
@@ -165,7 +165,7 @@ class canon_t {
             }
             return result;
         }
-        
+
         bool tick(const float dt){
             for (auto it = m_pengs_all.begin(); it != m_pengs_all.end();) {
                 physiks::ball_ref_t& p = *it;
@@ -212,7 +212,7 @@ class canon_t {
             }
             return true;
         }
-        
+
         bool add_velocity(const float pct) {
             m_velocity += velocity_max * pct;
             if(m_velocity > velocity_max){
@@ -221,24 +221,24 @@ class canon_t {
             }
             return true;
         }
-        
-        void set_velocity(const float o) { 
+
+        void set_velocity(const float o) {
             m_velocity = std::min(o, velocity_max);
             log_printf(0, "XX set velo %f\n", m_velocity);
         }
-        
+
         float velocity(){ return m_velocity; }
-        
+
         int ball(){ return m_ball; }
-        
+
         int peng_idn = 0;
-        
+
         void peng(){
             log_printf(0, "XX peng velo %f\n", m_velocity);
             vec_t v = vec_t::from_length_angle(barrel_end_height*0.5f, m_barrel_end.dir_angle + (float)M_PI_2);
             const point_t peng_start_center = m_barrel_end.m_br + v;
-            physiks::ball_ref_t p = physiks::ball_t::create("peng_"+std::to_string(peng_idn++), 
-                peng_start_center, bullet_radius, m_velocity, m_barrel_end.dir_angle, 
+            physiks::ball_ref_t p = physiks::ball_t::create("peng_"+std::to_string(peng_idn++),
+                peng_start_center, bullet_radius, m_velocity, m_barrel_end.dir_angle,
                 physiks::earth_accel, 0, debug_gfx, false);
             m_pengs_flying.push_back(p);
             m_pengs_all.push_back(p);
@@ -288,8 +288,8 @@ void mainloop() {
     static pixel::input_event_t event;
     static bool animating = true;
     static float rot_step_default = 45.0f; // [ang-degrees / s]
-    
-    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]    
+
+    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
     while(pixel::handle_one_event(event)){
@@ -326,12 +326,12 @@ void mainloop() {
     // const bool animating = !event.paused();
     const point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
-                             
+
     float fps = get_gpu_fps();
     hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-                    "fps %f, td %d [ms], energie %f, adeg %3.3f, points %d, ball %d", 
+                    "fps %f, td %d [ms], energie %f, adeg %3.3f, points %d, ball %d",
                     fps, t1, player.velocity(), player.adeg(), player.score(), player.ball());
-                    
+
 
     // white background
     clear_pixel_fb( 255, 255, 255, 255);
@@ -339,10 +339,10 @@ void mainloop() {
     if( !event.paused() ) {
         if( event.pressed(input_event_type_t::P1_ACTION1) ) {
             // 100% (velo_max) in ~1.0s
-            player.add_velocity(dt/1.0f); 
+            player.add_velocity(dt/1.0f);
         }
         player.tick(dt);
-        UpOrDown = ((sf->m_tl.y < (cart_coord.max_y() - frame_offset)) && UpOrDown) || 
+        UpOrDown = ((sf->m_tl.y < (cart_coord.max_y() - frame_offset)) && UpOrDown) ||
         !(sf->m_bl.y > frame_offset);
         if( make_sf ) {
             if( sf->m_bl.y > frame_offset && !UpOrDown ) {
@@ -352,18 +352,18 @@ void mainloop() {
             }
         }
     }
-    
+
     player.draw();
     set_pixel_color(0, 0, 0, 255);
     geom_list_t &list = gobjects();
     for(const geom_ref_t& g : list) {
         g->draw();
     }
-    
+
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
-        hud_text->draw(dx, 0);
+        hud_text->draw_fbcoord(dx, 0);
     }
     pixel::swap_gpu_buffer();
 }
@@ -412,7 +412,7 @@ int main(int argc, char *argv[])
                                       " -debug_gfx -show_velo\n", argv[0]);
         pixel::log_printf(0, "- win size %d x %d\n", window_width, window_height);
         pixel::log_printf(0, "- forced_fps %d\n", pixel::forced_fps);
-        pixel::log_printf(0, "- debug_gfx %d\n", debug_gfx);        
+        pixel::log_printf(0, "- debug_gfx %d\n", debug_gfx);
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
@@ -444,22 +444,22 @@ int main(int argc, char *argv[])
             point_t(cart_coord.max_x() - frame_offset - basket_frame_thickness,
                     cart_coord.min_y() + frame_offset + basket_height),
             basket_frame_thickness, basket_height-basket_frame_thickness);
-        sf = std::make_shared<rect_t>(point_t(l->m_tl.x - sf_thickness, 0), 
+        sf = std::make_shared<rect_t>(point_t(l->m_tl.x - sf_thickness, 0),
         sf_thickness, sf_height);
         if(make_sf){
             list.push_back(sf);
-        }                                            
-        list.push_back(l);                                            
+        }
+        list.push_back(l);
         list.push_back(b);
         list.push_back(r);
-        korb.push_back(l);                                            
+        korb.push_back(l);
         korb.push_back(b);
         korb.push_back(r);
         korb_box.resize(l->box());
         korb_box.resize(b->box());
         korb_box.resize(r->box());
     }
-                                               
+
     rect_ref_t r1 = std::make_shared<rect_t>(point_t(cart_coord.min_x() + frame_gap,
                                                      cart_coord.min_y() + frame_offset),
                                              cart_coord.width() - 2 * frame_gap, frame_thickness);
