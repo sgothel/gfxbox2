@@ -416,6 +416,8 @@ namespace pixel::f2 {
             return *this;
         }
 
+        point_t center() const noexcept { return (bl + tr)/2; }
+
         /**
          * Resize the AABBox to encapsulate another AABox
          * @param newBox AABBox to be encapsulated in
@@ -961,7 +963,7 @@ namespace pixel::f2 {
         : p_a(a_), p_b(b_), p_c(c_)
         {
             // FIXME ???
-            p_center = { (p_c.x + p_b.x) / 2.0f, (p_a.y + p_b.y) / 2.0f };
+            p_center = (p_a + p_b + p_c) / 3.0f;//{ (p_c.x + p_b.x) / 2.0f, (p_a.y + p_b.y) / 2.0f };
             dir_angle = 0.0f;
         }
 
@@ -997,6 +999,7 @@ namespace pixel::f2 {
             p_a.rotate(sin, cos, p_center);
             p_b.rotate(sin, cos, p_center);
             p_c.rotate(sin, cos, p_center);
+            p_center = (p_a + p_b + p_c) / 3.0f;
             dir_angle += radians;
         }
 
@@ -1006,6 +1009,7 @@ namespace pixel::f2 {
             p_a.rotate(sin, cos, p);
             p_b.rotate(sin, cos, p);
             p_c.rotate(sin, cos, p);
+            p_center = (p_a + p_b + p_c) / 3.0f;
             dir_angle += radians;
         }
 
@@ -1125,6 +1129,7 @@ namespace pixel::f2 {
                     ", c " + p_c.toString() +
                     "]"; }
     };
+
     typedef std::shared_ptr<triangle_t> triangle_ref_t;
 
 
