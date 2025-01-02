@@ -34,6 +34,7 @@
 #include <cstdio>
 #include <cmath>
 #include <iostream>
+#include <vector>
 
 using namespace pixel::literals;
 
@@ -65,6 +66,9 @@ constexpr static const float base_height = 8.0f; // [m]
 
 constexpr static float bunk_width = 22.0f;
 constexpr static float bunk_height = 16.0f;
+
+constexpr static int ship_id = 1;
+constexpr static int alien_id = 2;
 
 static const pixel::f2::point_t bunk1_tl( -80, -62 );
 static const pixel::f2::point_t bunk2_tl( -35, -62 );
@@ -134,9 +138,9 @@ class alient_t {
   private:
     pixel::animtex_t m_atex;
     pixel::f2::vec_t m_dim;
-    pixel::f2::point_t m_tl;
 
   public:
+    pixel::f2::point_t m_tl;
     pixel::f2::vec_t m_velo; // [m/s]
 
     alient_t(pixel::animtex_t atex_alien, const pixel::f2::point_t& center, const pixel::f2::vec_t& v) noexcept
@@ -180,11 +184,6 @@ class bunker_t {
   private:
     pixel::f2::vec_t m_dim;
     pixel::f2::point_t m_tl;
-
-    bool hits_fragment() noexcept {
-        bool hit = false;
-        return hit;
-    }
 
   public:
     bunker_t(const pixel::f2::point_t& tl) noexcept
@@ -281,10 +280,11 @@ class peng_t {
     }
   public:
     pixel::f2::vec_t m_velo; // [m/s]
+    int m_owner;
 
-    peng_t(const pixel::f2::point_t& center, const pixel::f2::vec_t& v) noexcept
+    peng_t(const pixel::f2::point_t& center, const pixel::f2::vec_t& v, const int owner) noexcept
     : m_dim((float)tex_peng->width, (float)tex_peng->height),
-      m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ), m_velo( v )
+      m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ), m_velo( v ), m_owner(owner)
     { }
 
     pixel::f2::aabbox_t box() const noexcept {
@@ -344,7 +344,7 @@ class spaceship_t {
                 // adjust start posision to geometric ship model
                 pixel::f2::point_t p0 = m_tc;
                 pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(peng_velo_0, 90_deg);
-                pengs.emplace_back(p0, v_p);
+                pengs.emplace_back(p0, v_p, ship_id);
                 --peng_inventory;
             }
         }
@@ -521,6 +521,9 @@ void mainloop() {
                 if( p.tick(dt) ) {
                     ++it;
                 } else {
+                    if(p.m_owner == ship_id){
+                        p1.add_score(10);
+                    }
                     it = pengs.erase(it);
                 }
             }
