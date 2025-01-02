@@ -89,6 +89,7 @@ static const pixel::f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f
 static pixel::texture_ref all_images;
 static std::vector<pixel::texture_ref> tex_alien1, tex_alien2, tex_alien3;
 static pixel::texture_ref tex_base, tex_peng, tex_bunk, tex_alienm;
+int level = 1;
 
 static void load_textures() {
     constexpr int dy1 = 8;  // aliens, base, mothership
@@ -156,15 +157,13 @@ class alient_t {
 
     void tick(const float dt) noexcept {
         m_atex.tick(dt);
-        if(!m_velo.is_zero()){
-            m_tl += m_velo * dt;
-            /*
-            if( !box().inside(field_box) ) {
-                m_velo.x *= -1;
-                m_tl += 2 * m_velo * dt;
-            }
-            */
+        m_tl += m_velo * dt;
+        /*
+        if( !box().inside(field_box) ) {
+            m_velo.x *= -1;
+            m_tl += 2 * m_velo * dt;
         }
+        */
     }
 
     void draw() const noexcept {
@@ -204,15 +203,26 @@ class all_aliens {
         m_velo.y = 0;
         for(alient_t& a : list){
             if( !a.box().inside(field_box) ) {
+                if(pixel::get_gpu_fps() > 60){
+                    m_velo.x *= -1;
+                    m_velo.y = -(float)a.atex().height();
+                }
                 m_velo.x *= -1;
-                m_velo.y = -(float)a.atex().height() / dt / 2;
-                break;
+                m_velo.y = -(float)a.atex().height() * pixel::get_gpu_fps();
+                goto mark;
             }
         }
+        mark:
+        int h;
         for(alient_t& a : list){
             a.m_velo = m_velo;
             a.tick(dt);
+            h = a.atex().height();
         }
+        if(m_velo.y != 0){
+            printf("texheight: %d, Velo.y: %f, fps: %fs\n", h, m_velo.y, pixel::get_gpu_fps());
+        }
+        m_velo.y = 0;
     }
     
     void draw(){
@@ -303,19 +313,41 @@ void reset_items() {
     reset_aliens();
 }
 
+struct hit_result{
+    bool hit;
+    bool live;
+};
+
 class peng_t {
   private:
     pixel::f2::vec_t m_dim;
     pixel::f2::point_t m_tl;
-
-    bool hits_aliens() {
+    
+    hit_result hits_aliens() {
         pixel::f2::aabbox_t b = box();
         for(auto it = aa.list.begin(); it != aa.list.end(); ) {
             alient_t& a = *it;
             if( !a.box().intersects(b) ) {
                 ++it;
             } else {
-                it = aa.list.erase(it);
+                if(m_owner == ship_id){
+                    it = aa.list.erase(it);
+                }
+                // printf("XXX: Peng: Killed ALien\n");
+                return {true, m_owner == alien_id};
+            }
+        }
+        return {false, true};
+    }
+
+    bool hits_bunker() {
+        pixel::f2::aabbox_t b = box();
+        for(auto it = bunks.begin(); it != bunks.end(); ) {
+            bunker_t& a = *it;
+            if( !a.box().intersects(b) ) {
+                ++it;
+            } else {
+                // FIXME it = bunks.erase(it);
                 // printf("XXX: Peng: Killed ALien\n");
                 return true;
             }
@@ -342,7 +374,7 @@ class peng_t {
         if(!m_velo.is_zero()){
             m_tl += m_velo * dt;
         }
-        return !hits_aliens();
+        return hits_aliens().live && !hits_bunker();
     }
 
     void draw() const noexcept {
@@ -376,8 +408,8 @@ class spaceship_t {
     public:
         constexpr static const float height = base_height; // [m]
 
-        constexpr static const float peng_velo_0 = field_height / 1; // [m/s]
-        constexpr static const int peng_inventory_max = 4000;
+        constexpr static const float peng_velo_0 = field_height / 2; // [m/s]
+        constexpr static const int peng_inventory_max = 3;
 
     private:
         pixel::f2::vec_t m_dim;
@@ -414,7 +446,7 @@ class spaceship_t {
             if(peng_inventory > 0){
                 // adjust start posision to geometric ship model
                 pixel::f2::point_t p0 = {m_tc.x, m_tc.y + (float)tex_peng->height/2 + 0.05f};
-                pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(peng_velo_0, 90_deg);
+                pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(peng_velo_0 + 10.0f * (float)level, 90_deg);
                 pengs.emplace_back(p0, v_p, ship_id);
                 --peng_inventory;
             }
@@ -441,36 +473,42 @@ typedef std::shared_ptr<spaceship_t> spaceship_ref_t;
 std::vector<spaceship_ref_t> spaceship;
 
 class player_t {
+    public:
+        int m_live;
+        spaceship_ref_t m_ship;
     private:
         float m_respawn_timer;
-        spaceship_ref_t m_ship;
         int m_score;
 
         void ship_dtor() noexcept {
+            --m_live;
             m_ship = nullptr;
-            m_respawn_timer = 5; // [s]
+            m_respawn_timer = 3; // [s]
         }
 
         void respawn_ship() noexcept {
+            if(m_live <= 0){
+                return;
+            }
             m_respawn_timer = 0;
             m_ship = std::make_shared<spaceship_t>( pixel::f2::point_t{base_box.bl.x + base_width/2, base_box.bl.y + base_height} );
         }
 
     public:
-        player_t() noexcept
-        : m_respawn_timer(0),
-          m_ship(nullptr), m_score(0)
+        player_t(int start_live) noexcept
+        : m_live(start_live),
+          m_ship(nullptr), m_respawn_timer(0), m_score(0)
         { respawn_ship(); }
 
         void reset() noexcept {
             respawn_ship();
             m_score = 0;
         }
-        spaceship_ref_t ship() noexcept { return m_ship; }
+        spaceship_ref_t& ship() noexcept { return m_ship; }
         bool has_ship() noexcept { return nullptr != m_ship; }
 
         int peng_inventory() const noexcept { return nullptr != m_ship ? m_ship->peng_inventory : 0; }
-
+        
         constexpr int score() const noexcept { return m_score; }
         void add_score(int diff) noexcept { m_score += diff; }
 
@@ -529,47 +567,40 @@ constexpr float rng_from_norm(float v) noexcept {
 static float next_rnd() noexcept {
     return rng_to_norm((float)rng());
 }
-
-float peng_time = next_rnd() * 10_s;
+float max_peng_time = 5_s;
+float peng_time = next_rnd() * max_peng_time;
 void peng_from_alien(alient_t alien){
     // adjust start posision to geometric alien model
     pixel::f2::point_t p0 = {alien.m_tl.x + (float)alien.atex().width()/2, 
-                             alien.m_tl.y + (float)alien.atex().height() + 0.05f};
+                             alien.m_tl.y - (float)alien.atex().height() - 0.05f};
     p0.add(0, (float)tex_peng->height/2);
-    pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(field_height/1, 270_deg);
+    pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(field_height/2 + 10.0f * (float)level, 270_deg);
     pengs.emplace_back(p0, v_p, alien_id);
+    //printf("peng");
 }
+
 void peng_alien() {
     if(peng_time > 0){
         return;
     }
     //printf("XXX: Alien shooted");
-    /*
-    for(size_t it = (size_t)next_rnd() * (aa.list.size()-1)/3, a = 0; a < 100; ++a) {
-        alient_t& alien = aa.list[it];
-        peng_from_alien(alien);
-        if(pengs[pengs.size()-1].hit_aliens()){
-            pengs.end()-1 = pengs.erase(pengs.end()-1);
-            it = (size_t)next_rnd() * (aa.list.size()-1);
-        } else {
-            return;
-        }
+    if(aa.list.size() <= 0){
+        return;
     }
-    */
-    peng_from_alien(aa.list[(size_t)next_rnd() * (aa.list.size()-1)/3]);
+    peng_from_alien(aa.list[(size_t)(next_rnd() * (float)(aa.list.size()-1))]);
 }
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
 static bool raster = false;
-
+int start_live = 3;
 void mainloop() {
-    static player_t p1;
-
+    static player_t p1(start_live);
     static uint64_t frame_count_total = 0;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
     static bool animating = true;
-
+    static pixel::texture_ref game_over_text = pixel::make_text(tl_text, 0, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
+    static bool game_over = false;
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -595,6 +626,7 @@ void mainloop() {
             reset_items();
             p1.reset();
             aa = {aliens};
+            game_over = false;
         }
 
         // Pass events to all animated objects
@@ -614,17 +646,6 @@ void mainloop() {
         if (raster) {
             pixel::draw_grid(50, 255, 0, 0, 0, 255, 0, 0, 0);
         }
-/*
-        for(size_t i = 0; i < aliens.size(); ++i){
-            alient_t& alien = aliens[i];
-            if(i == 0){
-                continue;
-            }
-            if(!aliens[i-1].on_screen()){
-                alien.m_velo.x *= -1;
-            }
-        }
-*/
         // alien tick
         aa.tick(dt);
 
@@ -636,14 +657,24 @@ void mainloop() {
                     ++it;
                 } else {
                     if(p.m_owner == ship_id){
-                        p1.add_score(10);
+                        ++p1.m_ship->peng_inventory;
+                        if(p.hit_aliens()){
+                            p1.add_score(1);
+                        }
                     }
                     it = pengs.erase(it);
                 }
             }
         }
-        //peng_time -= dt;
-        //peng_alien();
+        peng_time -= dt;
+        peng_alien();
+        if(peng_time <= 0){
+            if((float)level < max_peng_time){
+                peng_time = next_rnd() * (max_peng_time - ((float)level-1));
+            } else {
+                peng_time = next_rnd() * (max_peng_time - (float)level+1);
+            }
+        }
     }
     pixel::clear_pixel_fb(0, 0, 0, 255);
 
@@ -658,21 +689,24 @@ void mainloop() {
     for(auto & peng : pengs) {
         peng.draw();
     }
+    
+    if(aa.list.size() == 0){
+        pengs.clear();
+        reset_items();
+        p1.reset();
+        aa = {aliens};
+        ++level;
+    }
     pixel::set_pixel_color(255, 255, 255, 255);
 
     float fps = pixel::get_gpu_fps();
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
-    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, score %4d",
+    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, score %4d, lives %d, level %d",
                     pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-                    fps, p1.score());
+                    fps, p1.score(), p1.m_live, level);
     for(alient_t& a : aa.list){
-        if(a.box().bl.y < -62){
-            pixel::set_pixel_color(255, 0, 0, 255);
-            pixel::texture_ref game_over_text = pixel::make_text(tl_text, 2, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
-            {
-                const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
-                game_over_text->draw_fbcoord(dx, 0);
-            }
+        if(a.box().bl.y < -62-bunks[0].box().height() || p1.m_live <= 0){
+            game_over = true;
             animating = false;
         }
     }
@@ -681,7 +715,11 @@ void mainloop() {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
         hud_text->draw_fbcoord(dx, 0);
     }
-    pixel::swap_gpu_buffer();
+    if(game_over){
+        const int dx = ( pixel::fb_width - pixel::round_to_int((float)game_over_text->width*game_over_text->dest_sx) ) / 2;
+        game_over_text->draw_fbcoord(dx, 0);
+    }
+    pixel::swap_gpu_buffer(60);
     if( record_bmpseq_basename.size() > 0 ) {
         std::string snap_fname(128, '\0');
         const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
@@ -701,7 +739,11 @@ int main(int argc, char *argv[])
                 window_height = atoi(argv[i+1]);
                 window_width = (int)std::round( (float)window_height * space_width_pct );
                 ++i;
+            } else if( 0 == strcmp("-live", argv[i]) && i+1<argc) {
+                start_live = atoi(argv[i+1]);
+                ++i;
             }
+
         }
     }
     {
