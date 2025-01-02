@@ -430,6 +430,8 @@ namespace pixel {
             int m_id;
             void* m_data;
             bool m_owner;
+            void destroy() noexcept;
+
         public:
             /** source texture pos-x */
             int x;
@@ -465,8 +467,6 @@ namespace pixel {
             ~texture_t() noexcept {
                 destroy();
             }
-
-            void destroy() noexcept;
 
             constexpr void* data() noexcept { return m_data; }
             constexpr bool is_owner() const noexcept { return m_owner; }
@@ -551,6 +551,8 @@ namespace pixel {
             size_t m_animation_index;
             bool m_paused;
 
+            void destroy() noexcept;
+
         public:
             animtex_t(std::string name, float sec_per_atex, const std::vector<texture_ref>& textures) noexcept;
 
@@ -570,8 +572,6 @@ namespace pixel {
             ~animtex_t() noexcept {
                 destroy();
             }
-
-            void destroy() noexcept;
 
             const texture_ref texture(const size_t idx) const noexcept { return idx < m_textures.size() ? m_textures[idx] : nullptr; }
             const texture_ref texture() const noexcept { return m_animation_index < m_textures.size() ? m_textures[m_animation_index] : nullptr; }

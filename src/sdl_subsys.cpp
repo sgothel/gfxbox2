@@ -291,9 +291,8 @@ void pixel::texture_t::destroy() noexcept {
     if( nullptr != m_data && m_owner ) {
         SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_data);
         SDL_DestroyTexture(tex);
-        m_data = nullptr;
     }
-    // m_data = nullptr; FIXME
+    m_data = nullptr;
 }
 
 void pixel::texture_t::draw_raw(const int fb_x, const int fb_y, const int fb_w, const int fb_h) const noexcept {
