@@ -29,9 +29,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_scancode.h>
 #include <SDL2/SDL_ttf.h>
-#if !defined(__EMSCRIPTEN__)
-    #include <SDL2/SDL_image.h>
-#endif
+#include <SDL2/SDL_image.h>
 
 using namespace pixel;
 
@@ -141,12 +139,10 @@ bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
         printf("SDL: Error initializing: %s\n", SDL_GetError());
         return false;
     }
-    #if !defined(__EMSCRIPTEN__)
-        if ( ( IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG ) != IMG_INIT_PNG ) {
-            printf("SDL_image: Error initializing: %s\n", SDL_GetError());
-            return false;
-        }
-    #endif
+    if ( ( IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG ) != IMG_INIT_PNG ) {
+        printf("SDL_image: Error initializing: %s\n", SDL_GetError());
+        return false;
+    }
     if( 0 != TTF_Init() ) {
         printf("SDL_TTF: Error initializing: %s\n", SDL_GetError());
         return false;
