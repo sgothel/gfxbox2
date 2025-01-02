@@ -59,13 +59,13 @@ constexpr static float space_width_pct = space_width / space_height;
 constexpr static float field_height = 184.0f; // [m]
 constexpr static float field_width = 204.0f; // [m]
 static const pixel::f2::aabbox_t field_box( { -field_width/2.0, -field_height/2.0 }, { field_width/2.0, field_height/2.0 } );
-static const pixel::f2::vec_t alien_dim( 172, 72 );
+// static const pixel::f2::vec_t alien_dim( 172, 72 );
 
 constexpr static const float base_width = 13.0f; // [m]
 constexpr static const float base_height = 8.0f; // [m]
 
 constexpr static float bunk_width = 22.0f;
-constexpr static float bunk_height = 16.0f;
+// constexpr static float bunk_height = 16.0f;
 
 constexpr static int ship_id = 1;
 constexpr static int alien_id = 2;
@@ -79,8 +79,8 @@ static const pixel::f2::aabbox_t base_box( { bunk1_tl.x-base_width, -field_heigh
 
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
 // static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
-static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
-static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
+// static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
+// static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
 // static const uint8_t rgba_blue[/*4*/] = { 0, 0, 255, 255 };
 static const float text_lum = 0.75f;
 static const pixel::f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f);

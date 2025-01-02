@@ -18,8 +18,9 @@ Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten
 ## Online WebAssembly Examples
 * [solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html)
 * [spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
-* [freefall01](https://jausoft.com/projects/gfxbox2/freefall01.html)
-* [pong01](https://jausoft.com/projects/gfxbox2/pong01.html)
+* [space invaders](https://jausoft.com/projects/gfxbox2/spaceinv01.html)
+* [freefall](https://jausoft.com/projects/gfxbox2/freefall01.html)
+* [pong](https://jausoft.com/projects/gfxbox2/pong01.html)
 * [canonball](https://jausoft.com/projects/gfxbox2/canonball.html)
 * [tron](https://jausoft.com/projects/gfxbox2/tron.html)
 * [piviz](https://jausoft.com/projects/gfxbox2/piviz.html)
