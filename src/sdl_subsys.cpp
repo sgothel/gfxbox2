@@ -120,7 +120,7 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
             TTF_CloseFont(sdl_font);
             sdl_font = nullptr;
         }
-        const std::string fontfilename = "fonts/freefont/FreeSansBold.ttf";
+        const std::string fontfilename = "resources/fonts/freefont/FreeSansBold.ttf";
         font_height = std::max(24, fb_height / 35);
         sdl_font = TTF_OpenFont(fontfilename.c_str(), font_height);
         if( nullptr == sdl_font ) {
