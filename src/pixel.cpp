@@ -288,9 +288,6 @@ pixel::animtex_t::animtex_t(std::string name, float sec_per_atex, const texture_
 }
 
 void pixel::animtex_t::destroy() noexcept {
-    for(const texture_ref& t : m_textures) {
-        t->destroy();
-    }
     m_textures.clear();
 }
 

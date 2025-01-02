@@ -29,9 +29,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_scancode.h>
 #include <SDL2/SDL_ttf.h>
-#if !defined(__EMSCRIPTEN__)
-    #include <SDL2/SDL_image.h>
-#endif
+#include <SDL2/SDL_image.h>
 
 using namespace pixel;
 
@@ -120,7 +118,7 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
             TTF_CloseFont(sdl_font);
             sdl_font = nullptr;
         }
-        const std::string fontfilename = "fonts/freefont/FreeSansBold.ttf";
+        const std::string fontfilename = "resources/fonts/freefont/FreeSansBold.ttf";
         font_height = std::max(24, fb_height / 35);
         sdl_font = TTF_OpenFont(fontfilename.c_str(), font_height);
         if( nullptr == sdl_font ) {
@@ -141,12 +139,10 @@ bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
         printf("SDL: Error initializing: %s\n", SDL_GetError());
         return false;
     }
-    #if !defined(__EMSCRIPTEN__)
-        if ( ( IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG ) != IMG_INIT_PNG ) {
-            printf("SDL_image: Error initializing: %s\n", SDL_GetError());
-            return false;
-        }
-    #endif
+    if ( ( IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG ) != IMG_INIT_PNG ) {
+        printf("SDL_image: Error initializing: %s\n", SDL_GetError());
+        return false;
+    }
     if( 0 != TTF_Init() ) {
         printf("SDL_TTF: Error initializing: %s\n", SDL_GetError());
         return false;
@@ -295,9 +291,8 @@ void pixel::texture_t::destroy() noexcept {
     if( nullptr != m_data && m_owner ) {
         SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_data);
         SDL_DestroyTexture(tex);
-        m_data = nullptr;
     }
-    // m_data = nullptr; FIXME
+    m_data = nullptr;
 }
 
 void pixel::texture_t::draw_raw(const int fb_x, const int fb_y, const int fb_w, const int fb_h) const noexcept {
