@@ -158,10 +158,12 @@ class alient_t {
         m_atex.tick(dt);
         if(!m_velo.is_zero()){
             m_tl += m_velo * dt;
+            /*
             if( !box().inside(field_box) ) {
                 m_velo.x *= -1;
                 m_tl += 2 * m_velo * dt;
             }
+            */
         }
     }
 
@@ -177,8 +179,50 @@ class alient_t {
     bool intersection(const alient_t& o) const {
         return box().intersects(o.box());
     }
+    
+    pixel::animtex_t& atex() { return m_atex; }
 };
 std::vector<alient_t> aliens;
+
+class all_aliens {
+  private:
+    pixel::f2::vec_t m_velo;
+  public:
+    std::vector<alient_t> list;
+    all_aliens(const std::vector<alient_t>& als){
+        list = als;
+        m_velo = list[0].m_velo;
+    }
+    
+    all_aliens() = default;
+    all_aliens(const class all_aliens&)            = default;
+    all_aliens(class all_aliens&&)                 = default;
+    class all_aliens& operator=(const class all_aliens&) = default;
+    class all_aliens& operator=(class all_aliens&&)      = default;
+
+    void tick(const float dt){
+        m_velo.y = 0;
+        for(alient_t& a : list){
+            if( !a.box().inside(field_box) ) {
+                m_velo.x *= -1;
+                m_velo.y = -(float)a.atex().height() / dt / 2;
+                break;
+            }
+        }
+        for(alient_t& a : list){
+            a.m_velo = m_velo;
+            a.tick(dt);
+        }
+    }
+    
+    void draw(){
+        for(alient_t& a : list){
+            a.draw();
+        }
+    }
+};
+
+all_aliens aa;
 
 class bunker_t {
   private:
@@ -266,13 +310,13 @@ class peng_t {
 
     bool hits_aliens() {
         pixel::f2::aabbox_t b = box();
-        for(auto it = aliens.begin(); it != aliens.end(); ) {
+        for(auto it = aa.list.begin(); it != aa.list.end(); ) {
             alient_t& a = *it;
             if( !a.box().intersects(b) ) {
                 ++it;
             } else {
-                it = aliens.erase(it);
-                printf("XXX: Peng: Killed ALien\n");
+                it = aa.list.erase(it);
+                // printf("XXX: Peng: Killed ALien\n");
                 return true;
             }
         }
@@ -312,6 +356,19 @@ class peng_t {
     bool intersection(const peng_t& o) const {
         return box().intersects(o.box());
     }
+    
+    bool hit_aliens() {
+        pixel::f2::aabbox_t b = box();
+        for(auto it = aa.list.begin(); it != aa.list.end(); ) {
+            alient_t& a = *it;
+            if( !a.box().intersects(b) ) {
+                ++it;
+            } else {
+                return true;
+            }
+        }
+        return false;
+    }
 };
 std::vector<peng_t> pengs;
 
@@ -325,7 +382,21 @@ class spaceship_t {
     private:
         pixel::f2::vec_t m_dim;
         pixel::f2::point_t m_tl, m_tc;
-
+        
+        bool hits_peng() {
+            pixel::f2::aabbox_t b = box();
+            for(auto it = pengs.begin(); it != pengs.end(); ) {
+                peng_t& a = *it;
+                if( !a.box().intersects(b) ) {
+                    ++it;
+                } else {
+                    it = pengs.erase(it);
+                    // printf("XXX: Peng: Killed Ship\n");
+                    return true;
+                }
+            }
+            return false;
+        }
     public:
         int peng_inventory;
 
@@ -342,7 +413,7 @@ class spaceship_t {
         void peng() noexcept {
             if(peng_inventory > 0){
                 // adjust start posision to geometric ship model
-                pixel::f2::point_t p0 = m_tc;
+                pixel::f2::point_t p0 = {m_tc.x, m_tc.y + (float)tex_peng->height/2 + 0.05f};
                 pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(peng_velo_0, 90_deg);
                 pengs.emplace_back(p0, v_p, ship_id);
                 --peng_inventory;
@@ -359,7 +430,7 @@ class spaceship_t {
             }
         }
         bool tick(const float /*dt*/) noexcept {
-            return true;
+            return !hits_peng();
         }
 
         void draw() const noexcept {
@@ -441,11 +512,55 @@ class player_t {
             }
         }
 };
+static std::random_device rng;
 
+constexpr float rng_to_norm(float v) noexcept {
+    constexpr float a = (float)std::random_device::min();
+    constexpr float b = (float)std::random_device::max();
+    return (v - a) / (b - a);
+}
+
+constexpr float rng_from_norm(float v) noexcept {
+    constexpr float a = (float)std::random_device::min();
+    constexpr float b = (float)std::random_device::max();
+    return v * (b - a) + a;
+}
+
+static float next_rnd() noexcept {
+    return rng_to_norm((float)rng());
+}
+
+float peng_time = next_rnd() * 10_s;
+void peng_from_alien(alient_t alien){
+    // adjust start posision to geometric alien model
+    pixel::f2::point_t p0 = {alien.m_tl.x + (float)alien.atex().width()/2, 
+                             alien.m_tl.y + (float)alien.atex().height() + 0.05f};
+    p0.add(0, (float)tex_peng->height/2);
+    pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(field_height/1, 270_deg);
+    pengs.emplace_back(p0, v_p, alien_id);
+}
+void peng_alien() {
+    if(peng_time > 0){
+        return;
+    }
+    //printf("XXX: Alien shooted");
+    /*
+    for(size_t it = (size_t)next_rnd() * (aa.list.size()-1)/3, a = 0; a < 100; ++a) {
+        alient_t& alien = aa.list[it];
+        peng_from_alien(alien);
+        if(pengs[pengs.size()-1].hit_aliens()){
+            pengs.end()-1 = pengs.erase(pengs.end()-1);
+            it = (size_t)next_rnd() * (aa.list.size()-1);
+        } else {
+            return;
+        }
+    }
+    */
+    peng_from_alien(aa.list[(size_t)next_rnd() * (aa.list.size()-1)/3]);
+}
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
 static bool raster = false;
-
 
 void mainloop() {
     static player_t p1;
@@ -479,6 +594,7 @@ void mainloop() {
             pengs.clear();
             reset_items();
             p1.reset();
+            aa = {aliens};
         }
 
         // Pass events to all animated objects
@@ -510,9 +626,7 @@ void mainloop() {
         }
 */
         // alien tick
-        for(alient_t& a: aliens) {
-            a.tick(dt);
-        }
+        aa.tick(dt);
 
         // pengs tick
         {
@@ -528,6 +642,8 @@ void mainloop() {
                 }
             }
         }
+        //peng_time -= dt;
+        //peng_alien();
     }
     pixel::clear_pixel_fb(0, 0, 0, 255);
 
@@ -538,9 +654,7 @@ void mainloop() {
         bunk.draw();
     }
     // printf("XXX: aliens %zu\n", aliens.size());
-    for(auto & alien : aliens) {
-        alien.draw();
-    }
+    aa.draw();
     for(auto & peng : pengs) {
         peng.draw();
     }
@@ -551,6 +665,17 @@ void mainloop() {
     pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, score %4d",
                     pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
                     fps, p1.score());
+    for(alient_t& a : aa.list){
+        if(a.box().bl.y < -62){
+            pixel::set_pixel_color(255, 0, 0, 255);
+            pixel::texture_ref game_over_text = pixel::make_text(tl_text, 2, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
+            {
+                const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
+                game_over_text->draw_fbcoord(dx, 0);
+            }
+            animating = false;
+        }
+    }
     pixel::swap_pixel_fb(false);
     {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
@@ -597,7 +722,7 @@ int main(int argc, char *argv[])
     }
     load_textures();
     reset_items();
-
+    aa = {aliens};
     #if defined(__EMSCRIPTEN__)
         emscripten_set_main_loop(mainloop, 0, 1);
     #else
