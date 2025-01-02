@@ -322,8 +322,9 @@ class peng_t {
   private:
     pixel::f2::vec_t m_dim;
     pixel::f2::point_t m_tl;
+    bool alien_hit;
 
-    hit_result hits_aliens() {
+    bool hits_aliens() {
         pixel::f2::aabbox_t b = box();
         for(auto it = aa.list.begin(); it != aa.list.end(); ) {
             alient_t& a = *it;
@@ -333,11 +334,11 @@ class peng_t {
                 if(m_owner == ship_id){
                     it = aa.list.erase(it);
                 }
-                // printf("XXX: Peng: Killed ALien\n");
-                return {true, m_owner == alien_id};
+                alien_hit = true;
+                return true;
             }
         }
-        return {false, true};
+        return false;
     }
 
     bool hits_bunker() {
@@ -360,7 +361,8 @@ class peng_t {
 
     peng_t(const pixel::f2::point_t& center, const pixel::f2::vec_t& v, const int owner) noexcept
     : m_dim((float)tex_peng->width, (float)tex_peng->height),
-      m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ), m_velo( v ), m_owner(owner)
+      m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ),
+      alien_hit(false), m_velo( v ), m_owner(owner)
     { }
 
     pixel::f2::aabbox_t box() const noexcept {
@@ -374,7 +376,7 @@ class peng_t {
         if(!m_velo.is_zero()){
             m_tl += m_velo * dt;
         }
-        return hits_aliens().live && !hits_bunker();
+        return hits_aliens() && !hits_bunker();
     }
 
     void draw() const noexcept {
@@ -389,18 +391,7 @@ class peng_t {
         return box().intersects(o.box());
     }
 
-    bool hit_aliens() {
-        pixel::f2::aabbox_t b = box();
-        for(auto it = aa.list.begin(); it != aa.list.end(); ) {
-            alient_t& a = *it;
-            if( !a.box().intersects(b) ) {
-                ++it;
-            } else {
-                return true;
-            }
-        }
-        return false;
-    }
+    bool was_alien_hit() const { return alien_hit; }
 };
 std::vector<peng_t> pengs;
 
@@ -512,6 +503,14 @@ class player_t {
         int peng_inventory() const noexcept { return nullptr != m_ship ? m_ship->peng_inventory : 0; }
 
         constexpr int score() const noexcept { return m_score; }
+        void peng_completed(const peng_t& p) noexcept {
+            if(has_ship())  {
+                ++m_ship->peng_inventory;
+            }
+            if(p.was_alien_hit()){
+                add_score(1);
+            }
+        }
         void add_score(int diff) noexcept { m_score += diff; }
 
         bool tick(const float dt) noexcept {
@@ -656,10 +655,7 @@ void mainloop() {
                     ++it;
                 } else {
                     if(p.m_owner == ship_id){
-                        ++p1.m_ship->peng_inventory;
-                        if(p.hit_aliens()){
-                            p1.add_score(1);
-                        }
+                        p1.peng_completed(p);
                     }
                     it = pengs.erase(it);
                 }
