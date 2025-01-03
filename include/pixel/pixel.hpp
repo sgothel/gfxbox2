@@ -473,6 +473,7 @@ namespace pixel {
             constexpr void* data() noexcept { return m_data; }
             constexpr bool is_owner() const noexcept { return m_owner; }
             void disown() noexcept { m_owner = false; }
+            void set_owner(bool v) noexcept { m_owner = v; }
 
             /// draw using FB coordinates and dimension
             void draw_raw(const int fb_x, const int fb_y, const int fb_w, const int fb_h) const noexcept;
@@ -519,7 +520,7 @@ namespace pixel {
      *
      * None of the sub-textures is the owner of the common SDL_Texture instance.
      * @param storage
-     * @param global_texture
+     * @param parent
      * @param x_off
      * @param y_off
      * @param w
@@ -528,21 +529,21 @@ namespace pixel {
      * @return number of added sub-textures
      */
     size_t add_sub_textures(std::vector<texture_ref>& storage,
-                            const texture_ref& global_texture, int x_off, int y_off, int w, int h,
+                            const texture_ref& parent, int x_off, int y_off, int w, int h,
                             const std::vector<tex_sub_coord_t>& tex_positions) noexcept;
 
     /**
      * Returns a sub-texture from given global texture owner.
      *
      * The sub-texture is not the owner of the common SDL_Texture instance.
-     * @param global_texture
+     * @param parent
      * @param x_off
      * @param y_off
      * @param w
      * @param h
      * @return sub-texture ref
      */
-    texture_ref add_sub_texture(const texture_ref& global_texture, int x_off, int y_off, int w, int h) noexcept;
+    texture_ref add_sub_texture(const texture_ref& parent, int x_off, int y_off, int w, int h) noexcept;
 
     class animtex_t {
         private:

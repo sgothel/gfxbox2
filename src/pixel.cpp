@@ -194,9 +194,6 @@ size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const std::str
 {
     std::unique_ptr<texture_t> all = std::make_unique<texture_t>(filename);
     all->disown();
-    if( DEBUG_TEX ) {
-        log_printf("add_sub_textures: each ( %d + %d ) x %d, all: %s\n", w, x_off, h, all->toString().c_str());
-    }
     const size_t size_start = storage.size();
 
     for(int y=0; y<all->height; y+=h) {
@@ -204,54 +201,58 @@ size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const std::str
             if( storage.size() > size_start ) {
                 storage[ storage.size() - 1 ]->disown(); // only last entry is owner of the SDL_Texture
             }
-            storage.push_back( std::make_shared<texture_t>(all->data(), x, y, w, h, true /* owner*/) );
+            storage.push_back( std::make_shared<texture_t>(all->data(), x, y, w, h, false /* owner*/) );
             if( DEBUG_TEX ) {
-                log_printf("add_sub_textures: tex %zd [%d][%d]: %s\n", storage.size()-1, x, y, storage[ storage.size() - 1 ]->toString().c_str());
+                log_printf("add_sub_textures: tex %zd: %d/%d %dx%d of %dx%d: %s of %s\n",
+                    storage.size() - 1, x, y, w, h, all->width, all->height,
+                    storage[ storage.size() - 1 ]->toString().c_str(),
+                    all->toString().c_str());
             }
         }
+    }
+    const size_t nc = storage.size() - size_start;
+    if( nc > 0 ) {
+        storage[storage.size()-1]->set_owner(true); // last one claims ownership
     }
     return storage.size() - size_start;
 }
 
-size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const texture_ref& global_texture,
+size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const texture_ref& parent,
                                int x_off, int y_off, int w, int h, const std::vector<tex_sub_coord_t>& tex_positions) noexcept
 {
-    if( DEBUG_TEX ) {
-        log_printf("add_sub_textures: each %d x %d, all: %s\n", w, h, global_texture->toString().c_str());
-    }
     const size_t size_start = storage.size();
 
     for(tex_sub_coord_t p : tex_positions) {
         const int x = x_off+p.x;
         const int y = y_off+p.y;
-        if( 0 <= x && 0 <= y && x+w <= global_texture->width && y+h <= global_texture->height ) {
-            storage.push_back( std::make_shared<texture_t>(global_texture->data(), x, y, w, h, false /* owner*/) );
+        if( 0 <= x && 0 <= y && x+w <= parent->width && y+h <= parent->height ) {
+            storage.push_back( std::make_shared<texture_t>(parent->data(), x, y, w, h, false /* owner*/) );
         } else {
             storage.push_back( std::make_shared<texture_t>() );
         }
         if( DEBUG_TEX ) {
-            log_printf("add_sub_textures: tex %zd [%d][%d]: %s\n", storage.size()-1, x, y, storage[ storage.size() - 1 ]->toString().c_str());
+            log_printf("add_sub_textures: tex %zd: %d/%d %dx%d of %dx%d: %s of %s\n",
+                storage.size() - 1, x, y, w, h, parent->width, parent->height,
+                storage[ storage.size() - 1 ]->toString().c_str(),
+                parent->toString().c_str());
         }
     }
     return storage.size() - size_start;
 }
 
-pixel::texture_ref pixel::add_sub_texture(const texture_ref& global_texture, int x_off, int y_off, int w, int h) noexcept {
-    if( DEBUG_TEX ) {
-        log_printf("add_sub_texture: %d x %d, all: %s\n", w, h, global_texture->toString().c_str());
-    }
-
+pixel::texture_ref pixel::add_sub_texture(const texture_ref& parent, int x_off, int y_off, int w, int h) noexcept {
     pixel::texture_ref res;
     {
         const int x = x_off;
         const int y = y_off;
-        if( 0 <= x && 0 <= y && x+w <= global_texture->width && y+h <= global_texture->height ) {
-            res = std::make_shared<texture_t>(global_texture->data(), x, y, w, h, false /* owner*/);
+        if( 0 <= x && 0 <= y && x+w <= parent->width && y+h <= parent->height ) {
+            res = std::make_shared<texture_t>(parent->data(), x, y, w, h, false /* owner*/);
         } else {
             res = std::make_shared<texture_t>();
         }
         if( DEBUG_TEX ) {
-            log_printf("add_sub_texture: tex[%d][%d]: %s\n", x, y, res->toString().c_str());
+            log_printf("add_sub_texture: tex %d/%d %dx%d of %dx%d: %s of %s\n",
+                x, y, w, h, parent->width, parent->height, res->toString().c_str(), parent->toString().c_str());
         }
     }
     return res;
