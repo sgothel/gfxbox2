@@ -343,10 +343,17 @@ pixel::texture_t::texture_t(const std::string& fname) noexcept
 // Text Texture
 //
 
+static bool _tex_font_warn0_once = true;
+static bool _tex_font_warn1_once = true;
 pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
 {
     if( nullptr == sdl_rend || nullptr == sdl_font ) {
-        return nullptr;
+        if( _tex_font_warn0_once ) {
+            fprintf(stderr, "make_text_texture: Null texture for '%s': Uninitialized %s\n", text.c_str(),
+                nullptr == sdl_font ? "font" : "renderer");
+            _tex_font_warn0_once = false;
+        }
+        return std::make_shared<texture_t>(nullptr, 0, 0, 0, 0);
     }
     uint8_t r, g, b, a;
     pixel::uint32_to_rgba(draw_color, r, g, b, a);
@@ -354,8 +361,11 @@ pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
 
     SDL_Surface* textSurface = TTF_RenderText_Solid(sdl_font, text.c_str(), foregroundColor);
     if( nullptr == textSurface ) {
-        fprintf(stderr, "make_text_texture: Null texture for '%s': %s\n", text.c_str(), SDL_GetError());
-        return nullptr;
+        if( _tex_font_warn1_once ) {
+            fprintf(stderr, "make_text_texture: Null texture for '%s': %s\n", text.c_str(), SDL_GetError());
+            _tex_font_warn1_once = false;
+        }
+        return std::make_shared<texture_t>(nullptr, 0, 0, 0, 0);
     }
     SDL_Texture* sdl_tex = SDL_CreateTextureFromSurface(sdl_rend, textSurface);
     texture_ref tex = std::make_shared<texture_t>(reinterpret_cast<void*>(sdl_tex), 0, 0, 0, 0);

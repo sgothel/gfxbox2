@@ -451,10 +451,10 @@ namespace pixel {
             float dest_sy;
 
             texture_t(void* data_, const int x_, const int y_, const int width_, const int height_, bool owner=true) noexcept
-            : m_id(counter++), m_data(data_), m_owner(owner), x(x_), y(y_), width(width_), height(height_), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+            : m_id(counter++), m_data(data_), m_owner(nullptr!=data_ && owner), x(x_), y(y_), width(width_), height(height_), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
             texture_t(void* data_, int width_, int height_, bool owner=true) noexcept
-            : m_id(counter++), m_data(data_), m_owner(owner), x(0), y(0), width(width_), height(height_), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+            : m_id(counter++), m_data(data_), m_owner(nullptr!=data_ && owner), x(0), y(0), width(width_), height(height_), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
             texture_t() noexcept
             : m_id(counter++), m_data(nullptr), m_owner(false), x(0), y(0), width(0), height(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
@@ -487,7 +487,8 @@ namespace pixel {
             }
 
             std::string toString() const noexcept {
-                return "id "+std::to_string(m_id) + " " + std::to_string(x)+"/"+std::to_string(y) + " " + std::to_string(width)+"x"+std::to_string(height) +
+                return "id "+std::to_string(m_id) + (m_data ? " (set) " : " (empty) ") +
+                       std::to_string(x)+"/"+std::to_string(y) + " " + std::to_string(width)+"x"+std::to_string(height) +
                        ", owner " + std::to_string(m_owner);
             }
     };
