@@ -457,6 +457,30 @@ static input_event_type_t to_event_type(SDL_Scancode scancode) {
             return input_event_type_t::P3_ACTION4;
         case SDL_SCANCODE_R:
             return input_event_type_t::RESET;
+        case SDL_SCANCODE_F1:
+            return input_event_type_t::F1;
+        case SDL_SCANCODE_F2:
+            return input_event_type_t::F2;
+        case SDL_SCANCODE_F3:
+            return input_event_type_t::F3;
+        case SDL_SCANCODE_F4:
+            return input_event_type_t::F4;
+        case SDL_SCANCODE_F5:
+            return input_event_type_t::F5;
+        case SDL_SCANCODE_F6:
+            return input_event_type_t::F6;
+        case SDL_SCANCODE_F7:
+            return input_event_type_t::F7;
+        case SDL_SCANCODE_F8:
+            return input_event_type_t::F8;
+        case SDL_SCANCODE_F9:
+            return input_event_type_t::F9;
+        case SDL_SCANCODE_F10:
+            return input_event_type_t::F10;
+        case SDL_SCANCODE_F11:
+            return input_event_type_t::F11;
+        case SDL_SCANCODE_F12:
+            return input_event_type_t::F12;
         default:
             return input_event_type_t::ANY_KEY;
     }
