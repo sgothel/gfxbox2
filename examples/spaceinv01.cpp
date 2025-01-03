@@ -46,14 +46,14 @@ static pixel::input_event_t event;
  * - Alien-3   8 x   8
  * - Base     13 x   8
  * - peng      1 x   4
- * - Bunker   22 x  16  1: 32/192, 2: 77/192, 3: 122/192, 4: 176/192
+ * - Bunker   22 x  16  (aspect 1.375) 1: 32/192, 2: 77/192, 3: 122/192, 4: 176/192
  * - Aline-M  16 x   8  (mothership)
  * - Peng      1 x   4
 */
 constexpr static float space_height = 260.0f; // [m]
 constexpr static float space_width = 224.0f; // [m]
 constexpr static float space_width_pct = space_width / space_height;
-constexpr static float field_height = 184.0f; // [m]
+constexpr static float field_height = 188.0f; // [m]
 constexpr static float field_width = 204.0f; // [m]
 static const pixel::f2::aabbox_t field_box( { -field_width/2.0, -field_height/2.0 }, { field_width/2.0, field_height/2.0 } );
 // static const pixel::f2::vec_t alien_dim( 172, 72 );
@@ -75,13 +75,13 @@ static const pixel::f2::point_t bunk4_tl(  55, -62 );
 static const pixel::f2::aabbox_t base_box( { bunk1_tl.x-base_width, -field_height/2.0 }, { bunk4_tl.x+bunk_width+base_width, field_height/2.0 } );
 
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
-// static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
+static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
 // static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
-// static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
+static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
 // static const uint8_t rgba_blue[/*4*/] = { 0, 0, 255, 255 };
 static const float text_lum = 0.75f;
 static const pixel::f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f);
-// static bool debug_gfx = false;
+static bool debug_gfx = true;
 
 static pixel::texture_ref all_images;
 static std::vector<pixel::texture_ref> tex_alien1, tex_alien2, tex_alien3;
@@ -661,7 +661,20 @@ void mainloop() {
     pixel::clear_pixel_fb(0, 0, 0, 255);
 
     // Draw all objects
-    pixel::set_pixel_color(rgba_white);
+    if( debug_gfx ) {
+        {
+            const float w = space_width - 2;
+            const float h = space_height - 2;
+            pixel::set_pixel_color(rgba_yellow);
+            pixel::f2::rect_t r({-w/2.0f, +h/2.0f}, w, h);
+            r.draw();
+        }
+        {
+            pixel::set_pixel_color(rgba_green);
+            pixel::f2::rect_t r({-field_width/2.0f, +field_height/2.0f}, field_width, field_height);
+            r.draw();
+        }
+    }
     p1.draw();
     for(auto & bunk : bunks) {
         bunk.draw();
