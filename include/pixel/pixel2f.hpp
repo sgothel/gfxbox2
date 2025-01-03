@@ -540,6 +540,16 @@ namespace pixel::f2 {
             return intersects(o.box());
         }
 
+        /// Returns intersecting aabbox, maybe of width() and height() zero if not intersecting
+        aabbox_t intersection(const aabbox_t& o) const noexcept {
+            aabbox_t res( /*bl=*/ max(bl, o.bl), /*tr=*/ min(tr, o.tr) );
+            if (res.bl.x > res.tr.x || res.bl.y > res.tr.y) {
+                res.bl = { 0, 0 };
+                res.tr = { 0, 0 };
+            }
+            return res;;
+        }
+
         bool intersection(vec_t& reflect_out, vec_t& cross_normal, point_t& cross_point, const lineseg_t& in) const noexcept override;
 
         bool on_screen() const noexcept override {
