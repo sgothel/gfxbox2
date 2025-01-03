@@ -88,7 +88,7 @@ static std::vector<pixel::texture_ref> tex_alien1, tex_alien2, tex_alien3;
 static pixel::texture_ref tex_base, tex_peng, tex_bunk, tex_alienm;
 int level = 1;
 
-static void load_textures() {
+static bool load_textures() {
     constexpr int dy1 = 8;  // aliens, base, mothership
     constexpr int dy1b = 4; // peng
     constexpr int dy2 = 16; // bunk
@@ -101,6 +101,9 @@ static void load_textures() {
     constexpr int dx7 = 16; // mothership
     int y_off=0;
     all_images = std::make_shared<pixel::texture_t>("resources/spaceinv/spaceinv-sprites.png");
+    if( !all_images->data() ) {
+        return false;
+    }
     pixel::add_sub_textures(tex_alien1, all_images, 0, y_off, dx1, dy1, { {  0*dx1, 0 }, {  1*dx1, 0 }, });
     y_off+=dy1;
     pixel::add_sub_textures(tex_alien2, all_images, 0, y_off, dx2, dy1, { {  0*dx2, 0 }, {  1*dx2, 0 }, });
@@ -130,6 +133,7 @@ static void load_textures() {
     for(const pixel::texture_ref& t : tex_alien3) {
         pixel::log_printf(0, "XX alien3: %s\n", t->toString().c_str());
     }
+    return true;
 }
 
 class alient_t {
@@ -734,7 +738,9 @@ int main(int argc, char *argv[])
         float a = w / h;
         printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]\n", w, h, r01, a);
     }
-    load_textures();
+    if( !load_textures() ) {
+        return 1;
+    }
     reset_items();
     aa = {aliens};
     #if defined(__EMSCRIPTEN__)
@@ -742,4 +748,5 @@ int main(int argc, char *argv[])
     #else
         while( true ) { mainloop(); }
     #endif
+    return 0;
 }
