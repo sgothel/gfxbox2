@@ -89,9 +89,10 @@ static pixel::texture_ref tex_base, tex_peng, tex_bunk, tex_alienm;
 int level = 1;
 
 static bool load_textures() {
-    constexpr int dy1 = 8;  // aliens, base, mothership
+    constexpr int dy1 = 8;  // aliens, base
     constexpr int dy1b = 4; // peng
     constexpr int dy2 = 16; // bunk
+    constexpr int dy3 = 7;  // mothership
     constexpr int dx1 = 12; // alien1
     constexpr int dx2 = 11; // alien2
     constexpr int dx3 =  8; // alien3
@@ -115,7 +116,7 @@ static bool load_textures() {
     y_off+=dy1;
     tex_bunk = pixel::add_sub_texture(all_images,   0, y_off, dx6, dy2);
     y_off+=dy2;
-    tex_alienm = pixel::add_sub_texture(all_images, 0, y_off, dx7, dy1);
+    tex_alienm = pixel::add_sub_texture(all_images, 0, y_off, dx7, dy3);
 
     pixel::log_printf(0, "XX base: %s\n", tex_base->toString().c_str());
     pixel::log_printf(0, "XX peng: %s\n", tex_peng->toString().c_str());
