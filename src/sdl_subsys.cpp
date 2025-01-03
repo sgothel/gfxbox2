@@ -354,6 +354,30 @@ pixel::bitmap_t::bitmap_t(const uint32_t width_, const uint32_t height_) noexcep
     }
 }
 
+pixel::bitmap_t::bitmap_t(const bitmap_t& o, int /*unused*/) noexcept
+: m_id(counter++), m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
+{
+    if( !o.m_pixels ) {
+        log_printf("bitmap_t: Cloning empty surface: %s, %s\n", o.toString().c_str());
+        return;
+    }
+    SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormatFrom(o.m_pixels, (int)o.width, (int)o.height, (int)o.bpp*8, (int)o.stride, o.format);
+    if( nullptr != surface ) {
+        if( DEBUG_TEX ) {
+            log_printf("bitmap_t: Created fmt %s, %d x %d pitch %d\n", format_str(surface->format->format), surface->w, surface->h, surface->pitch);
+        }
+        m_handle = reinterpret_cast<void*>(surface);
+        m_pixels = reinterpret_cast<uint8_t*>(surface->pixels);
+        width = surface->w;
+        height = surface->h;
+        bpp = SDL_BYTESPERPIXEL(surface->format->format);
+        stride = surface->pitch;
+        format = surface->format->format;
+    } else {
+        log_printf("bitmap_t: Error cloning surface: %s, %s\n", o.toString().c_str(), SDL_GetError());
+    }
+}
+
 //
 // Texture
 //
@@ -434,6 +458,7 @@ pixel::texture_t::texture_t(const std::string& fname) noexcept
 
 void pixel::texture_t::update(const bitmap_ref& bmap) noexcept {
     if( nullptr == m_handle || bmap->format != format || bmap->width > width || bmap->height > height) {
+        log_printf("texture_t: Update mismatch: source %s, target %s\n", bmap->toString().c_str(), toString().c_str());
         return;
     }
     SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_handle);

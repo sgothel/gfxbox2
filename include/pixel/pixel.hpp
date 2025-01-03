@@ -25,6 +25,7 @@
 #define PIXEL_HPP_
 
 #include <atomic>
+#include <cstddef>
 #include <limits>
 #include <memory>
 #include <functional> // NOLINT(unused-includes): Used in other header
@@ -451,6 +452,14 @@ namespace pixel {
             // Creates an ABGR8888 surface from given file
             bitmap_t(const std::string& fname) noexcept;
 
+            /** Returns a clone */
+            bitmap_t(const bitmap_t& o, int /*unused*/) noexcept;
+
+            /** Returns a clone */
+            std::shared_ptr<bitmap_t> clone() {
+                return std::make_shared<bitmap_t>(*this, 0);
+            }
+
             bitmap_t(const bitmap_t&) = delete;
             void operator=(const bitmap_t&) = delete;
 
@@ -468,7 +477,7 @@ namespace pixel {
                 if(x > width || y > height ) {
                     return 0;
                 }
-                const uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + y * stride + x * bpp);
+                const uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>(y * stride) + static_cast<size_t>(x * bpp));
                 return *target_pixel;
             }
 
@@ -477,7 +486,7 @@ namespace pixel {
                 if(x > width || y > height ) {
                     return;
                 }
-                uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + y * stride + x * bpp);
+                uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>(y * stride) + static_cast<size_t>(x * bpp));
                 *target_pixel = abgr;
             }
 
