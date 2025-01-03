@@ -573,9 +573,11 @@ void peng_alien() {
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
 static bool raster = false;
+
 void mainloop() {
     static player_t p1;
     static uint64_t frame_count_total = 0;
+    static uint64_t snap_count = 0;
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
     static bool animating = true;
@@ -583,6 +585,7 @@ void mainloop() {
     static bool game_over = false;
     constexpr static float max_peng_time = 1_s;
     static float peng_time = pixel::next_rnd() * max_peng_time;
+    bool do_snapshot = false;
 
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -594,6 +597,13 @@ void mainloop() {
             #endif
         } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
+        } else if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
+            pengs.clear();
+            reset_items();
+            p1.reset();
+            game_over = false;
+        } else if( event.released_and_clr(pixel::input_event_type_t::F12) ) {
+            do_snapshot = true;
         }
         if( event.paused() ) {
             animating = false;
@@ -602,14 +612,6 @@ void mainloop() {
                 t_last = pixel::getElapsedMillisecond(); // [ms]
             }
             animating = true;
-        }
-
-        if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
-            pengs.clear();
-            reset_items();
-            p1.reset();
-            aa = {aliens};
-            game_over = false;
         }
 
         // Pass events to all animated objects
@@ -705,6 +707,13 @@ void mainloop() {
         const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
         snap_fname.resize(written);
         pixel::save_snapshot(snap_fname);
+    }
+    if( do_snapshot ) {
+        std::string snap_fname(128, '\0');
+        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "spaceinv-%7.7" PRIu64 ".bmp", snap_count++);
+        snap_fname.resize(written);
+        pixel::save_snapshot(snap_fname);
+        printf("Snapshot written to %s\n", snap_fname.c_str());
     }
     ++frame_count_total;
 }

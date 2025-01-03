@@ -147,7 +147,7 @@ void mainloop() {
         snap_fname.resize(written);
         pixel::save_snapshot(snap_fname);
     }
-
+    ++frame_count_total;
 }
 
 int main(int argc, char *argv[])
