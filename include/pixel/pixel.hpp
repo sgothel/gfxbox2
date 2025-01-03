@@ -301,11 +301,6 @@ namespace pixel {
             /** Convert cartesian y-axis value to framebuffer pixel value. */
             int to_fb_dy(const float dy) const noexcept { return round_to_int( dy / m_h_to_fbh ); }
 
-            /** Convert cartesian x-axis value to framebuffer pixel value. */
-            float to_fb_dx_f(const float dx) const noexcept { return dx / m_w_to_fbw; }
-            /** Convert cartesian y-axis value to framebuffer pixel value. */
-            float to_fb_dy_f(const float dy) const noexcept { return dy / m_h_to_fbh; }
-
             /** Convert framebuffer x-axis value in pixels to cartesian pixel value. */
             int from_fb_dx(const int dx) const noexcept { return round_to_int((float)dx * m_w_to_fbw); }
             /** Convert framebuffer y-axis value in pixels to cartesian pixel value. */
