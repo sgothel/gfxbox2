@@ -493,7 +493,7 @@ namespace pixel {
             std::string toString() const noexcept {
                 return "id "+std::to_string(m_id) + (m_handle ? " (set) " : " (empty) ") +
                        std::to_string(width)+"x"+std::to_string(height)+"x"+std::to_string(bpp)+
-                       ", stride "+std::to_string(stride)+", "+format_str(format);
+                       ", stride "+std::to_string(stride)+", "+format_str(format)+", pix "+std::to_string((intptr_t)(void*)m_pixels);
             }
     };
     typedef std::shared_ptr<bitmap_t> bitmap_ref;

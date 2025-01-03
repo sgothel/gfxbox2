@@ -28,6 +28,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_scancode.h>
+#include <SDL2/SDL_surface.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_image.h>
 
@@ -361,10 +362,18 @@ pixel::bitmap_t::bitmap_t(const bitmap_t& o, int /*unused*/) noexcept
         log_printf("bitmap_t: Cloning empty surface: %s, %s\n", o.toString().c_str());
         return;
     }
-    SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormatFrom(o.m_pixels, (int)o.width, (int)o.height, (int)o.bpp*8, (int)o.stride, o.format);
+    SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(0, (int)o.width, (int)o.height, (int)o.bpp*8, o.format);
     if( nullptr != surface ) {
         if( DEBUG_TEX ) {
             log_printf("bitmap_t: Created fmt %s, %d x %d pitch %d\n", format_str(surface->format->format), surface->w, surface->h, surface->pitch);
+        }
+        SDL_Surface * o_s = reinterpret_cast<SDL_Surface*>(o.m_handle);
+        SDL_Rect srcrect = { .x=(int)0, .y=(int)0, .w=(int)o.width, .h=(int)o.height};
+        SDL_Rect destrect = { .x=(int)0,
+                          .y=(int)0,
+                          .w=(int)width, .h=(int)height };
+        if( SDL_UpperBlit(o_s, &srcrect, surface, &destrect) ) {
+            log_printf("bitmap_t: Cloning blit error: %s, %s, %s\n", o.toString().c_str(), toString().c_str(), SDL_GetError());
         }
         m_handle = reinterpret_cast<void*>(surface);
         m_pixels = reinterpret_cast<uint8_t*>(surface->pixels);
