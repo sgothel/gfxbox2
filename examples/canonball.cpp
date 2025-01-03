@@ -189,7 +189,7 @@ class canon_t {
                     it = m_pengs_flying.erase(it);
                     // FIXME
                     // reset(false);
-                    // rotate_adeg(rot_step * dt * next_rnd() * 3.0f);
+                    // rotate_adeg(rot_step * dt * pixel::next_rnd() * 3.0f);
                 } else {
                     ++it;
                     for(geom_ref_t g : agobjects()){
@@ -259,20 +259,6 @@ class canon_t {
             // printf("barrel_end: ")
         }
 };
-
-static std::random_device rng;
-static const float rng_range = (float)std::random_device::max() - (float)std::random_device::min() + 1.0f;
-
-float next_rnd() noexcept {
-    if constexpr (false) {
-        const float r0 = (float)rng();
-        const float r = r0 / rng_range;
-        std::cout << "rnd: r0 " << r0 << " / " << rng_range << " = " << r << std::endl;
-        return r;
-    } else {
-        return (float)rng() / rng_range;
-    }
-}
 
 static const float text_lum = 0.0f;
 static const f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f);

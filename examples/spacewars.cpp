@@ -30,7 +30,6 @@
 #include "pixel/pixel.hpp"
 
 #include <algorithm>
-#include <random>
 #include <cinttypes>
 
 using namespace pixel::literals;
@@ -131,20 +130,6 @@ class star_t {
 typedef std::shared_ptr<star_t> star_ref_t;
 
 star_ref_t sun;
-
-static std::random_device rng;
-static const float rng_range = (float)std::random_device::max() - (float)std::random_device::min() + 1.0f;
-
-static float next_rnd() noexcept {
-    if constexpr (false) {
-        const float r0 = (float)rng();
-        const float r = r0 / rng_range;
-        std::cout << "rnd: r0 " << r0 << " / " << rng_range << " = " << r << std::endl;
-        return r;
-    } else {
-        return (float)rng() / rng_range;
-    }
-}
 
 class fragment_t : public pixel::f2::linestrip_t {
     public:
@@ -771,14 +756,14 @@ void reset_asteroids(int count) {
     fragments.clear();
     for(int i = 0; i < count; ++i) {
         const float height_h = spaceship_t::height*2.0f;
-        const float height = height_h + height_h*next_rnd();
-        const float angle = pixel::adeg_to_rad(next_rnd() * 360.0f);
-        const float velocity = 10.0f + next_rnd() * 10.0f; // m/s
+        const float height = height_h + height_h*pixel::next_rnd();
+        const float angle = pixel::adeg_to_rad(pixel::next_rnd() * 360.0f);
+        const float velocity = 10.0f + pixel::next_rnd() * 10.0f; // m/s
         const float rot_velocity = ( 15_deg +
-                                     next_rnd() * 15_deg )
+                                     pixel::next_rnd() * 15_deg )
                                    * ( i%2 == 0 ? 1.0f : -1.0f ); // angle/s
-        const float jitter = 1.0f / ( 4.0f + 4.0f * next_rnd() );
-        pixel::f2::point_t p0(pixel::cart_coord.min_x()+(pixel::cart_coord.width()*next_rnd()),
+        const float jitter = 1.0f / ( 4.0f + 4.0f * pixel::next_rnd() );
+        pixel::f2::point_t p0(pixel::cart_coord.min_x()+(pixel::cart_coord.width()*pixel::next_rnd()),
                               i%2 == 0 ? pixel::cart_coord.min_y()+height/2 : pixel::cart_coord.max_y()-height/2);
         fragment_ref_t asteroid1 = make_asteroid(p0, height,
                 angle, velocity, rot_velocity, jitter );
@@ -1258,8 +1243,8 @@ int main(int argc, char *argv[])
     /*
     const float peng_diag = spaceship_height;
     for(int i = 0; i < 5; ++i){
-        const float x = next_rnd() * pixel::cart_coord.width();
-        const float y = next_rnd() * pixel::cart_coord.height();
+        const float x = pixel::next_rnd() * pixel::cart_coord.width();
+        const float y = pixel::next_rnd() * pixel::cart_coord.height();
         peng_t peng(&world_id, pixel::f2::point_t(x, y), peng_diag, 0.0f, 0.0f);
         pengs.emplace_back(peng);
         if(!peng.on_screen()){

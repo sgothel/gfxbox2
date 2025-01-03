@@ -28,12 +28,9 @@
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
 
-#include <algorithm>
-#include <random>
 #include <cinttypes>
 #include <cstdio>
 #include <cmath>
-#include <iostream>
 #include <vector>
 
 using namespace pixel::literals;
@@ -551,23 +548,6 @@ class player_t {
             }
         }
 };
-static std::random_device rng;
-
-constexpr float rng_to_norm(float v) noexcept {
-    constexpr float a = (float)std::random_device::min();
-    constexpr float b = (float)std::random_device::max();
-    return (v - a) / (b - a);
-}
-
-constexpr float rng_from_norm(float v) noexcept {
-    constexpr float a = (float)std::random_device::min();
-    constexpr float b = (float)std::random_device::max();
-    return v * (b - a) + a;
-}
-
-static float next_rnd() noexcept {
-    return rng_to_norm((float)rng());
-}
 void peng_from_alien(alient_t alien){
     // adjust start posision to geometric alien model
     pixel::f2::point_t p0 = {alien.m_tl.x + (float)alien.atex().width()/2,
@@ -583,7 +563,7 @@ void peng_alien() {
     if(aa.list.size() <= 0){
         return;
     }
-    peng_from_alien(aa.list[(size_t)(next_rnd() * (float)(aa.list.size()-1))]);
+    peng_from_alien(aa.list[(size_t)(pixel::next_rnd() * (float)(aa.list.size()-1))]);
 }
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
@@ -597,7 +577,7 @@ void mainloop() {
     static pixel::texture_ref game_over_text = pixel::make_text(tl_text, 0, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
     static bool game_over = false;
     constexpr static float max_peng_time = 1_s;
-    static float peng_time = next_rnd() * max_peng_time;
+    static float peng_time = pixel::next_rnd() * max_peng_time;
 
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -665,9 +645,9 @@ void mainloop() {
         if(peng_time <= 0){
             peng_alien();
             if((float)level < max_peng_time){
-                peng_time = next_rnd() * (max_peng_time - ((float)level-1));
+                peng_time = pixel::next_rnd() * (max_peng_time - ((float)level-1));
             } else {
-                peng_time = next_rnd() * (max_peng_time - (float)level+1);
+                peng_time = pixel::next_rnd() * (max_peng_time - (float)level+1);
             }
         }
     }

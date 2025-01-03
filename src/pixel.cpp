@@ -30,6 +30,7 @@
 #include <cstdint>
 #include <cinttypes>
 #include <ctime>
+#include <random>
 
 bool pixel::use_subsys_primitives_val = true;
 int pixel::win_width=0;
@@ -46,6 +47,24 @@ int pixel::font_height = 24;
 pixel::cart_coord_t pixel::cart_coord;
 
 uint32_t pixel::draw_color = 0;
+
+static std::random_device rng;
+
+constexpr float rng_to_norm(float v) noexcept {
+    constexpr float a = (float)std::random_device::min();
+    constexpr float b = (float)std::random_device::max();
+    return (v - a) / (b - a);
+}
+
+constexpr float rng_from_norm(float v) noexcept {
+    constexpr float a = (float)std::random_device::min();
+    constexpr float b = (float)std::random_device::max();
+    return v * (b - a) + a;
+}
+
+float pixel::next_rnd() noexcept {
+    return rng_to_norm((float)rng());
+}
 
 /**
  * See <http://man7.org/linux/man-pages/man2/clock_gettime.2.html>

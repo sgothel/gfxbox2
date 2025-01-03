@@ -122,6 +122,8 @@ namespace pixel {
         return rad * 180.0f / std::numbers::pi_v<float>;
     }
 
+    float next_rnd() noexcept;
+
     enum class orientation_t {
         /** Collinear **/
         COL,
