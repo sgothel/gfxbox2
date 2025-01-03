@@ -418,6 +418,78 @@ namespace pixel {
                    uint8_t cr, uint8_t cg, uint8_t cb, uint8_t ca);
 
     //
+    // Bitmap
+    //
+    class bitmap_t {
+        private:
+            static std::atomic_int counter;
+            int m_id;
+            void* m_handle;
+            uint8_t *m_pixels;
+            void destroy() noexcept;
+
+        public:
+            static const char* format_str(uint32_t fmt) noexcept;
+
+            /** bitmap width */
+            uint32_t  width;
+            /** bitmap width */
+            uint32_t height;
+            /** bitmap bytes per pixel */
+            uint32_t bpp;
+            /** bitmap stride (pitch) */
+            uint32_t stride;
+            /** native format */
+            uint32_t format;
+
+            // Create an empty ABGR8888 surface
+            bitmap_t(const uint32_t width_, const uint32_t height_) noexcept;
+
+            bitmap_t() noexcept
+            : m_id(counter++), m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0) {}
+
+            // Creates an ABGR8888 surface from given file
+            bitmap_t(const std::string& fname) noexcept;
+
+            bitmap_t(const bitmap_t&) = delete;
+            void operator=(const bitmap_t&) = delete;
+
+            ~bitmap_t() noexcept {
+                destroy();
+            }
+
+            constexpr void* handle() noexcept { return m_handle; }
+            constexpr uint8_t* pixels() noexcept { return m_pixels; }
+
+            void set_pixel(int x, int y, uint32_t abgr) noexcept;
+
+            /** Reads abgr value */
+            constexpr uint32_t get(uint32_t x, uint32_t y) const noexcept {
+                if(x > width || y > height ) {
+                    return 0;
+                }
+                const uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + y * stride + x * bpp);
+                return *target_pixel;
+            }
+
+            /** Writes given abgr value */
+            constexpr void put(uint32_t x, uint32_t y, uint32_t abgr) noexcept {
+                if(x > width || y > height ) {
+                    return;
+                }
+                uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + y * stride + x * bpp);
+                *target_pixel = abgr;
+            }
+
+            std::string toString() const noexcept {
+                return "id "+std::to_string(m_id) + (m_handle ? " (set) " : " (empty) ") +
+                       std::to_string(width)+"x"+std::to_string(height)+"x"+std::to_string(bpp)+
+                       ", stride "+std::to_string(stride)+", "+format_str(format);
+            }
+    };
+    typedef std::shared_ptr<bitmap_t> bitmap_ref;
+
+    //
     // Texture
     //
 
@@ -425,38 +497,57 @@ namespace pixel {
         private:
             static std::atomic_int counter;
             int m_id;
-            void* m_data;
+            void* m_handle;
             bool m_owner;
             void destroy() noexcept;
 
         public:
-            /** source texture pos-x */
-            int x;
-            /** source texture pos-y */
-            int y;
-            /** source texture width */
-            int width;
-            /** source texture width */
-            int height;
+            static const char* format_str(uint32_t fmt) noexcept {
+                return bitmap_t::format_str(fmt);
+            }
+            /** texture pos-x */
+            uint32_t x;
+            /** texture pos-y */
+            uint32_t y;
+            /** texture width */
+            uint32_t width;
+            /** texture width */
+            uint32_t height;
+            /** texture bytes per pixel */
+            uint32_t bpp;
+            /** texture format */
+            uint32_t format;
             /** dest texture pos-x */
-            int dest_x;
+            uint32_t dest_x;
             /** dest texture pos-y */
-            int dest_y;
+            uint32_t dest_y;
             /** dest texture scale-x */
             float dest_sx;
             /** dest texture scale-y */
             float dest_sy;
 
-            texture_t(void* data_, const int x_, const int y_, const int width_, const int height_, bool owner=true) noexcept
-            : m_id(counter++), m_data(data_), m_owner(nullptr!=data_ && owner), x(x_), y(y_), width(width_), height(height_), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+            texture_t(void* handle_, const uint32_t x_, const uint32_t y_, const uint32_t width_, const uint32_t height_, const uint32_t bpp_, const uint32_t format_, const bool owner=true) noexcept
+            : m_id(counter++), m_handle(handle_), m_owner(nullptr!=handle_ && owner),
+              x(x_), y(y_), width(width_), height(height_), bpp(bpp_), format(format_),
+              dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
-            texture_t(void* data_, int width_, int height_, bool owner=true) noexcept
-            : m_id(counter++), m_data(data_), m_owner(nullptr!=data_ && owner), x(0), y(0), width(width_), height(height_), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+            /** Create a shared proxy clone w/o ownership, use createShared() */
+            texture_t(const texture_t& parent, int /*unused*/) noexcept
+            : m_id(counter++), m_handle(parent.m_handle), m_owner(false),
+              x(parent.x), y(parent.y), width(parent.width), height(parent.height), bpp(parent.bpp), format(parent.format),
+              dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+
+            /** Create a shared proxy clone w/o ownership */
+            std::shared_ptr<texture_t> createShared() {
+                return std::make_shared<texture_t>(*this, 0);
+            }
 
             texture_t() noexcept
-            : m_id(counter++), m_data(nullptr), m_owner(false), x(0), y(0), width(0), height(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+            : m_id(counter++), m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
             texture_t(const std::string& fname) noexcept;
+
+            texture_t(const bitmap_ref& bmap) noexcept;
 
             texture_t(const texture_t&) = delete;
             void operator=(const texture_t&) = delete;
@@ -465,15 +556,18 @@ namespace pixel {
                 destroy();
             }
 
-            constexpr void* data() noexcept { return m_data; }
+            constexpr void* handle() noexcept { return m_handle; }
             constexpr bool is_owner() const noexcept { return m_owner; }
             void disown() noexcept { m_owner = false; }
             void set_owner(bool v) noexcept { m_owner = v; }
 
+            /** update texture */
+            void update(const bitmap_ref& bmap) noexcept;
+
             /// draw using FB coordinates and dimension
-            void draw_raw(const int fb_x, const int fb_y, const int fb_w, const int fb_h) const noexcept;
+            void draw_raw(const uint32_t fb_x, const uint32_t fb_y, const uint32_t fb_w, const uint32_t fb_h) const noexcept;
             /// draw using FB coordinates and optional scale
-            void draw_fbcoord(const int x_pos, const int y_pos, const float scale_x=1.0f, const float scale_y=1.0f) const noexcept {
+            void draw_fbcoord(const uint32_t x_pos, const uint32_t y_pos, const float scale_x=1.0f, const float scale_y=1.0f) const noexcept {
                 draw_raw(x_pos + dest_x, y_pos + dest_y,
                          round_to_int((float)width*dest_sx*scale_x),
                          round_to_int((float)height*dest_sy*scale_y));
@@ -485,16 +579,16 @@ namespace pixel {
             }
 
             std::string toString() const noexcept {
-                return "id "+std::to_string(m_id) + (m_data ? " (set) " : " (empty) ") +
-                       std::to_string(x)+"/"+std::to_string(y) + " " + std::to_string(width)+"x"+std::to_string(height) +
-                       ", owner " + std::to_string(m_owner);
+                return "id "+std::to_string(m_id) + (m_handle ? " (set) " : " (empty) ") +
+                       std::to_string(x)+"/"+std::to_string(y) + " " + std::to_string(width)+"x"+std::to_string(height)+"x"+std::to_string(bpp) +
+                       ", " + format_str(format) + ", owner " + std::to_string(m_owner);
             }
     };
     typedef std::shared_ptr<texture_t> texture_ref;
 
     struct tex_sub_coord_t {
-        int x;
-        int y;
+        uint32_t x;
+        uint32_t y;
     };
 
     /**
@@ -508,7 +602,7 @@ namespace pixel {
      * @return number of added sub-textures, last one is owner of the SDL_Texture instance
      */
     size_t add_sub_textures(std::vector<texture_ref>& storage,
-                            const std::string& filename, int w, int h, int x_off) noexcept;
+                            const std::string& filename, uint32_t w, uint32_t h, uint32_t x_off) noexcept;
 
     /**
      * Add sub-textures to the storage list of texture_t from given global texture owner.
@@ -524,7 +618,7 @@ namespace pixel {
      * @return number of added sub-textures
      */
     size_t add_sub_textures(std::vector<texture_ref>& storage,
-                            const texture_ref& parent, int x_off, int y_off, int w, int h,
+                            const texture_ref& parent, uint32_t x_off, uint32_t y_off, uint32_t w, uint32_t h,
                             const std::vector<tex_sub_coord_t>& tex_positions) noexcept;
 
     /**
@@ -538,7 +632,7 @@ namespace pixel {
      * @param h
      * @return sub-texture ref
      */
-    texture_ref add_sub_texture(const texture_ref& parent, int x_off, int y_off, int w, int h) noexcept;
+    texture_ref add_sub_texture(const texture_ref& parent, uint32_t x_off, uint32_t y_off, uint32_t w, uint32_t h) noexcept;
 
     class animtex_t {
         private:

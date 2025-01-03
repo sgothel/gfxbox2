@@ -283,60 +283,164 @@ float pixel::get_gpu_fps() noexcept {
 }
 
 //
-// Texture
+// Bitmap
 //
 static constexpr const bool DEBUG_TEX = true;
 
-void pixel::texture_t::destroy() noexcept {
-    if( nullptr != m_data && m_owner ) {
-        SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_data);
-        SDL_DestroyTexture(tex);
+const char* pixel::bitmap_t::format_str(uint32_t fmt) noexcept {
+    const char* s = SDL_GetPixelFormatName(fmt);
+    if( 0==strncmp("SDL_PIXELFORMAT_", s, 16) ) {
+        return s+16;
     }
-    m_data = nullptr;
+    return s;
+}
+void pixel::bitmap_t::destroy() noexcept {
+    if( nullptr != m_handle ) {
+        SDL_Surface * s = reinterpret_cast<SDL_Surface*>(m_handle);
+        SDL_FreeSurface(s);
+        m_handle = nullptr;
+        m_pixels = nullptr;
+    }
 }
 
-void pixel::texture_t::draw_raw(const int fb_x, const int fb_y, const int fb_w, const int fb_h) const noexcept {
-    if( nullptr != m_data ) {
-        SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_data);
-        SDL_Rect src = { .x=x, .y=y, .w=width, .h=height};
-        SDL_Rect dest = { .x=fb_x,
-                          .y=fb_y,
-                          .w=fb_w, .h=fb_h };
+pixel::bitmap_t::bitmap_t(const std::string& fname) noexcept
+: m_id(counter++), m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
+{
+    SDL_Surface* surface = IMG_Load(fname.c_str());
+    if( nullptr == surface ) {
+        log_printf("bitmap_t: Error loading %s: %s\n", fname.c_str(), SDL_GetError());
+        return;
+    }
+    if( DEBUG_TEX ) {
+        log_printf("bitmap_t: Loaded fmt %s, %d x %d pitch %d\n", format_str(surface->format->format), surface->w, surface->h, surface->pitch);
+    }
+    if( SDL_PIXELFORMAT_ABGR8888 != surface->format->format ) {
+        SDL_Surface *old = surface;
+        surface = SDL_ConvertSurfaceFormat(old, SDL_PIXELFORMAT_ABGR8888, 0);
+        if( DEBUG_TEX ) {
+            log_printf("bitmap_t: Converting fmt %s -> %s, target %s\n",
+                format_str(old->format->format),
+                format_str(surface->format->format),
+                format_str(SDL_PIXELFORMAT_ABGR8888));
+        }
+        SDL_FreeSurface(old);
+    }
+    m_handle = reinterpret_cast<void*>(surface);
+    m_pixels = reinterpret_cast<uint8_t*>(surface->pixels);
+    width = surface->w;
+    height = surface->h;
+    bpp = SDL_BYTESPERPIXEL(surface->format->format);
+    stride = surface->pitch;
+    format = surface->format->format;
+}
+
+pixel::bitmap_t::bitmap_t(const uint32_t width_, const uint32_t height_) noexcept
+: m_id(counter++), m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
+{
+    SDL_Surface *surface = SDL_CreateRGBSurface(0, (int)width_, (int)height_, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
+    if( nullptr != surface ) {
+        if( DEBUG_TEX ) {
+            log_printf("bitmap_t: Created fmt %s, %d x %d pitch %d\n", format_str(surface->format->format), surface->w, surface->h, surface->pitch);
+        }
+        m_handle = reinterpret_cast<void*>(surface);
+        m_pixels = reinterpret_cast<uint8_t*>(surface->pixels);
+        width = surface->w;
+        height = surface->h;
+        bpp = SDL_BYTESPERPIXEL(surface->format->format);
+        stride = surface->pitch;
+        format = surface->format->format;
+    } else {
+        log_printf("bitmap_t: Error creating RGBA %dx%d: %s\n", width_, height_, SDL_GetError());
+    }
+}
+
+//
+// Texture
+//
+void pixel::texture_t::destroy() noexcept {
+    if( nullptr != m_handle && m_owner ) {
+        SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_handle);
+        SDL_DestroyTexture(tex);
+    }
+    m_handle = nullptr;
+}
+
+void pixel::texture_t::draw_raw(const uint32_t fb_x, const uint32_t fb_y, const uint32_t fb_w, const uint32_t fb_h) const noexcept {
+    if( nullptr != m_handle ) {
+        SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_handle);
+        SDL_Rect src = { .x=(int)x, .y=(int)y, .w=(int)width, .h=(int)height};
+        SDL_Rect dest = { .x=(int)fb_x,
+                          .y=(int)fb_y,
+                          .w=(int)fb_w, .h=(int)fb_h };
         SDL_RenderCopy(sdl_rend, tex, &src, &dest);
     }
 }
 
-pixel::texture_t::texture_t(const std::string& fname) noexcept
-: m_id(counter++)
+pixel::texture_t::texture_t(const bitmap_ref& bmap) noexcept
+: m_id(counter++), m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1)
 {
-    SDL_Surface* surface = IMG_Load(fname.c_str());
+    SDL_Surface * surface = reinterpret_cast<SDL_Surface*>(bmap->handle());
     SDL_Texture* tex_;
     if( nullptr != surface ) {
         if( DEBUG_TEX ) {
-            log_printf("texture_t::surface: fmt %u 0x%X, %d x %d pitch %d\n", surface->format->format, surface->format->format, surface->w, surface->h, surface->pitch);
+            log_printf("texture_t: Given surface fmt %s, %d x %d pitch %d\n", format_str(surface->format->format), surface->w, surface->h, surface->pitch);
         }
         tex_ = SDL_CreateTextureFromSurface(sdl_rend, surface);
-        SDL_FreeSurface(surface);
         if( nullptr == tex_ ) {
-            log_printf("texture_t: Error loading %s: %s\n", fname.c_str(), SDL_GetError());
+            log_printf("texture_t: Error loading surface: %s\n", SDL_GetError());
         }
     } else {
         tex_ = nullptr;
-        log_printf("texture_t::surface: Error loading %s: %s\n", fname.c_str(), SDL_GetError());
+        log_printf("texture_t: Empty surface\n");
     }
-    m_data = reinterpret_cast<void*>(tex_);
-    x = 0;
-    y = 0;
-    width = 0;
-    height = 0;
-    Uint32 format = 0;
+    m_handle = reinterpret_cast<void*>(tex_);
     if( nullptr != tex_ ) {
-        SDL_QueryTexture(tex_, &format, nullptr, &width, &height);
+        Uint32 format_ = 0;
+        int w=0, h=0;
+        SDL_QueryTexture(tex_, &format_, nullptr, &w, &h);
+        width = w;
+        height = h;
+        bpp = SDL_BYTESPERPIXEL(format_);
+        format = format_;
         if( DEBUG_TEX ) {
-            log_printf("texture_t: fmt %u 0x%X, %d x %d\n", format, format, width, height);
+            log_printf("texture_t: Loaded fmt %s, %d x %d\n", format_str(format), width, height);
         }
     }
     m_owner = true;
+}
+
+pixel::texture_t::texture_t(const std::string& fname) noexcept
+: m_id(counter++), m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1)
+{
+    SDL_Texture* tex_ = IMG_LoadTexture(sdl_rend, fname.c_str());
+    if( nullptr == tex_ ) {
+        log_printf("texture_t: Error loading %s: %s\n", fname.c_str(), SDL_GetError());
+    }
+    m_handle = reinterpret_cast<void*>(tex_);
+    if( nullptr != tex_ ) {
+        Uint32 format_ = 0;
+        int w=0, h=0;
+        SDL_QueryTexture(tex_, &format_, nullptr, &w, &h);
+        width = w;
+        height = h;
+        bpp = SDL_BYTESPERPIXEL(format_);
+        format = format_;
+        if( DEBUG_TEX ) {
+            log_printf("texture_t: Loaded fmt %s, %d x %d\n", format_str(format), width, height);
+        }
+    }
+    m_owner = true;
+}
+
+void pixel::texture_t::update(const bitmap_ref& bmap) noexcept {
+    if( nullptr == m_handle || bmap->format != format || bmap->width > width || bmap->height > height) {
+        return;
+    }
+    SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_handle);
+    SDL_Rect rect { 0, 0, (int)bmap->width, (int)bmap->height};
+    if( SDL_UpdateTexture(tex, &rect, bmap->pixels(), (int)bmap->stride) ) {
+        log_printf("texture_t: Update error: %s\n", SDL_GetError());
+    }
 }
 
 //
@@ -353,7 +457,7 @@ pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
                 nullptr == sdl_font ? "font" : "renderer");
             _tex_font_warn0_once = false;
         }
-        return std::make_shared<texture_t>(nullptr, 0, 0, 0, 0);
+        return std::make_shared<texture_t>();
     }
     uint8_t r, g, b, a;
     pixel::uint32_to_rgba(draw_color, r, g, b, a);
@@ -365,11 +469,19 @@ pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
             fprintf(stderr, "make_text_texture: Null texture for '%s': %s\n", text.c_str(), SDL_GetError());
             _tex_font_warn1_once = false;
         }
-        return std::make_shared<texture_t>(nullptr, 0, 0, 0, 0);
+        return std::make_shared<texture_t>();
     }
     SDL_Texture* sdl_tex = SDL_CreateTextureFromSurface(sdl_rend, textSurface);
-    texture_ref tex = std::make_shared<texture_t>(reinterpret_cast<void*>(sdl_tex), 0, 0, 0, 0);
-    SDL_QueryTexture(sdl_tex, nullptr, nullptr, &tex->width, &tex->height);
+    texture_ref tex = std::make_shared<texture_t>(reinterpret_cast<void*>(sdl_tex), 0, 0, 0, 0, 0, 0);
+    {
+        Uint32 format_ = 0;
+        int w=0, h=0;
+        SDL_QueryTexture(sdl_tex, &format_, nullptr, &w, &h);
+        tex->width = w;
+        tex->height = h;
+        tex->bpp = SDL_BYTESPERPIXEL(format_);
+        tex->format = format_;
+    }
     SDL_FreeSurface(textSurface);
     return tex;
 }

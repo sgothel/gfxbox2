@@ -130,8 +130,8 @@ void mainloop() {
 
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
-        const int dx = ( pixel::fb_width - pixel::round_to_int(hud_text->width*hud_text->dest_sx) ) / 2;
-        hud_text->draw_fbcoord(dx, 0);
+        const uint32_t dx = ( pixel::fb_width - hud_text->width*hud_text->dest_sx ) / 2;
+        hud_text->draw_fbcoord((int)dx, 0);
     }
     pixel::swap_gpu_buffer();
 }

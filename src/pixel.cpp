@@ -185,23 +185,28 @@ std::string pixel::to_string(const char* format, ...) noexcept {
 }
 
 //
-// Texture
+// Bitmap
 //
 static constexpr const bool DEBUG_TEX = true;
+std::atomic<int> pixel::bitmap_t::counter = 0;
+
+//
+// Texture
+//
 std::atomic<int> pixel::texture_t::counter = 0;
 
-size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const std::string& filename, int w, int h, int x_off) noexcept
+size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const std::string& filename, uint32_t w, uint32_t h, uint32_t x_off) noexcept
 {
     std::unique_ptr<texture_t> all = std::make_unique<texture_t>(filename);
     all->disown();
     const size_t size_start = storage.size();
 
-    for(int y=0; y<all->height; y+=h) {
-        for(int x=0; x<all->width; x+=w+x_off) {
+    for(uint32_t y=0; y<all->height; y+=h) {
+        for(uint32_t x=0; x<all->width; x+=w+x_off) {
             if( storage.size() > size_start ) {
                 storage[ storage.size() - 1 ]->disown(); // only last entry is owner of the SDL_Texture
             }
-            storage.push_back( std::make_shared<texture_t>(all->data(), x, y, w, h, false /* owner*/) );
+            storage.push_back( std::make_shared<texture_t>(all->handle(), x, y, w, h, all->bpp, all->format, false /* owner*/) );
             if( DEBUG_TEX ) {
                 log_printf("add_sub_textures: tex %zd: %d/%d %dx%d of %dx%d: %s of %s\n",
                     storage.size() - 1, x, y, w, h, all->width, all->height,
@@ -218,15 +223,15 @@ size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const std::str
 }
 
 size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const texture_ref& parent,
-                               int x_off, int y_off, int w, int h, const std::vector<tex_sub_coord_t>& tex_positions) noexcept
+                               uint32_t x_off, uint32_t y_off, uint32_t w, uint32_t h, const std::vector<tex_sub_coord_t>& tex_positions) noexcept
 {
     const size_t size_start = storage.size();
 
     for(tex_sub_coord_t p : tex_positions) {
-        const int x = x_off+p.x;
-        const int y = y_off+p.y;
-        if( 0 <= x && 0 <= y && x+w <= parent->width && y+h <= parent->height ) {
-            storage.push_back( std::make_shared<texture_t>(parent->data(), x, y, w, h, false /* owner*/) );
+        const uint32_t x = x_off+p.x;
+        const uint32_t y = y_off+p.y;
+        if( x+w <= parent->width && y+h <= parent->height ) {
+            storage.push_back( std::make_shared<texture_t>(parent->handle(), x, y, w, h, parent->bpp, parent->format, false /* owner*/) );
         } else {
             storage.push_back( std::make_shared<texture_t>() );
         }
@@ -240,13 +245,13 @@ size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const texture_
     return storage.size() - size_start;
 }
 
-pixel::texture_ref pixel::add_sub_texture(const texture_ref& parent, int x_off, int y_off, int w, int h) noexcept {
+pixel::texture_ref pixel::add_sub_texture(const texture_ref& parent, uint32_t x_off, uint32_t y_off, uint32_t w, uint32_t h) noexcept {
     pixel::texture_ref res;
     {
-        const int x = x_off;
-        const int y = y_off;
-        if( 0 <= x && 0 <= y && x+w <= parent->width && y+h <= parent->height ) {
-            res = std::make_shared<texture_t>(parent->data(), x, y, w, h, false /* owner*/);
+        const uint32_t x = x_off;
+        const uint32_t y = y_off;
+        if( x+w <= parent->width && y+h <= parent->height ) {
+            res = std::make_shared<texture_t>(parent->handle(), x, y, w, h, parent->bpp, parent->format, false /* owner*/);
         } else {
             res = std::make_shared<texture_t>();
         }
@@ -266,7 +271,7 @@ pixel::animtex_t::animtex_t(std::string name, float sec_per_atex, const std::vec
 : m_name( std::move(name) )
 {
     for(const texture_ref& t : textures) {
-        m_textures.push_back( std::make_shared<texture_t>(t->data(), t->x, t->y, t->width, t->height, false /* owner */) );
+        m_textures.push_back( t->createShared() );
     }
     m_sec_per_atex = sec_per_atex;
     m_atex_sec_left = 0;
