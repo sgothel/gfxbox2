@@ -682,6 +682,7 @@ class player_t {
         pixel::f2::point_t ship_startpos() {
             return {base_box.bl.x + base_width/2, base_box.bl.y + base_height};
         }
+
         void respawn_ship() noexcept {
             if(m_lives <= 0){
                 return;
@@ -780,6 +781,7 @@ void peng_alien() {
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
 static bool raster = false;
+static int high_score = 1000;
 
 void mainloop() {
     static player_t p1;
@@ -915,15 +917,20 @@ void mainloop() {
 
     float fps = pixel::get_gpu_fps();
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
-    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, score %4d, lives %d, level %d",
+    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, score %4d, high score %d, level %d",
                     pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-                    fps, p1.score(), p1.lives(), level);
+                    fps, p1.score(), high_score, level);
     for(alient_t& a : alien_group.actives){
         if(a.box().bl.y < -62-bunks[0].box().height() || p1.lives() <= 0){
             game_over = true;
             animating = false;
         }
     }
+    
+    if(p1.score() > high_score){
+        high_score = p1.score();
+    }
+    
     pixel::swap_pixel_fb(false);
     {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*(float)hud_text->dest_sx) ) / 2;
@@ -961,7 +968,6 @@ int main(int argc, char *argv[])
                 window_width = (int)std::round( (float)window_height * space_width_pct );
                 ++i;
             }
-
         }
     }
     {
