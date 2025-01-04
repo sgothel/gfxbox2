@@ -309,7 +309,7 @@ void pixel::bitmap_t::destroy() noexcept {
 }
 
 pixel::bitmap_t::bitmap_t(const std::string& fname) noexcept
-: m_id(counter++), m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
+: m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
 {
     SDL_Surface* surface = IMG_Load(fname.c_str());
     if( nullptr == surface ) {
@@ -340,7 +340,7 @@ pixel::bitmap_t::bitmap_t(const std::string& fname) noexcept
 }
 
 pixel::bitmap_t::bitmap_t(const uint32_t width_, const uint32_t height_) noexcept
-: m_id(counter++), m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
+: m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
 {
     SDL_Surface *surface = SDL_CreateRGBSurface(0, (int)width_, (int)height_, 32, 0x000000ff, 0x0000ff00, 0x00ff0000, 0xff000000);
     if( nullptr != surface ) {
@@ -360,7 +360,7 @@ pixel::bitmap_t::bitmap_t(const uint32_t width_, const uint32_t height_) noexcep
 }
 
 pixel::bitmap_t::bitmap_t(const bitmap_t& o, int /*unused*/) noexcept
-: m_id(counter++), m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
+: m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
 {
     if( !o.m_pixels ) {
         log_printf("bitmap_t: Cloning empty surface: %s, %s\n", o.toString().c_str());
@@ -414,7 +414,7 @@ void pixel::texture_t::draw_raw(const uint32_t fb_x, const uint32_t fb_y, const 
 }
 
 pixel::texture_t::texture_t(const bitmap_ref& bmap) noexcept
-: m_id(counter++), m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1)
+: m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1)
 {
     SDL_Surface * surface = reinterpret_cast<SDL_Surface*>(bmap->handle());
     SDL_Texture* tex_;
@@ -447,7 +447,7 @@ pixel::texture_t::texture_t(const bitmap_ref& bmap) noexcept
 }
 
 pixel::texture_t::texture_t(const std::string& fname) noexcept
-: m_id(counter++), m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1)
+: m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1)
 {
     SDL_Texture* tex_ = IMG_LoadTexture(sdl_rend, fname.c_str());
     if( nullptr == tex_ ) {

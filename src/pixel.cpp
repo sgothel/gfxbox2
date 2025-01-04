@@ -188,7 +188,6 @@ std::string pixel::to_string(const char* format, ...) noexcept {
 // Bitmap
 //
 static constexpr const bool DEBUG_TEX = true;
-std::atomic<int> pixel::bitmap_t::counter = 0;
 
 void pixel::bitmap_t::put(const f2::aabbox_t& box, uint32_t abgr) noexcept {
     if(!m_pixels || 0 == width || 0 == height ) {
@@ -228,7 +227,6 @@ bool pixel::bitmap_t::equals(const f2::aabbox_t& box, uint32_t abgr) noexcept {
 //
 // Texture
 //
-std::atomic<int> pixel::texture_t::counter = 0;
 
 size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const std::string& filename, uint32_t w, uint32_t h, uint32_t x_off) noexcept
 {

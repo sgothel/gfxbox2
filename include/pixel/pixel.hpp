@@ -424,8 +424,6 @@ namespace pixel {
     //
     class bitmap_t {
         private:
-            static std::atomic_int counter;
-            int m_id;
             void* m_handle;
             uint8_t *m_pixels;
             void destroy() noexcept;
@@ -448,7 +446,7 @@ namespace pixel {
             bitmap_t(const uint32_t width_, const uint32_t height_) noexcept;
 
             bitmap_t() noexcept
-            : m_id(counter++), m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0) {}
+            : m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0) {}
 
             // Creates an ABGR8888 surface from given file
             bitmap_t(const std::string& fname) noexcept;
@@ -498,7 +496,7 @@ namespace pixel {
             bool equals(const f2::aabbox_t& box, uint32_t abgr) noexcept;
 
             std::string toString() const noexcept {
-                return "id "+std::to_string(m_id) + (m_handle ? " (set) " : " (empty) ") +
+                return (m_handle ? " (set) " : " (empty) ") +
                        std::to_string(width)+"x"+std::to_string(height)+"x"+std::to_string(bpp)+
                        ", stride "+std::to_string(stride)+", "+format_str(format)+", pix "+std::to_string((intptr_t)(void*)m_pixels);
             }
@@ -511,8 +509,6 @@ namespace pixel {
 
     class texture_t {
         private:
-            static std::atomic_int counter;
-            int m_id;
             void* m_handle;
             bool m_owner;
             void destroy() noexcept;
@@ -543,13 +539,13 @@ namespace pixel {
             float dest_sy;
 
             texture_t(void* handle_, const uint32_t x_, const uint32_t y_, const uint32_t width_, const uint32_t height_, const uint32_t bpp_, const uint32_t format_, const bool owner=true) noexcept
-            : m_id(counter++), m_handle(handle_), m_owner(nullptr!=handle_ && owner),
+            : m_handle(handle_), m_owner(nullptr!=handle_ && owner),
               x(x_), y(y_), width(width_), height(height_), bpp(bpp_), format(format_),
               dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
             /** Create a shared proxy clone w/o ownership, use createShared() */
             texture_t(const texture_t& parent, int /*unused*/) noexcept
-            : m_id(counter++), m_handle(parent.m_handle), m_owner(false),
+            : m_handle(parent.m_handle), m_owner(false),
               x(parent.x), y(parent.y), width(parent.width), height(parent.height), bpp(parent.bpp), format(parent.format),
               dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
@@ -559,7 +555,7 @@ namespace pixel {
             }
 
             texture_t() noexcept
-            : m_id(counter++), m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+            : m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
             texture_t(const std::string& fname) noexcept;
 
@@ -595,7 +591,7 @@ namespace pixel {
             }
 
             std::string toString() const noexcept {
-                return "id "+std::to_string(m_id) + (m_handle ? " (set) " : " (empty) ") +
+                return (m_handle ? " (set) " : " (empty) ") +
                        std::to_string(x)+"/"+std::to_string(y) + " " + std::to_string(width)+"x"+std::to_string(height)+"x"+std::to_string(bpp) +
                        ", " + format_str(format) + ", owner " + std::to_string(m_owner);
             }
