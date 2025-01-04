@@ -2,6 +2,8 @@
 build*/
 dist*/
 snaps/
+images/
+media/
 /compile_commands.json
 *~
 *.log
