@@ -44,7 +44,10 @@ static pixel::input_event_t event;
  * - Alien-1  12 x   8
  * - Alien-2  11 x   8
  * - Alien-3   8 x   8
- * - Base     13 x   8
+ * - Alien-X  13 x   8
+ * - Alien-S   3 x   7  (shot sets 2x3)
+ * - Red-X     8 x   8
+ * - Base     13 x   8  (incl. explosions 1-3)
  * - peng      1 x   4
  * - Bunker   22 x  16  (aspect 1.375) 1: 32/192, 2: 77/192, 3: 122/192, 4: 176/192
  * - Aline-M  16 x   8  (mothership)
@@ -85,9 +88,28 @@ static bool debug_gfx = true;
 
 static pixel::bitmap_ref bmp_bunk;
 static pixel::texture_ref all_images;
-static std::vector<pixel::texture_ref> tex_alien1, tex_alien2, tex_alien3;
-static pixel::texture_ref tex_base, tex_peng, tex_alienm;
+
+// row-1
+static std::vector<pixel::texture_ref> tex_alien1; // 2x
+static std::vector<pixel::texture_ref> tex_alienX, tex_redX;
+
+// row-2
+static std::vector<pixel::texture_ref> tex_alien2; // 2x
+
+// row-3
+static std::vector<pixel::texture_ref> tex_alien3; // 2x
+static std::vector<pixel::texture_ref> tex_ashot1, tex_ashot2; // 3x
+
+// row-4
+static std::vector<pixel::texture_ref> tex_base;
+static std::vector<pixel::texture_ref> tex_baseX; // 3x
+
+// row-5
 static pixel::texture_ref tex_bunk[] { nullptr, nullptr, nullptr, nullptr };
+static std::vector<pixel::texture_ref> tex_peng;
+
+// row-6
+static pixel::texture_ref tex_alienm;
 int level = 1;
 
 static bool load_textures() {
@@ -98,54 +120,84 @@ static bool load_textures() {
     bmp_bunk = std::make_shared<pixel::bitmap_t>("resources/spaceinv/spaceinv-bunk.png");
     pixel::log_printf(0, "XX bmp bunk: %s\n", bmp_bunk->toString().c_str());
 
-    constexpr int dy1 = 8;  // aliens, base
-    constexpr int dy1b = 4; // peng
-    constexpr int dy2 = 16; // bunk
-    constexpr int dy3 = 7;  // mothership
-    constexpr int dx1 = 12; // alien1
-    constexpr int dx2 = 11; // alien2
-    constexpr int dx3 =  8; // alien3
-    constexpr int dx4 = 13; // base
-    constexpr int dx5 =  1; // peng
-    // constexpr int dx6 = 22; // bunk
-    constexpr int dx7 = 16; // mothership
     int y_off=0;
     all_images = std::make_shared<pixel::texture_t>("resources/spaceinv/spaceinv-sprites.png");
     if( !all_images->handle() ) {
         return false;
     }
-    pixel::add_sub_textures(tex_alien1, all_images, 0, y_off, dx1, dy1, { {  0*dx1, 0 }, {  1*dx1, 0 }, });
-    y_off+=dy1;
-    pixel::add_sub_textures(tex_alien2, all_images, 0, y_off, dx2, dy1, { {  0*dx2, 0 }, {  1*dx2, 0 }, });
-    y_off+=dy1;
-    pixel::add_sub_textures(tex_alien3, all_images, 0, y_off, dx3, dy1, { {  0*dx3, 0 }, {  1*dx3, 0 }, });
-    y_off+=dy1;
-    tex_base = pixel::add_sub_texture(all_images,   0, y_off, dx4, dy1);
-    tex_peng = pixel::add_sub_texture(all_images,  13, y_off, dx5, dy1b);
-    y_off+=dy1;
-    tex_bunk[0] = std::make_shared<pixel::texture_t>(bmp_bunk);
+    // row-1
+    pixel::add_sub_textures(tex_alien1, all_images, 0*12,  y_off, 12, 8, { {  0*12, 0 }, {  1*12, 0 }, });
+    tex_alienX.push_back( pixel::add_sub_texture(all_images, 2*12,  y_off, 13, 8) );
+    tex_redX.push_back( pixel::add_sub_texture(all_images, 24+13, y_off,  8, 8) );
+    y_off+= 8;
+
+    // row-2
+    pixel::add_sub_textures(tex_alien2, all_images, 0*11, y_off, 11, 8, { {  0*11, 0 }, {  1*11, 0 }, });
+    y_off+= 8;
+
+    // row-3
+    pixel::add_sub_textures(tex_alien3, all_images, 0* 8, y_off,  8, 8, { {  0* 8, 0 }, {  1* 8, 0 }, });
+    pixel::add_sub_textures(tex_ashot1, all_images, 2* 8, y_off,  3, 7, { {  0* 3, 0 }, {  1* 3, 0 }, {  2* 3, 0 } });
+    pixel::add_sub_textures(tex_ashot2, all_images, 16+9, y_off,  3, 7, { {  0* 3, 0 }, {  1* 3, 0 }, {  2* 3, 0 } });
+    y_off+= 8;
+
+    // row-4
+    tex_base.push_back( pixel::add_sub_texture(all_images,   0*13, y_off, 13, 8) );
+    pixel::add_sub_textures(tex_baseX, all_images,  1*13, y_off, 13, 8, { {  0* 3, 0 }, {  1* 3, 0 }, {  2* 3, 0 } });
+    y_off+= 8;
+
+    // row-5
+    tex_bunk[0] = std::make_shared<pixel::texture_t>(bmp_bunk); // 22x16
     tex_bunk[1] = std::make_shared<pixel::texture_t>(bmp_bunk);
     tex_bunk[2] = std::make_shared<pixel::texture_t>(bmp_bunk);
     tex_bunk[3] = std::make_shared<pixel::texture_t>(bmp_bunk);
-    y_off+=dy2;
-    tex_alienm = pixel::add_sub_texture(all_images, 0, y_off, dx7, dy3);
+    tex_peng.push_back( pixel::add_sub_texture(all_images,  22, y_off,  1, 4) );
+    y_off+=16;
 
-    pixel::log_printf(0, "XX base: %s\n", tex_base->toString().c_str());
-    pixel::log_printf(0, "XX peng: %s\n", tex_peng->toString().c_str());
-    pixel::log_printf(0, "XX bunk: %s\n", tex_bunk[0]->toString().c_str());
-    pixel::log_printf(0, "XX alien MS: %s\n", tex_alienm->toString().c_str());
+    // row-6
+    tex_alienm = pixel::add_sub_texture(all_images, 0, y_off, 16, 7);
+
+    // row-1
     pixel::log_printf(0, "XX alien1: %d textures\n", tex_alien1.size());
     for(const pixel::texture_ref& t : tex_alien1) {
         pixel::log_printf(0, "XX alien1: %s\n", t->toString().c_str());
     }
+    pixel::log_printf(0, "XX alienX: %s\n", tex_alienX[0]->toString().c_str());
+    pixel::log_printf(0, "XX redX:   %s\n", tex_redX[0]->toString().c_str());
+
+    // row-2
     pixel::log_printf(0, "XX alien2: %d textures\n", tex_alien2.size());
     for(const pixel::texture_ref& t : tex_alien2) {
         pixel::log_printf(0, "XX alien2: %s\n", t->toString().c_str());
     }
+
+    // row-3
     pixel::log_printf(0, "XX alien3: %d textures\n", tex_alien3.size());
     for(const pixel::texture_ref& t : tex_alien3) {
         pixel::log_printf(0, "XX alien3: %s\n", t->toString().c_str());
     }
+    pixel::log_printf(0, "XX ashot1: %d textures\n", tex_ashot1.size());
+    for(const pixel::texture_ref& t : tex_ashot1) {
+        pixel::log_printf(0, "XX ashot1: %s\n", t->toString().c_str());
+    }
+    pixel::log_printf(0, "XX ashot2: %d textures\n", tex_ashot2.size());
+    for(const pixel::texture_ref& t : tex_ashot2) {
+        pixel::log_printf(0, "XX ashot2: %s\n", t->toString().c_str());
+    }
+
+    // row-4
+    pixel::log_printf(0, "XX base: %s\n", tex_base[0]->toString().c_str());
+    pixel::log_printf(0, "XX baseX: %d textures\n", tex_baseX.size());
+    for(const pixel::texture_ref& t : tex_baseX) {
+        pixel::log_printf(0, "XX baseX: %s\n", t->toString().c_str());
+    }
+
+    // row-5
+    pixel::log_printf(0, "XX bunk: %s\n", tex_bunk[0]->toString().c_str());
+    pixel::log_printf(0, "XX peng: %s\n", tex_peng[0]->toString().c_str());
+
+    // row-6
+    pixel::log_printf(0, "XX alien MS: %s\n", tex_alienm->toString().c_str());
     return true;
 }
 
@@ -153,35 +205,41 @@ class alient_t {
   private:
     pixel::animtex_t m_atex;
     pixel::f2::vec_t m_dim;
+    float dt_kill = 0;
 
   public:
     pixel::f2::point_t m_tl;
-    pixel::f2::vec_t m_velo; // [m/s]
 
-    alient_t(pixel::animtex_t atex_alien, const pixel::f2::point_t& center, const pixel::f2::vec_t& v) noexcept
+    alient_t(pixel::animtex_t atex_alien, const pixel::f2::point_t& center) noexcept
     : m_atex(std::move(atex_alien)),
       m_dim((float)m_atex.width(), (float)m_atex.height()),
-      m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ),
-      m_velo( v )
+      m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) )
     { }
 
     pixel::f2::aabbox_t box() const noexcept {
         return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
     }
 
-    void tick(const float dt) noexcept {
-        m_atex.tick(dt);
-        m_tl += m_velo * dt;
-        /*
-        if( !box().inside(field_box) ) {
-            m_velo.x *= -1;
-            m_tl += 2 * m_velo * dt;
-        }
-        */
+    void step(const pixel::f2::vec_t& step) noexcept {
+        m_atex.next();
+        m_tl += step;
     }
 
+    void notify_killed() {
+        m_atex = pixel::animtex_t("AlienX", 1.0f, tex_alienX);
+        dt_kill = 0.5f;
+    }
+
+    bool killanim(const float dt) {
+        if( 0 < dt_kill ) {
+            dt_kill = std::max( 0.0f, dt_kill - dt );
+            m_atex.tick(dt);
+            return true;
+        } else {
+            return false;
+        }
+    }
     void draw() const noexcept {
-        // printf("XXX: alien %s\n", m_atex.toString().c_str());
         m_atex.draw(m_tl.x, m_tl.y);
     }
 
@@ -197,82 +255,113 @@ class alient_t {
 };
 
 class alien_group_t {
-  private:
-    pixel::f2::vec_t m_velo;
   public:
-    std::vector<alient_t> items;
+    constexpr static float step_width = 2;
+    constexpr static float step_down = 8;
+
+  private:
+    pixel::f2::aabbox_t m_box;
+    pixel::f2::vec_t m_step = pixel::f2::vec_t(step_width, 0);
+    float m_sec_per_step = 1.0f;
+    float m_dt_step_left = m_sec_per_step;
+    std::vector<alient_t> m_killed;
+    bool m_pause = false;
+
+  public:
+    std::vector<alient_t> actives;
 
     alien_group_t() = default;
-    alien_group_t(const class alien_group_t&)            = default;
-    alien_group_t(class alien_group_t&&)                 = default;
-    class alien_group_t& operator=(const class alien_group_t&) = default;
-    class alien_group_t& operator=(class alien_group_t&&)      = default;
+    alien_group_t(const alien_group_t&) = default;
+    alien_group_t(alien_group_t&&)      = default;
+    alien_group_t& operator=(const alien_group_t&) = default;
+    alien_group_t& operator=(alien_group_t&&)      = default;
 
     void reset() {
         const float cell_height = (float)tex_alien1[0]->height;
         const float cell_width = (float)tex_alien1[0]->width;
-        const float sec_per_atex = 1.0f;
-        items.clear();
-        m_velo = pixel::f2::vec_t(3, 0);
+        actives.clear();
+        m_box.reset();
         pixel::f2::point_t p = field_box.bl;
         p.y =  0.0f;
         for(int y=0; y<2; ++y) {
-            const pixel::animtex_t atex_alien("Alien1", sec_per_atex, tex_alien1);
             p.x = field_box.bl.x + cell_width/2.0f;
             for(int x=0; x<11; ++x) {
-                items.emplace_back(atex_alien, p, m_velo);
+                actives.emplace_back(pixel::animtex_t("Alien1", m_sec_per_step, tex_alien1), p);
                 p.x += cell_width * 1.5f;
             }
             p.y +=  2.0f * cell_height;
         }
         for(int y=0; y<2; ++y) {
-            const pixel::animtex_t atex_alien("Alien2", sec_per_atex, tex_alien2);
             p.x = field_box.bl.x + cell_width/2.0f;
             for(int x=0; x<11; ++x) {
-                items.emplace_back(atex_alien, p, m_velo);
+                actives.emplace_back(pixel::animtex_t("Alien2", m_sec_per_step, tex_alien2), p);
+                m_box.resize(actives[actives.size()-1].box());
                 p.x += cell_width * 1.5f;
             }
             p.y +=  2.0f * cell_height;
         }
         for(int y=0; y<1; ++y) {
-            const pixel::animtex_t atex_alien("Alien3", sec_per_atex, tex_alien3);
             p.x = field_box.bl.x + cell_width/2.0f;
             for(int x=0; x<11; ++x) {
-                items.emplace_back(atex_alien, p, m_velo);
+                actives.emplace_back(pixel::animtex_t("Alien3", m_sec_per_step, tex_alien3), p);
+                m_box.resize(actives[actives.size()-1].box());
                 p.x += cell_width * 1.5f;
             }
             p.y +=  2.0f * cell_height;
         }
+        m_dt_step_left = m_sec_per_step;
     }
 
-    void tick(const float dt){
-        m_velo.y = 0;
-        for(alient_t& a : items){
-            if( !a.box().inside(field_box) ) {
-                if(pixel::get_gpu_fps() > 60){
-                    m_velo.x *= -1;
-                    m_velo.y = -(float)a.atex().height();
-                }
-                m_velo.x *= -1;
-                m_velo.y = -(float)a.atex().height() * pixel::get_gpu_fps();
-                goto mark;
+    bool check_hit(const pixel::f2::aabbox_t& b) {
+        for(auto it = actives.begin(); it != actives.end(); ) {
+            alient_t& a = *it;
+            if( !a.box().intersects(b) ) {
+                ++it;
+            } else {
+                a.notify_killed();
+                m_killed.push_back(a);
+                it = actives.erase(it);
+                return true;
             }
         }
-        mark:
-        int h=0;
-        for(alient_t& a : items){
-            a.m_velo = m_velo;
-            a.tick(dt);
-            h = a.atex().height();
+        return false;
+    }
+
+    void set_pause(bool v) noexcept { m_pause = v; }
+
+    void tick(const float dt) {
+        if( m_pause ) {
+            return;
         }
-        if(m_velo.y != 0){ // FIXME: debug code to be deleted
-            printf("texheight: %d, Velo.y: %f, fps: %fs\n", h, m_velo.y, pixel::get_gpu_fps());
+        for(auto it = m_killed.begin(); it != m_killed.end(); ) {
+            if( it->killanim(dt) ) {
+                ++it;
+            } else {
+                it = m_killed.erase(it);
+            }
         }
-        m_velo.y = 0;
+        m_dt_step_left -= dt;
+        if( m_dt_step_left > 0 || m_killed.size() > 0 ) {
+            return;
+        }
+        m_dt_step_left = m_sec_per_step;
+        if( !m_box.inside(field_box) ) {
+            m_step.x *= -1;
+            m_step.y = -step_down;
+        }
+        for(alient_t& a : actives){
+            a.step(m_step);
+        }
+        m_step.y = 0;
     }
 
     void draw(){
-        for(alient_t& a : items){
+        m_box.reset();
+        for(alient_t& a : actives){
+            a.draw();
+            m_box.resize(a.box());
+        }
+        for(alient_t& a : m_killed){
             a.draw();
         }
     }
@@ -286,6 +375,24 @@ class bunker_t {
     pixel::f2::point_t m_tl;
     pixel::bitmap_ref m_bunk;
 
+    void put_bunk(const pixel::f2::aabbox_t& box, uint32_t abgr) noexcept {
+        if(!m_bunk->pixels() || 0 == m_bunk->width || 0 == m_bunk->height ) {
+            return;
+        }
+        const uint32_t max_x = m_bunk->width-1;
+        const uint32_t max_y = m_bunk->height-1;
+        const uint32_t y1 = std::max<uint32_t>(0, pixel::round_to_int(box.bl.y));
+        const uint32_t y2 = std::min<uint32_t>(max_y, pixel::round_to_int(box.tr.y));
+        for(uint32_t y=y1; y<y2; ++y) {
+            const uint32_t o = y%2;
+            const uint32_t x1 = std::max<uint32_t>(0, pixel::round_to_int(box.bl.x)-o);
+            const uint32_t x2 = std::min<uint32_t>(max_x, pixel::round_to_int(box.tr.x)+o);
+            for(uint32_t x=x1; x<x2; ++x) {
+                uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_bunk->pixels() + static_cast<size_t>((m_bunk->height - y - 1) * m_bunk->stride) + static_cast<size_t>(x * m_bunk->bpp));
+                *target_pixel = abgr;
+            }
+        }
+    }
   public:
     bunker_t(size_t idx_, const pixel::f2::point_t& tl) noexcept
     : idx(idx_), m_dim((float)tex_bunk[idx]->width, (float)tex_bunk[idx]->height),
@@ -298,24 +405,37 @@ class bunker_t {
         return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
     }
 
-    void hit(pixel::f2::aabbox_t& hitbox) {
-        const pixel::f2::aabbox_t myself = box();
-        pixel::f2::aabbox_t ibox = hitbox.intersection(myself);
-        if( ibox.width() > 0 ) {
+    bool hit(pixel::f2::aabbox_t& hitbox) {
+        // const uint32_t clrpix = 0xffffffff;
+        const uint32_t clrpix = 0x00000000;
+        // pixel::f2::vec_t hitdim {0, hitbox.height()};
+        pixel::f2::vec_t hitdim {hitbox.width(), 0};
+        pixel::f2::aabbox_t hitbox2(hitbox.bl-1.4*hitdim, hitbox.tr+1.4*hitdim);
+        const pixel::f2::aabbox_t mybox = box();
+        pixel::f2::aabbox_t ibox = hitbox.intersection(mybox);
+        if( false ) {
+            printf("XXX bunk.hit: bunk   %s\n", mybox.toString().c_str());
             printf("XXX bunk.hit: hit    %s\n", hitbox.toString().c_str());
-            printf("XXX bunk.hit: bunk   %s\n", myself.toString().c_str());
-            printf("XXX bunk.hit: ibox.0 %s\n", ibox.toString().c_str());
-            pixel::f2::point_t bl { m_tl.x, m_tl.y - m_dim.y };
-            ibox.bl -= bl;
-            ibox.tr -= bl;
-            printf("XXX bunk.hit: ibox.1 %s\n", ibox.toString().c_str());
-            for(uint32_t y=(uint32_t)ibox.bl.y; y<(uint32_t)ibox.tr.y; ++y) {
-                for(uint32_t x=(uint32_t)ibox.bl.x; x<(uint32_t)ibox.tr.x; ++x) {
-                    m_bunk->put(x, y, 0xffffffff);
-                }
-            }
-            tex_bunk[idx]->update(m_bunk);
+            printf("XXX bunk.hit: hit2   %s\n", hitbox2.toString().c_str());
+            printf("XXX bunk.hit: ibox1.0 %s\n", ibox.toString().c_str());
         }
+        if( ibox.width() == 0 ) {
+            // printf("XXX bunk.hit: ibox empty -> false\n");
+            return false;
+        }
+        ibox.bl -= mybox.bl;
+        ibox.tr -= mybox.bl;
+        // printf("XXX bunk.hit: ibox1.1 %s\n", ibox.toString().c_str());
+        if( m_bunk->equals(ibox, clrpix) ) {
+            // printf("XXX bunk.hit: clear -> false\n");
+            return false;
+        }
+        pixel::f2::aabbox_t ibox2 = hitbox2.intersection(mybox);
+        ibox2.bl -= mybox.bl;
+        ibox2.tr -= mybox.bl;
+        put_bunk(ibox2, clrpix);
+        tex_bunk[idx]->update(m_bunk);
+        return true;
     }
     void draw() const noexcept {
         tex_bunk[idx]->draw(m_tl.x, m_tl.y, m_dim.x, m_dim.y);
@@ -330,20 +450,6 @@ class bunker_t {
 };
 std::vector<bunker_t> bunks;
 
-void reset_bunks() {
-    bunks.clear();
-    bunks.emplace_back(0, bunk1_tl);
-    bunks.emplace_back(1, bunk2_tl);
-    bunks.emplace_back(2, bunk3_tl);
-    bunks.emplace_back(2, bunk4_tl);
-}
-
-
-void reset_items() {
-    reset_bunks();
-    alien_group.reset();
-}
-
 struct hit_result{
     bool hit;
     bool live;
@@ -351,47 +457,42 @@ struct hit_result{
 
 class peng_t {
   private:
+    pixel::animtex_t m_atex;
     pixel::f2::vec_t m_dim;
     pixel::f2::point_t m_tl;
     bool m_alien_hit;
 
+  public:
+    constexpr static float anim_period = 0.03f; // 0.025f;
+    pixel::f2::vec_t m_velo; // [m/s]
+    int m_owner;
+
+  private:
     bool check_alien_hit() {
         if( m_owner == alien_id ) {
             return false;
         }
-        pixel::f2::aabbox_t b = box();
-        for(auto it = alien_group.items.begin(); it != alien_group.items.end(); ) {
-            alient_t& a = *it;
-            if( !a.box().intersects(b) ) {
-                ++it;
-            } else {
-                it = alien_group.items.erase(it);
-                m_alien_hit = true;
-                return true;
-            }
-        }
-        return false;
+        m_alien_hit = alien_group.check_hit( box() );
+        return m_alien_hit;
     }
 
     bool check_bunker_hit() {
         pixel::f2::aabbox_t b = box();
         for(auto it = bunks.begin(); it != bunks.end(); ) {
             bunker_t& bunk = *it;
-            if( !bunk.box().intersects(b) ) {
-                ++it;
-            } else {
-                bunk.hit(b);
+            if( bunk.box().intersects(b) && bunk.hit(b) ) {
                 return true;
+            } else {
+                ++it;
             }
         }
         return false;
     }
-  public:
-    pixel::f2::vec_t m_velo; // [m/s]
-    int m_owner;
 
-    peng_t(const pixel::f2::point_t& center, const pixel::f2::vec_t& v, const int owner) noexcept
-    : m_dim((float)tex_peng->width, (float)tex_peng->height),
+  public:
+    peng_t(const pixel::f2::point_t& center, const pixel::f2::vec_t& v, const int owner, pixel::animtex_t atex) noexcept
+    : m_atex(std::move(atex)),
+      m_dim((float)m_atex.texture()->width, (float)m_atex.texture()->height),
       m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ),
       m_alien_hit(false), m_velo( v ), m_owner(owner)
     { }
@@ -401,6 +502,7 @@ class peng_t {
     }
 
     bool tick(const float dt) noexcept {
+        m_atex.tick(dt);
         if( !box().inside(field_box) ) {
             return false;
         }
@@ -411,7 +513,7 @@ class peng_t {
     }
 
     void draw() const noexcept {
-        tex_peng->draw(m_tl.x, m_tl.y, m_dim.x, m_dim.y);
+        m_atex.draw(m_tl.x, m_tl.y, m_dim.x, m_dim.y);
     }
 
     bool on_screen(){
@@ -426,18 +528,33 @@ class peng_t {
 };
 std::vector<peng_t> pengs;
 
+void reset_items() {
+    bunks.clear();
+    bunks.emplace_back(0, bunk1_tl);
+    bunks.emplace_back(1, bunk2_tl);
+    bunks.emplace_back(2, bunk3_tl);
+    bunks.emplace_back(3, bunk4_tl);
+    alien_group.reset();
+    pengs.clear();
+}
+
 class spaceship_t {
     public:
         constexpr static const float height = base_height; // [m]
 
         constexpr static const float peng_velo_0 = field_height / 2; // [m/s]
-        constexpr static const int peng_inventory_max = 3;
+        constexpr static const int peng_inventory_max = 2;
 
     private:
+        pixel::animtex_t m_atex;
         pixel::f2::vec_t m_dim;
         pixel::f2::point_t m_tl, m_tc;
+        bool m_killed;
 
         bool check_hit() {
+            if( m_killed ) {
+                return false;
+            }
             pixel::f2::aabbox_t b = box();
             for(auto it = pengs.begin(); it != pengs.end(); ) {
                 peng_t& a = *it;
@@ -445,7 +562,8 @@ class spaceship_t {
                     ++it;
                 } else {
                     it = pengs.erase(it);
-                    // printf("XXX: Peng: Killed Ship\n");
+                    m_atex = pixel::animtex_t("pengX", 0.3f, tex_baseX);
+                    m_killed = true;
                     return true;
                 }
             }
@@ -455,10 +573,14 @@ class spaceship_t {
         int peng_inventory;
 
         spaceship_t(const pixel::f2::point_t& top_center) noexcept
-        : m_dim((float)tex_base->width, (float)tex_base->height),
+        : m_atex(pixel::animtex_t("peng", 1.0f, tex_base)),
+          m_dim((float)tex_base[0]->width, (float)tex_base[0]->height),
           m_tl(top_center.x - m_dim.x/2.0f, top_center.y), m_tc(top_center),
+          m_killed(false),
           peng_inventory(peng_inventory_max)
         {}
+
+        constexpr bool is_killed() const noexcept { return m_killed; }
 
         pixel::f2::aabbox_t box() const noexcept {
             return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
@@ -467,9 +589,9 @@ class spaceship_t {
         void peng() noexcept {
             if(peng_inventory > 0){
                 // adjust start posision to geometric ship model
-                pixel::f2::point_t p0 = {m_tc.x, m_tc.y + (float)tex_peng->height/2 + 0.05f};
+                pixel::f2::point_t p0 = {m_tc.x, m_tc.y + (float)tex_peng[0]->height/2 + 0.05f};
                 pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(peng_velo_0 + 10.0f * (float)level, 90_deg);
-                pengs.emplace_back(p0, v_p, ship_id);
+                pengs.emplace_back(p0, v_p, ship_id, pixel::animtex_t("peng", peng_t::anim_period, tex_peng));
                 --peng_inventory;
             }
         }
@@ -483,59 +605,60 @@ class spaceship_t {
                 m_tc -= d;
             }
         }
-        bool tick(const float /*dt*/) noexcept {
+        bool tick(const float dt) noexcept {
+            m_atex.tick(dt);
             return !check_hit();
         }
 
         void draw() const noexcept {
-            tex_base->draw(m_tl.x, m_tl.y, m_dim.x, m_dim.y);
+            m_atex.draw(m_tl.x, m_tl.y, m_dim.x, m_dim.y);
         }
 };
 typedef std::shared_ptr<spaceship_t> spaceship_ref_t;
 std::vector<spaceship_ref_t> spaceship;
 
 class player_t {
-    public:
-        int m_live;
-        spaceship_ref_t m_ship;
     private:
+        int m_lives;
+        spaceship_ref_t m_ship;
         constexpr static int start_live = 3;
         float m_respawn_timer;
         int m_score;
 
         void ship_dtor() noexcept {
-            --m_live;
-            m_ship = nullptr;
-            m_respawn_timer = 3; // [s]
+            --m_lives;
+            m_respawn_timer = 2; // [s]
+            alien_group.set_pause(true);
         }
 
         void respawn_ship() noexcept {
-            if(m_live <= 0){
+            if(m_lives <= 0){
                 return;
             }
             m_respawn_timer = 0;
             m_ship = std::make_shared<spaceship_t>( pixel::f2::point_t{base_box.bl.x + base_width/2, base_box.bl.y + base_height} );
+            alien_group.set_pause(false);
         }
 
     public:
         player_t() noexcept
-        : m_live(start_live),
+        : m_lives(start_live),
           m_ship(nullptr), m_respawn_timer(0), m_score(0)
         { respawn_ship(); }
 
         void reset() noexcept {
-            respawn_ship();
             m_score = 0;
-            m_live = start_live;
+            m_lives = start_live;
+            respawn_ship();
         }
-        spaceship_ref_t& ship() noexcept { return m_ship; }
-        bool has_ship() noexcept { return nullptr != m_ship; }
+        bool is_killed() const noexcept { return m_ship->is_killed(); }
+        constexpr int lives() const noexcept { return m_lives; }
 
-        int peng_inventory() const noexcept { return nullptr != m_ship ? m_ship->peng_inventory : 0; }
+        int peng_inventory() const noexcept { return m_ship->peng_inventory; }
 
         constexpr int score() const noexcept { return m_score; }
         void peng_completed(const peng_t& p) noexcept {
-            if(has_ship())  {
+            if(!is_killed())  {
                 ++m_ship->peng_inventory;
             }
             if(p.alien_hit()){
@@ -545,14 +668,11 @@ class player_t {
         void add_score(int diff) noexcept { m_score += diff; }
 
         bool tick(const float dt) noexcept {
-            if( nullptr != m_ship ) {
-                if( !m_ship->tick(dt) ) {
-                    ship_dtor();
-                }
-            } else {
-                if( m_respawn_timer > 0 ) {
-                    m_respawn_timer -= dt;
-                }
+            if( !m_ship->tick(dt) ) {
+                ship_dtor();
+            }
+            if( m_respawn_timer > 0 ) {
+                m_respawn_timer -= dt;
                 if( 0 >= m_respawn_timer ) {
                     respawn_ship();
                 }
@@ -560,12 +680,10 @@ class player_t {
             return true;
         }
         void draw() const noexcept {
-            if( m_ship != nullptr ) {
-                m_ship->draw();
-            }
+            m_ship->draw();
         }
         void handle_event0() noexcept {
-            if( nullptr != m_ship && event.has_any_p1() ) {
+            if( !m_ship->is_killed() && event.has_any_p1() ) {
                 if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
                     m_ship->peng();
                 }
@@ -573,7 +691,7 @@ class player_t {
         }
         void handle_event1(const float dt /* [s] */) noexcept {
             const float v = 35.0f;
-            if( nullptr != m_ship && event.has_any_p1() ) {
+            if( !m_ship->is_killed() && event.has_any_p1() ) {
                 if( event.pressed(pixel::input_event_type_t::P1_LEFT) ){
                     m_ship->move( { -v * dt, 0 } );
                 } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
@@ -583,21 +701,23 @@ class player_t {
         }
 };
 void peng_from_alien(alient_t alien){
+    static int alt = 0;
+    std::vector<pixel::texture_ref>& vtex = 0 == alt ? tex_ashot1 : tex_ashot2;
     // adjust start posision to geometric alien model
     pixel::f2::point_t p0 = {alien.m_tl.x + (float)alien.atex().width()/2,
                              alien.m_tl.y - (float)alien.atex().height() - 0.05f};
-    p0.add(0, (float)tex_peng->height/2);
+    p0.add(0, (float)vtex[0]->height/2);
     pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(field_height/2 + 10.0f * (float)level, 270_deg);
-    pengs.emplace_back(p0, v_p, alien_id);
-    //printf("peng");
+    pengs.emplace_back(p0, v_p, alien_id, pixel::animtex_t("ashot", peng_t::anim_period, vtex));
+    alt = (alt + 1)%2;
 }
 
 void peng_alien() {
     //printf("XXX: Alien shooted");
-    if(alien_group.items.size() <= 0){
+    if(alien_group.actives.size() <= 0){
         return;
     }
-    peng_from_alien(alien_group.items[(size_t)(pixel::next_rnd() * (float)(alien_group.items.size()-1))]);
+    peng_from_alien(alien_group.actives[(size_t)(pixel::next_rnd() * (float)(alien_group.actives.size()-1))]);
 }
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
@@ -612,7 +732,7 @@ void mainloop() {
     static bool animating = true;
     static pixel::texture_ref game_over_text = pixel::make_text(tl_text, 0, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
     static bool game_over = false;
-    constexpr static float max_peng_time = 1_s;
+    constexpr static float max_peng_time = 2_s;
     static float peng_time = pixel::next_rnd() * max_peng_time;
     bool do_snapshot = false;
 
@@ -627,7 +747,6 @@ void mainloop() {
         } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
         } else if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
-            pengs.clear();
             reset_items();
             p1.reset();
             game_over = false;
@@ -677,13 +796,15 @@ void mainloop() {
                 }
             }
         }
-        peng_time -= dt;
-        if(peng_time <= 0){
-            peng_alien();
-            if((float)level < max_peng_time){
-                peng_time = pixel::next_rnd() * (max_peng_time - ((float)level-1));
-            } else {
-                peng_time = pixel::next_rnd() * (max_peng_time - (float)level+1);
+        if( !p1.is_killed() ) {
+            peng_time -= dt;
+            if(peng_time <= 0){
+                peng_alien();
+                if((float)level < max_peng_time){
+                    peng_time = pixel::next_rnd() * (max_peng_time - ((float)level-1));
+                } else {
+                    peng_time = pixel::next_rnd() * (max_peng_time - (float)level+1);
+                }
             }
         }
     }
@@ -714,8 +835,7 @@ void mainloop() {
         peng.draw();
     }
 
-    if(alien_group.items.size() == 0){
-        pengs.clear();
+    if(alien_group.actives.size() == 0){
         reset_items();
         p1.reset();
         ++level;
@@ -726,9 +846,9 @@ void mainloop() {
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, score %4d, lives %d, level %d",
                     pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-                    fps, p1.score(), p1.m_live, level);
-    for(alient_t& a : alien_group.items){
-        if(a.box().bl.y < -62-bunks[0].box().height() || p1.m_live <= 0){
+                    fps, p1.score(), p1.lives(), level);
+    for(alient_t& a : alien_group.actives){
+        if(a.box().bl.y < -62-bunks[0].box().height() || p1.lives() <= 0){
             game_over = true;
             animating = false;
         }
