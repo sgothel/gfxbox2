@@ -528,7 +528,7 @@ class peng_t {
   public:
     peng_t(const pixel::f2::point_t& center, const pixel::f2::vec_t& v, const int owner, pixel::animtex_t atex) noexcept
     : m_atex(std::move(atex)),
-      m_dim((float)m_atex.texture()->width, (float)m_atex.texture()->height),
+      m_dim((float)m_atex.width(), (float)m_atex.height()),
       m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ),
       m_alien_hit(false), m_velo( v ), m_owner(owner)
     { }
