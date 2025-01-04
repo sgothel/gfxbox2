@@ -583,7 +583,7 @@ class spaceship_t {
         constexpr static const float height = base_height; // [m]
 
         constexpr static const float peng_velo_0 = field_height / 2; // [m/s]
-        constexpr static const int peng_inventory_max = 2;
+        constexpr static const int peng_inventory_max = 1;
 
     private:
         pixel::animtex_t m_atex;
