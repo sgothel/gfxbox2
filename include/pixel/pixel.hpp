@@ -105,9 +105,30 @@ namespace pixel {
         }
     }
 
+    /** Returns the floor float value cast to int. */
+    inline constexpr int floor_to_int(const float v) noexcept {
+        return (int)std::floor(v);
+    }
+    /** Returns the floor float value cast to int. */
+    inline constexpr uint32_t floor_to_uint32(const float v) noexcept {
+        return std::max(0, (int)std::floor(v));
+    }
     /** Returns the rounded float value cast to int. */
     inline constexpr int round_to_int(const float v) noexcept {
         return (int)std::round(v);
+    }
+    /** Returns the rounded float value cast to int. */
+    inline constexpr uint32_t round_to_uint32(const float v) noexcept {
+        return std::max(0, (int)std::round(v));
+    }
+
+    /** Returns the ceil float value cast to int. */
+    inline constexpr int ceil_to_int(const float v) noexcept {
+        return (int)std::ceil(v);
+    }
+    /** Returns the ceil float value cast to int. */
+    inline constexpr uint32_t ceil_to_uint32(const float v) noexcept {
+        return std::max(0, (int)std::ceil(v));
     }
     /** Returns the rounded double value cast to int. */
     inline constexpr int round_to_int(const double v) noexcept {
