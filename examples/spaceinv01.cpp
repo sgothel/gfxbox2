@@ -120,8 +120,9 @@ using namespace jau::audio;
 static std::vector<audio_sample_ref> audio_aliens;
 static audio_sample_ref audio_peng, audio_alienX, audio_baseX;
 
-static bool load_resources() {
-    if( jau::audio::audio_open() ) {
+static bool load_samples() {
+    audio_aliens.clear();
+    if( jau::audio::is_audio_subsystem_initialized() ) {
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien1.wav", false) );
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien2.wav", false) );
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien3.wav", false) );
@@ -129,12 +130,17 @@ static bool load_resources() {
         audio_peng = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/peng.wav", false);
         audio_alienX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alienX.wav", false);
         audio_baseX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/baseX.wav", false);
+        return true;
     } else {
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>() );
         audio_peng = std::make_shared<jau::audio::audio_sample_t>();
         audio_alienX = std::make_shared<jau::audio::audio_sample_t>();
         audio_baseX = std::make_shared<jau::audio::audio_sample_t>();
+        return false;
     }
+}
+
+static bool load_textures() {
     {
         pixel::bitmap_ref empty = std::make_shared<pixel::bitmap_t>(64, 64);
         pixel::log_printf(0, "XX empty: %s\n", empty->toString().c_str());
@@ -760,45 +766,14 @@ void peng_alien() {
     peng_from_alien(alien_group.actives[(size_t)(pixel::next_rnd() * (float)(alien_group.actives.size()-1))]);
 }
 
-static std::atomic_bool first_init = true;
-static bool init_app(int window_width, int window_height) {
-    bool exp_first_init = true;
-    if( !first_init.compare_exchange_strong(exp_first_init, false) ) {
-        return false;
-    }
-    {
-        const float origin_norm[] = { 0.5f, 0.5f };
-        if( !pixel::init_gfx_subsystem("Space Invaders", window_width, window_height, origin_norm, true, true /* subsys primitives */) ) {
-            return false;
-        }
-    }
-    pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
-
-    pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
-    {
-        float w = pixel::cart_coord.width();
-        float h = pixel::cart_coord.height();
-        float r01 = h/w;
-        float a = w / h;
-        printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]\n", w, h, r01, a);
-    }
-    if( !load_resources() ) {
-        return false;
-    }
-    reset_items();
-    return true;
-}
 
 #if defined(__EMSCRIPTEN__)
+    static void init_audio() {
+        jau::audio::init_audio_subsystem();
+        load_samples();
+    }
     extern "C" {
-        EMSCRIPTEN_KEEPALIVE void start_app() noexcept {
-            int window_height = 1024;
-            int window_width = (int)std::round( (float)window_height * space_width_pct );
-            init_app(window_height, window_width);
-        }
-        EMSCRIPTEN_KEEPALIVE void pause_app() noexcept {  emscripten_pause_main_loop(); }
-        EMSCRIPTEN_KEEPALIVE void resume_app() noexcept {  emscripten_resume_main_loop(); }
-        EMSCRIPTEN_KEEPALIVE void cancel_app() noexcept {  emscripten_cancel_main_loop(); }
+        EMSCRIPTEN_KEEPALIVE void start_audio() noexcept { init_audio(); }
     }
 #endif
 
@@ -808,26 +783,22 @@ static bool raster = false;
 static std::atomic_bool first_run = true;
 
 void mainloop() {
-    static std::unique_ptr<player_t> p1 = nullptr;
+    static player_t p1;
     static uint64_t frame_count_total = 0;
     static uint64_t snap_count = 0;
-    static uint64_t t_last = 0;
+    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
     static bool animating = true;
-    static pixel::texture_ref game_over_text = nullptr;
+    static pixel::texture_ref game_over_text = pixel::make_text(tl_text, 0, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
     static bool game_over = false;
     constexpr static float max_peng_time = 2_s;
-    static float peng_time = 0;
+    static float peng_time = pixel::next_rnd() * max_peng_time;
 
     if( !pixel::is_gfx_subsystem_initialized() ) {
         return;
     }
     bool exp_first_run = true;
     if( first_run.compare_exchange_strong(exp_first_run, false) ) {
-        p1 = std::make_unique<player_t>();
-        t_last = pixel::getElapsedMillisecond(); // [ms]
-        game_over_text = pixel::make_text(tl_text, 0, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
-        peng_time = pixel::next_rnd() * max_peng_time;
     }
     bool do_snapshot = false;
 
@@ -843,7 +814,7 @@ void mainloop() {
             pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
         } else if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
             reset_items();
-            p1->reset();
+            p1.reset();
             game_over = false;
         } else if( event.released_and_clr(pixel::input_event_type_t::F12) ) {
             do_snapshot = true;
@@ -859,7 +830,7 @@ void mainloop() {
 
         // Pass events to all animated objects
         if( animating ) {
-            p1->handle_event0();
+            p1.handle_event0();
         }
     }
     const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]
@@ -868,8 +839,8 @@ void mainloop() {
 
     if(animating) {
         {
-            p1->handle_event1(dt);
-            p1->tick(dt);
+            p1.handle_event1(dt);
+            p1.tick(dt);
         }
         if (raster) {
             pixel::draw_grid(50, 255, 0, 0, 0, 255, 0, 0, 0);
@@ -885,13 +856,13 @@ void mainloop() {
                     ++it;
                 } else {
                     if(p.m_owner == ship_id){
-                        p1->peng_completed(p);
+                        p1.peng_completed(p);
                     }
                     it = pengs.erase(it);
                 }
             }
         }
-        if( !p1->is_killed() ) {
+        if( !p1.is_killed() ) {
             peng_time -= dt;
             if(peng_time <= 0){
                 peng_alien();
@@ -920,7 +891,7 @@ void mainloop() {
             r.draw();
         }
     }
-    p1->draw();
+    p1.draw();
     for(auto & bunk : bunks) {
         bunk.draw();
     }
@@ -932,7 +903,7 @@ void mainloop() {
 
     if(alien_group.actives.size() == 0){
         reset_items();
-        p1->reset();
+        p1.reset();
         ++level;
     }
     pixel::set_pixel_color(255, 255, 255, 255);
@@ -941,9 +912,9 @@ void mainloop() {
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, score %4d, lives %d, level %d",
                     pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-                    fps, p1->score(), p1->lives(), level);
+                    fps, p1.score(), p1.lives(), level);
     for(alient_t& a : alien_group.actives){
-        if(a.box().bl.y < -62-bunks[0].box().height() || p1->lives() <= 0){
+        if(a.box().bl.y < -62-bunks[0].box().height() || p1.lives() <= 0){
             game_over = true;
             animating = false;
         }
@@ -976,26 +947,45 @@ void mainloop() {
 
 int main(int argc, char *argv[])
 {
-    #if defined(__EMSCRIPTEN__)
-        (void)argc;
-        (void)argv;
-        emscripten_set_main_loop(mainloop, 0, 1);
-    #else
-        int window_height = 1024;
-        int window_width = (int)std::round( (float)window_height * space_width_pct );
-        {
-            for(int i=1; i<argc; ++i) {
-                if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
-                    window_height = atoi(argv[i+1]);
-                    window_width = (int)std::round( (float)window_height * space_width_pct );
-                    ++i;
-                }
-
+    int window_height = 1024;
+    int window_width = (int)std::round( (float)window_height * space_width_pct );
+    {
+        for(int i=1; i<argc; ++i) {
+            if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
+                window_height = atoi(argv[i+1]);
+                window_width = (int)std::round( (float)window_height * space_width_pct );
+                ++i;
             }
+
         }
-        if( !init_app(window_width, window_height) ) {
+    }
+    {
+        const float origin_norm[] = { 0.5f, 0.5f };
+        if( !pixel::init_gfx_subsystem("Space Invaders", window_width, window_height, origin_norm, true, true /* subsys primitives */) ) {
             return 1;
         }
+    }
+    pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
+
+    pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
+    {
+        float w = pixel::cart_coord.width();
+        float h = pixel::cart_coord.height();
+        float r01 = h/w;
+        float a = w / h;
+        printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]\n", w, h, r01, a);
+    }
+    if( !load_textures() ) {
+        return 1;
+    }
+    #if !defined(__EMSCRIPTEN__)
+        jau::audio::init_audio_subsystem();
+    #endif
+    load_samples();
+    reset_items();
+    #if defined(__EMSCRIPTEN__)
+        emscripten_set_main_loop(mainloop, 0, 1);
+    #else
         while( true ) { mainloop(); }
     #endif
     return 0;

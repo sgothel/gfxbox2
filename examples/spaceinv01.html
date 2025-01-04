@@ -93,7 +93,7 @@
   <body>
     <a href="https://jausoft.com"><img src="/images/jaugsweklogo-hp-220x80.png" alt="Jausoft" style="background-color: #555555"/></a>
     <span style="padding:1em; font-size:2em;"><span class="acap">S</span>pace Invaders</span>... a <a href="https://jausoft.com/cgit/cs_class/gfxbox2.git/about/">gfxbox2 example</a>.
-    <div>Press <input type="button" value="Start" onclick="start_app()"></span> to launch the game!</div>
+    <div>Press <input type="button" value="Start Audio" onclick="start_audio()"></span> to enable audio!</div>
 
     <div class="spinner" id='spinner'></div>
     <div class="emscripten" id="status">Downloading...</div>
@@ -139,16 +139,13 @@
       var statusElement = document.getElementById('status');
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
-      var wasm_start_app, wasm_pause_app, wasm_resume_app, wasm_cancel_app;
+      var wasm_start_audio;
       var wasm_set_showvelo, wasm_set_forced_fps, wasm_set_window_size;
 
       var Module = {
         onRuntimeInitialized: function() {
           var wasm_start, wasm_pause, wasm_resume, wasm_cancel;
-            wasm_start_app = Module.cwrap('start_app', 'null')
-            wasm_pause_app = Module.cwrap('pause_app', 'null')
-            wasm_resume_app = Module.cwrap('resume_app', 'null')
-            wasm_cancel_app = Module.cwrap('cancel_app', 'null')
+            wasm_start_audio = Module.cwrap('start_audio', 'null')
             wasm_set_showvelo = Module.cwrap('set_showvelo', 'null', ['boolean'])
             wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
@@ -215,24 +212,9 @@
         };
       };
 
-      function start_app() {
-          if( null != wasm_start_app ) {
-              wasm_start_app();
-          }
-      }
-      function pause_app() {
-          if( null != wasm_pause_app ) {
-              wasm_pause_app();
-          }
-      }
-      function resume_app() {
-          if( null != wasm_resume_app ) {
-              wasm_resume_app();
-          }
-      }
-      function cancel_app() {
-          if( null != wasm_cancel_app ) {
-              wasm_cancel_app();
+      function start_audio() {
+          if( null != wasm_start_audio ) {
+              wasm_start_audio();
           }
       }
       function setForcedFPS(v) {
