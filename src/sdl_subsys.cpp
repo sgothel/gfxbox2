@@ -23,6 +23,7 @@
  */
 #include "pixel/pixel.hpp"
 
+#include <atomic>
 #include <pixel/version.hpp>
 #include <thread>
 
@@ -130,8 +131,17 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
     }
 }
 
+static std::atomic_bool gfx_subsystem_init = false;
+
+bool pixel::is_gfx_subsystem_initialized() noexcept {
+    return gfx_subsystem_init;
+}
 bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const float origin_norm[2],
                                bool enable_vsync, bool use_subsys_primitives) {
+    bool exp_init = false;
+    if( !gfx_subsystem_init.compare_exchange_strong(exp_init, true) ) {
+        return true;
+    }
     printf("gfxbox2 version %s\n", pixel::VERSION_LONG);
 
     pixel::use_subsys_primitives_val = use_subsys_primitives;
@@ -211,7 +221,7 @@ extern "C" {
         static bool warn_once = true;
         if( win_width != ww || win_height != wh ) {
             if( std::abs(win_width - ww) > 1 || std::abs(win_height - wh) > 1 ) {
-                if( 0 == win_width || 0 == win_height ) {
+                if( !is_gfx_subsystem_initialized() || 0 == win_width || 0 == win_height ) {
                     printf("JS Window Initial Size: Win %d x %d -> %d x %d\n", win_width, win_height, ww, wh);
                     win_width = ww;
                     win_height = wh;

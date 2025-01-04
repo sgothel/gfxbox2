@@ -715,6 +715,7 @@ namespace pixel {
     // gfx toolkit dependent API
     //
 
+    bool is_gfx_subsystem_initialized() noexcept;
     /** GFX Toolkit: Initialize a window of given size with a usable framebuffer. */
     bool init_gfx_subsystem(const char* title, int window_width, int window_height, const float origin_norm[2],
                             bool enable_vsync=true, bool use_subsys_primitives=true);
