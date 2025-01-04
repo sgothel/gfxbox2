@@ -89,7 +89,7 @@ static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
 // static const uint8_t rgba_blue[/*4*/] = { 0, 0, 255, 255 };
 static const float text_lum = 0.75f;
 static const pixel::f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f);
-static bool debug_gfx = true;
+static bool debug_gfx = false;
 
 static pixel::bitmap_ref bmp_bunk;
 static pixel::texture_ref all_images;
@@ -819,7 +819,6 @@ void mainloop() {
     static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
     static bool animating = true;
-    static pixel::texture_ref game_over_text = pixel::make_text(tl_text, 0, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
     static bool game_over = false;
     constexpr static float min_peng_time = 300_ms;
     constexpr static float max_peng_time = 2_s;
@@ -969,6 +968,8 @@ void mainloop() {
         hud_text->draw_fbcoord(dx, 0);
     }
     if(game_over){
+        tl_text.set(pixel::cart_coord.min_x(), 1.0f*pixel::cart_coord.height()/4.0f);
+        pixel::texture_ref game_over_text = pixel::make_text(tl_text, 0, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)game_over_text->width*game_over_text->dest_sx) ) / 2;
         game_over_text->draw_fbcoord(dx, 0);
     }
