@@ -159,10 +159,10 @@ else()
     # See https://emscripten.org/docs/tools_reference/settings_reference.html
     #
     # set(EMS_FLAGS "--use-port=sdl2" "--use-port=sdl2_image" "--use-port=sdl2_ttf" "--use-port=sdl2_mixer")
-    set(EMS_FLAGS "SHELL:-s USE_SDL=2" "SHELL:-s USE_SDL_IMAGE=2" "SHELL:-s SDL2_IMAGE_FORMATS='[\"bmp\",\"png\"]'" "SHELL:-s USE_SDL_TTF=2" "SHELL:-s USE_SDL_MIXER=2" "SHELL:-s USE_MPG123=1" "-Wno-unused-command-line-argument")
+    set(EMS_FLAGS "SHELL:-s USE_SDL=2" "SHELL:-s USE_SDL_IMAGE=2" "SHELL:-s SDL2_IMAGE_FORMATS='[\"bmp\",\"png\"]'" "SHELL:-s USE_SDL_TTF=2" "SHELL:-s USE_SDL_MIXER=2" "-Wno-unused-command-line-argument")
     set(EMS_FLAGS ${EMS_FLAGS} "SHELL:-s WASM=1" "SHELL:-s LZ4=1" "SHELL:-s EXPORTED_RUNTIME_METHODS=cwrap")
     # set(EMS_FLAGS ${EMS_FLAGS} "SHELL:-s FULL_ES2=1") # would use client-side memory like FULL_ES3 -> bad performance
-    set(EMS_FLAGS ${EMS_FLAGS} "SHELL:-s MAX_WEBGL_VERSION=2") # WebGL 2 -> ES3    
+    set(EMS_FLAGS ${EMS_FLAGS} "SHELL:-s MAX_WEBGL_VERSION=2") # WebGL 2 -> ES3
     set(EMS_FLAGS ${EMS_FLAGS} "SHELL:-s ALLOW_MEMORY_GROWTH=1")
     # set(EMS_FLAGS ${EMS_FLAGS} "-pthread") # fights w/ ALLOW_MEMORY_GROWTH
     # set(EMS_FLAGS ${EMS_FLAGS} "SHELL:-s MEMORY64=1") # wasm64 end-to-end: wasm32 object file can't be linked in wasm64 mode

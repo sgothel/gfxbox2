@@ -93,12 +93,15 @@
   <body>
     <a href="https://jausoft.com"><img src="/images/jaugsweklogo-hp-220x80.png" alt="Jausoft" style="background-color: #555555"/></a>
     <span style="padding:1em; font-size:2em;"><span class="acap">S</span>pace Invaders</span>... a <a href="https://jausoft.com/cgit/cs_class/gfxbox2.git/about/">gfxbox2 example</a>.
+    <div>Press <input type="button" value="Start" onclick="start_app()"></span> to launch the game!</div>
 
     <div class="spinner" id='spinner'></div>
     <div class="emscripten" id="status">Downloading...</div>
 
 <span id='controls'>
   <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
+  <!--span><input type="button" value="Pause" onclick="pause_app()"></span>
+  <span><input type="button" value="Resume" onclick="resume_app()"></span -->
   <span><input type="number" id="SetFPS" min="0" max="60" step="10" value="0" style="width: 3em;" onchange="setForcedFPS(this.value)"/>fps</span>
 </span>
 
@@ -115,56 +118,20 @@
         <table>
         <tr>
             <th>Actor</th>
-            <th>Accelerate</th>
-            <th>Left-Turn</th>
-            <th>Right-Turn</th>
-            <th>Shield</th>
+            <th>Left</th>
+            <th>Right</th>
             <th>Shoot</th>
-            <th>To Orbit</th>
-            <th>Cloak</th>
-            <th>Mine</th>
             <th>Reset</th>
             <th>Pause</th>
         </tr>
         <tr>
             <td>Ship 1</td>
-            <td>Cursor-Up</td>
             <td>Cursor-Left</td>
             <td>Cursor-Right</td>
-            <td>Cursor-Down</td>
-            <td>Right-Shift</td>
-            <td>Enter</td>
-            <td>Right-Alt</td>
-            <td>Right-Control</td>
-            <td>R</td>
-            <td>P</td>
-        </tr>
-        <tr>
-            <td>Ship 2</td>
-            <td>W</td>
-            <td>A</td>
-            <td>D</td>
-            <td>S</td>
-            <td>Left-Shift</td>
             <td>Left-Control</td>
-            <td>Left-Alt</td>
-            <td>Z</td>
             <td>R</td>
             <td>P</td>
         </tr>
-        <!-- tr>
-            <td>Ship 3</td>
-            <td>I</td>
-            <td>J</td>
-            <td>K</td>
-            <td>L</td>
-            <td>V</td>
-            <td>B</td>
-            <td>N</td>
-            <td>M</td>
-            <td>R</td>
-            <td>P</td>
-        </tr -->
         </table>
     </div>
 
@@ -172,14 +139,20 @@
       var statusElement = document.getElementById('status');
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
+      var wasm_start_app, wasm_pause_app, wasm_resume_app, wasm_cancel_app;
       var wasm_set_showvelo, wasm_set_forced_fps, wasm_set_window_size;
 
       var Module = {
         onRuntimeInitialized: function() {
+          var wasm_start, wasm_pause, wasm_resume, wasm_cancel;
+            wasm_start_app = Module.cwrap('start_app', 'null')
+            wasm_pause_app = Module.cwrap('pause_app', 'null')
+            wasm_resume_app = Module.cwrap('resume_app', 'null')
+            wasm_cancel_app = Module.cwrap('cancel_app', 'null')
             wasm_set_showvelo = Module.cwrap('set_showvelo', 'null', ['boolean'])
             wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
-            maximizeCanvas(0.98);
+            maximizeCanvas(0.50);
         },
         preRun: [],
         postRun: [],
@@ -242,6 +215,26 @@
         };
       };
 
+      function start_app() {
+          if( null != wasm_start_app ) {
+              wasm_start_app();
+          }
+      }
+      function pause_app() {
+          if( null != wasm_pause_app ) {
+              wasm_pause_app();
+          }
+      }
+      function resume_app() {
+          if( null != wasm_resume_app ) {
+              wasm_resume_app();
+          }
+      }
+      function cancel_app() {
+          if( null != wasm_cancel_app ) {
+              wasm_cancel_app();
+          }
+      }
       function setForcedFPS(v) {
           if( null != wasm_set_forced_fps ) {
               wasm_set_forced_fps(v);
