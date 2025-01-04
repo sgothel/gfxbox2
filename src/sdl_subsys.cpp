@@ -136,8 +136,11 @@ bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
 
     pixel::use_subsys_primitives_val = use_subsys_primitives;
 
-    // if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-    if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) { // SDL_INIT_EVERYTHING
+    Uint32 iflags = SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS;
+    #if !defined(__EMSCRIPTEN__)
+        iflags |= SDL_INIT_AUDIO;
+    #endif
+    if (SDL_Init(iflags) != 0) { // SDL_INIT_EVERYTHING
         printf("SDL: Error initializing: %s\n", SDL_GetError());
         return false;
     }
