@@ -193,10 +193,10 @@ void pixel::bitmap_t::put(const f2::aabbox_t& box, uint32_t abgr) noexcept {
     if(!m_pixels || 0 == width || 0 == height ) {
         return;
     }
-    const uint32_t x1 = std::max<uint32_t>(0, pixel::round_to_int(box.bl.x));
-    const uint32_t y1 = std::max<uint32_t>(0, pixel::round_to_int(box.bl.y));
-    const uint32_t y2 = std::min<uint32_t>(height-1, round_to_int(box.tr.y));
-    const uint32_t x2 = std::min<uint32_t>(width-1, round_to_int(box.tr.x));
+    const uint32_t x1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.x));
+    const uint32_t y1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.y));
+    const uint32_t x2 = std::min<uint32_t>(width, ceil_to_uint32(box.tr.x));
+    const uint32_t y2 = std::min<uint32_t>(height, ceil_to_uint32(box.tr.y));
     for(uint32_t y=y1; y<y2; ++y) {
         for(uint32_t x=x1; x<x2; ++x) {
             uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp));
@@ -209,10 +209,10 @@ bool pixel::bitmap_t::equals(const f2::aabbox_t& box, uint32_t abgr) noexcept {
     if(!m_pixels || 0 == width || 0 == height ) {
         return false;
     }
-    const uint32_t x1 = std::max<uint32_t>(0, pixel::round_to_int(box.bl.x));
-    const uint32_t y1 = std::max<uint32_t>(0, pixel::round_to_int(box.bl.y));
-    const uint32_t y2 = std::min<uint32_t>(height-1, round_to_int(box.tr.y));
-    const uint32_t x2 = std::min<uint32_t>(width-1, round_to_int(box.tr.x));
+    const uint32_t x1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.x));
+    const uint32_t y1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.y));
+    const uint32_t x2 = std::min<uint32_t>(width, ceil_to_uint32(box.tr.x));
+    const uint32_t y2 = std::min<uint32_t>(height, ceil_to_uint32(box.tr.y));
     for(uint32_t y=y1; y<y2; ++y) {
         for(uint32_t x=x1; x<x2; ++x) {
             const uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp));
