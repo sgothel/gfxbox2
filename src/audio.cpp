@@ -37,7 +37,7 @@ static bool audio_available = false;
 
 bool jau::audio::is_audio_open() { return audio_available; }
 
-bool jau::audio::audio_open(int mix_channels, int out_channel, int out_frequency, Uint16 /*out_sample_format*/, int out_chunksize) {
+bool jau::audio::audio_open(int init_modules, int req_modules, int mix_channels, int out_channel, int out_frequency, Uint16 /*out_sample_format*/, int out_chunksize) {
     if( audio_available ) {
         return true;
     }
@@ -46,7 +46,7 @@ bool jau::audio::audio_open(int mix_channels, int out_channel, int out_frequency
         return false;
     }
 
-    if ( ( Mix_Init(MIX_INIT_FLAC | MIX_INIT_MP3 | MIX_INIT_OGG | MIX_INIT_OPUS) & MIX_INIT_MP3 ) != MIX_INIT_MP3 ) {
+    if ( ( Mix_Init(init_modules) & req_modules ) != req_modules ) {
         pixel::log_printf("SDL_mixer: Error initializing: %s\n", SDL_GetError());
         return false;
     }
