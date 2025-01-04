@@ -78,7 +78,7 @@ static const pixel::f2::point_t bunk4_tl(  55, -62 );
 
 static const pixel::f2::aabbox_t base_box( { bunk1_tl.x-base_width, -field_height/2.0 }, { bunk4_tl.x+bunk_width+base_width, field_height/2.0 } );
 
-static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
+// static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
 static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
 // static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
 static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
