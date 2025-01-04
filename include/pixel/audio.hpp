@@ -32,7 +32,7 @@
 #include <SDL2/SDL_timer.h>
 
 namespace jau::audio {
-    bool is_audio_open();
+    bool is_audio_subsystem_initialized() noexcept;
 
     /**
      * Open the audio system.
@@ -46,8 +46,8 @@ namespace jau::audio {
      * @param out_chunksize
      * @return
      */
-    bool audio_open(int init_modules=0, int req_modules=0,
-                    int mix_channels=16, int out_channel=2, int out_frequency=MIX_DEFAULT_FREQUENCY, Uint16 out_sample_format=AUDIO_S16SYS, int out_chunksize=1024);
+    bool init_audio_subsystem(int init_modules=0, int req_modules=0,
+                              int mix_channels=16, int out_channel=2, int out_frequency=MIX_DEFAULT_FREQUENCY, Uint16 out_sample_format=AUDIO_S16SYS, int out_chunksize=1024);
 
     /**
      * Close the audio system.

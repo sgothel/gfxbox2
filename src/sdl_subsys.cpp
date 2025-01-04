@@ -131,6 +131,7 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
     }
 }
 
+static std::atomic_bool gfx_subsystem_init_called = false;
 static std::atomic_bool gfx_subsystem_init = false;
 
 bool pixel::is_gfx_subsystem_initialized() noexcept {
@@ -138,9 +139,9 @@ bool pixel::is_gfx_subsystem_initialized() noexcept {
 }
 bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const float origin_norm[2],
                                bool enable_vsync, bool use_subsys_primitives) {
-    bool exp_init = false;
-    if( !gfx_subsystem_init.compare_exchange_strong(exp_init, true) ) {
-        return true;
+    bool exp_init_called = false;
+    if( !gfx_subsystem_init_called.compare_exchange_strong(exp_init_called, true) ) {
+        return gfx_subsystem_init;
     }
     printf("gfxbox2 version %s\n", pixel::VERSION_LONG);
 
@@ -149,9 +150,6 @@ bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
     if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
         printf("SDL: Error initializing mandatory subsys: %s\n", SDL_GetError());
         return false;
-    }
-    if (SDL_Init(SDL_INIT_AUDIO) != 0) {
-        printf("SDL: Error initializing audio: %s\n", SDL_GetError());
     }
     if ( ( IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG ) != IMG_INIT_PNG ) {
         printf("SDL_image: Error initializing: %s\n", SDL_GetError());
@@ -207,6 +205,7 @@ bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
     gpu_swap_t0 = gpu_fps_t0;
     gpu_swap_t1 = gpu_fps_t0;
     gpu_frame_count = 0;
+    gfx_subsystem_init = true;
 
     on_window_resized(wwidth, wheight);
     return true;
