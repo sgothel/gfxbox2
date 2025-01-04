@@ -592,7 +592,7 @@ class spaceship_t {
     public:
         constexpr static const float height = base_height; // [m]
 
-        constexpr static const float peng_velo_0 = field_height / 2; // [m/s]
+        constexpr static const float peng_velo_0 = field_height / 1.5f; // [m/s]
         constexpr static const int peng_inventory_max = 1;
 
     private:
