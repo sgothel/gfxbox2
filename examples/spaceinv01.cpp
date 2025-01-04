@@ -803,10 +803,12 @@ void mainloop() {
     static bool animating = true;
     static pixel::texture_ref game_over_text = pixel::make_text(tl_text, 0, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
     static bool game_over = false;
+    constexpr static float min_peng_time = 300_ms;
     constexpr static float max_peng_time = 2_s;
-    static float peng_time = pixel::next_rnd() * max_peng_time;
+    static float peng_time = min_peng_time + pixel::next_rnd() * (max_peng_time-min_peng_time);
     bool do_snapshot = false;
     static const pixel::f2::aabbox_t p1_ship_box = p1.ship()->box();
+    static pixel::si_time_t level_time = 0;
 
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -822,6 +824,8 @@ void mainloop() {
             reset_items();
             p1.reset();
             game_over = false;
+            level_time = 0;
+            level = 1;
         } else if( event.released_and_clr(pixel::input_event_type_t::F12) ) {
             do_snapshot = true;
         }
@@ -842,6 +846,7 @@ void mainloop() {
     const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]
     const float dt = (float)(t1 - t_last) / 1000.0f; // [s]
     t_last = t1;
+    level_time += dt;
 
     if(animating) {
         {
@@ -872,11 +877,8 @@ void mainloop() {
             peng_time -= dt;
             if(peng_time <= 0){
                 peng_alien();
-                if((float)level < max_peng_time){
-                    peng_time = pixel::next_rnd() * (max_peng_time - ((float)level-1));
-                } else {
-                    peng_time = pixel::next_rnd() * (max_peng_time - (float)level+1);
-                }
+                peng_time = min_peng_time +
+                        pixel::next_rnd() * (max_peng_time-min_peng_time-(float)level*50_ms-level_time/2_min);
             }
         }
     }
@@ -923,6 +925,7 @@ void mainloop() {
         reset_items();
         p1.next_level();
         ++level;
+        level_time = 0;
     }
     pixel::set_pixel_color(255, 255, 255, 255);
 
