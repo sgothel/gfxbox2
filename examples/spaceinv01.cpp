@@ -347,9 +347,9 @@ class alien_group_t {
     }
 
     void scale_pace(float faktor) {
-        const float old = m_sec_per_step; 
+        const float old = m_sec_per_step;
         m_sec_per_step *= faktor;
-        pixel::log_printf(0, "XX ag scale pace %f * %f = %f\n", old, faktor, m_sec_per_step); 
+        pixel::log_printf(0, "XX ag scale pace %f * %f = %f\n", old, faktor, m_sec_per_step);
     }
 
     bool check_hit(const pixel::f2::aabbox_t& b, int& value) {
@@ -432,14 +432,14 @@ class bunker_t {
         if(!m_bunk->pixels() || 0 == m_bunk->width || 0 == m_bunk->height ) {
             return;
         }
-        const uint32_t max_x = m_bunk->width-1;
-        const uint32_t max_y = m_bunk->height-1;
-        const uint32_t y1 = std::max<uint32_t>(0, pixel::round_to_int(box.bl.y));
-        const uint32_t y2 = std::min<uint32_t>(max_y, pixel::round_to_int(box.tr.y));
+        const uint32_t width = m_bunk->width;
+        const uint32_t height = m_bunk->height;
+        const uint32_t y1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.y));
+        const uint32_t y2 = std::min<uint32_t>(height, pixel::ceil_to_uint32(box.tr.y));
         for(uint32_t y=y1; y<y2; ++y) {
-            const uint32_t o = y%2;
-            const uint32_t x1 = std::max<uint32_t>(0, pixel::round_to_int(box.bl.x)-o);
-            const uint32_t x2 = std::min<uint32_t>(max_x, pixel::round_to_int(box.tr.x)+o);
+            const uint32_t o = pixel::round_to_uint32(pixel::next_rnd()*4);
+            const uint32_t x1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.x)+1-o);
+            const uint32_t x2 = std::min<uint32_t>(width, pixel::ceil_to_uint32(box.tr.x)-1+o);
             for(uint32_t x=x1; x<x2; ++x) {
                 uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_bunk->pixels() + static_cast<size_t>((m_bunk->height - y - 1) * m_bunk->stride) + static_cast<size_t>(x * m_bunk->bpp));
                 *target_pixel = abgr;
@@ -458,18 +458,14 @@ class bunker_t {
         return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
     }
 
-    bool hit(pixel::f2::aabbox_t& hitbox) {
-        // const uint32_t clrpix = 0xffffffff;
+    bool hit(pixel::f2::aabbox_t& hitbox, pixel::f2::vec_t amp={0, 0} ) {
         const uint32_t clrpix = 0x00000000;
-        // pixel::f2::vec_t hitdim {0, hitbox.height()};
-        pixel::f2::vec_t hitdim {hitbox.width(), 0};
-        pixel::f2::aabbox_t hitbox2(hitbox.bl-1.4*hitdim, hitbox.tr+1.4*hitdim);
         const pixel::f2::aabbox_t mybox = box();
         pixel::f2::aabbox_t ibox = hitbox.intersection(mybox);
         if( false ) {
+            printf("XXX bunk.hit:\n");
             printf("XXX bunk.hit: bunk   %s\n", mybox.toString().c_str());
             printf("XXX bunk.hit: hit    %s\n", hitbox.toString().c_str());
-            printf("XXX bunk.hit: hit2   %s\n", hitbox2.toString().c_str());
             printf("XXX bunk.hit: ibox1.0 %s\n", ibox.toString().c_str());
         }
         if( ibox.width() == 0 ) {
@@ -479,14 +475,16 @@ class bunker_t {
         ibox.bl -= mybox.bl;
         ibox.tr -= mybox.bl;
         // printf("XXX bunk.hit: ibox1.1 %s\n", ibox.toString().c_str());
+        ibox.bl.x = std::max(0.0f, ibox.bl.x - ibox.width() * amp.x);
+        ibox.bl.y = std::max(0.0f, ibox.bl.y - ibox.height() * amp.y);
+        ibox.tr.x += ibox.width() * amp.x ;
+        ibox.tr.y += ibox.height() * amp.y ;
+        // printf("XXX bunk.hit: ibox1.2 %s, amp %s\n", ibox.toString().c_str(), amp.toString().c_str());
         if( m_bunk->equals(ibox, clrpix) ) {
             // printf("XXX bunk.hit: clear -> false\n");
             return false;
         }
-        pixel::f2::aabbox_t ibox2 = hitbox2.intersection(mybox);
-        ibox2.bl -= mybox.bl;
-        ibox2.tr -= mybox.bl;
-        put_bunk(ibox2, clrpix);
+        put_bunk(ibox, clrpix);
         tex_bunk[idx]->update(m_bunk);
         return true;
     }
@@ -538,7 +536,9 @@ class peng_t {
         pixel::f2::aabbox_t b = box();
         for(auto it = bunks.begin(); it != bunks.end(); ) {
             bunker_t& bunk = *it;
-            if( bunk.box().intersects(b) && bunk.hit(b) ) {
+            if( bunk.box().intersects(b) &&
+                bunk.hit(b, m_owner == alien_id ? pixel::f2::vec_t{ 0.6f, 2.5f } : pixel::f2::vec_t{ 0.0f, 0.0f }) )
+            {
                 return true;
             } else {
                 ++it;
