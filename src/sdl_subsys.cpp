@@ -136,13 +136,12 @@ bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
 
     pixel::use_subsys_primitives_val = use_subsys_primitives;
 
-    Uint32 iflags = SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS;
-    #if !defined(__EMSCRIPTEN__)
-        iflags |= SDL_INIT_AUDIO;
-    #endif
-    if (SDL_Init(iflags) != 0) { // SDL_INIT_EVERYTHING
-        printf("SDL: Error initializing: %s\n", SDL_GetError());
+    if (SDL_Init(SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_EVENTS) != 0) {
+        printf("SDL: Error initializing mandatory subsys: %s\n", SDL_GetError());
         return false;
+    }
+    if (SDL_Init(SDL_INIT_AUDIO) != 0) {
+        printf("SDL: Error initializing audio: %s\n", SDL_GetError());
     }
     if ( ( IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG ) != IMG_INIT_PNG ) {
         printf("SDL_image: Error initializing: %s\n", SDL_GetError());
