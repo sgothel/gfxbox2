@@ -399,25 +399,27 @@ namespace pixel::f2 {
          * Create an Axis Aligned bounding box (AABBox)
          * where the low and and high MAX float Values.
          */
-        aabbox_t() noexcept {
+        constexpr aabbox_t() noexcept {
             reset();
         }
 
         /**
          * Create an AABBox with given bl (low) and tr (high)
          */
-        aabbox_t(const point_t& bl_, const point_t& tr_) noexcept
+        constexpr aabbox_t(const point_t& bl_, const point_t& tr_) noexcept
         : bl( bl_ ), tr( tr_ ) {
         }
 
-        aabbox_t(const aabbox_t& o) noexcept = default;
-        aabbox_t(aabbox_t&& o) noexcept = default;
+        constexpr aabbox_t(const aabbox_t& o) noexcept = default;
+        constexpr aabbox_t(aabbox_t&& o) noexcept = default;
+        constexpr aabbox_t& operator=(const aabbox_t&) noexcept = default;
+        constexpr aabbox_t& operator=(aabbox_t&&) noexcept = default;
 
         /**
          * Reset this box to the inverse low/high, allowing the next {@link #resize(float, float, float)} command to hit.
          * @return this AABBox for chaining
          */
-        aabbox_t& reset() noexcept {
+        constexpr aabbox_t& reset() noexcept {
             bl.x = std::numeric_limits<float>::max();
             bl.y = std::numeric_limits<float>::max();
             tr.x = -std::numeric_limits<float>::max();
@@ -425,14 +427,14 @@ namespace pixel::f2 {
             return *this;
         }
 
-        point_t center() const noexcept { return (bl + tr)/2; }
+        constexpr point_t center() const noexcept { return (bl + tr)/2; }
 
         /**
          * Resize the AABBox to encapsulate another AABox
          * @param newBox AABBox to be encapsulated in
          * @return this AABBox for chaining
          */
-        aabbox_t& resize(const aabbox_t& o) noexcept {
+        constexpr aabbox_t& resize(const aabbox_t& o) noexcept {
             /** test bl (low) */
             if (o.bl.x < bl.x) {
                 bl.x = o.bl.x;
@@ -448,7 +450,6 @@ namespace pixel::f2 {
             if (o.tr.y > tr.y) {
                 tr.y = o.tr.y;
             }
-
             return *this;
         }
 
@@ -458,7 +459,7 @@ namespace pixel::f2 {
          * @param y y-axis coordinate value
          * @return this AABBox for chaining
          */
-        aabbox_t& resize(float x, float y) noexcept {
+        constexpr aabbox_t& resize(float x, float y) noexcept {
             /** test bl (low) */
             if (x < bl.x) {
                 bl.x = x;
@@ -474,7 +475,6 @@ namespace pixel::f2 {
             if (y > tr.y) {
                 tr.y = y;
             }
-
             return *this;
         }
 
@@ -484,14 +484,14 @@ namespace pixel::f2 {
          * @param y y-axis coordinate value
          * @return this AABBox for chaining
          */
-        aabbox_t& resize(const point_t& p) noexcept {
+        constexpr aabbox_t& resize(const point_t& p) noexcept {
             return resize(p.x, p.y);
         }
 
-        aabbox_t box() const noexcept override { return *this; }
+        constexpr aabbox_t box() const noexcept override { return *this; }
 
-        float width() const noexcept { return tr.x - bl.x; }
-        float height() const noexcept { return tr.y - bl.y; }
+        constexpr float width() const noexcept { return tr.x - bl.x; }
+        constexpr float height() const noexcept { return tr.y - bl.y; }
 
         /**
          * Check if the point is bounded/contained by this AABBox
@@ -541,7 +541,7 @@ namespace pixel::f2 {
         }
 
         /// Returns intersecting aabbox, maybe of width() and height() zero if not intersecting
-        aabbox_t intersection(const aabbox_t& o) const noexcept {
+        constexpr aabbox_t intersection(const aabbox_t& o) const noexcept {
             aabbox_t res( /*bl=*/ max(bl, o.bl), /*tr=*/ min(tr, o.tr) );
             if (res.bl.x > res.tr.x || res.bl.y > res.tr.y) {
                 res.bl = { 0, 0 };
