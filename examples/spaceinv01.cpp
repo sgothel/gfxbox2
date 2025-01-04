@@ -22,7 +22,9 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include <algorithm>
+#include <atomic>
 #include <cstddef>
+#include <memory>
 #include <pixel/pixel3f.hpp>
 #include <pixel/pixel4f.hpp>
 #include <pixel/pixel2f.hpp>
@@ -120,8 +122,9 @@ using namespace jau::audio;
 static std::vector<audio_sample_ref> audio_aliens;
 static audio_sample_ref audio_peng, audio_alienX, audio_baseX;
 
-static bool load_resources() {
-    if( jau::audio::audio_open() ) {
+static bool load_samples() {
+    audio_aliens.clear();
+    if( jau::audio::is_audio_subsystem_initialized() ) {
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien1.wav", false) );
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien2.wav", false) );
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien3.wav", false) );
@@ -129,12 +132,17 @@ static bool load_resources() {
         audio_peng = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/peng.wav", false);
         audio_alienX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alienX.wav", false);
         audio_baseX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/baseX.wav", false);
+        return true;
     } else {
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>() );
         audio_peng = std::make_shared<jau::audio::audio_sample_t>();
         audio_alienX = std::make_shared<jau::audio::audio_sample_t>();
         audio_baseX = std::make_shared<jau::audio::audio_sample_t>();
+        return false;
     }
+}
+
+static bool load_textures() {
     {
         pixel::bitmap_ref empty = std::make_shared<pixel::bitmap_t>(64, 64);
         pixel::log_printf(0, "XX empty: %s\n", empty->toString().c_str());
@@ -789,10 +797,21 @@ void peng_alien() {
     peng_from_alien(alien_group.actives[(size_t)(pixel::next_rnd() * (float)(alien_group.actives.size()-1))]);
 }
 
+#if defined(__EMSCRIPTEN__)
+    static void init_audio() {
+        jau::audio::init_audio_subsystem();
+        load_samples();
+    }
+    extern "C" {
+        EMSCRIPTEN_KEEPALIVE void start_audio() noexcept { init_audio(); }
+    }
+#endif
+
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
 static bool raster = false;
 static int high_score = 1000;
+static std::atomic_bool first_run = true;
 
 void mainloop() {
     static player_t p1;
@@ -806,6 +825,13 @@ void mainloop() {
     constexpr static float min_peng_time = 300_ms;
     constexpr static float max_peng_time = 2_s;
     static float peng_time = min_peng_time + pixel::next_rnd() * (max_peng_time-min_peng_time);
+
+    if( !pixel::is_gfx_subsystem_initialized() ) {
+        return;
+    }
+    bool exp_first_run = true;
+    if( first_run.compare_exchange_strong(exp_first_run, false) ) {
+    }
     bool do_snapshot = false;
     static const pixel::f2::aabbox_t p1_ship_box = p1.ship()->box();
     static pixel::si_time_t level_time = 0;
@@ -954,7 +980,7 @@ void mainloop() {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)game_over_text->width*game_over_text->dest_sx) ) / 2;
         game_over_text->draw_fbcoord(dx, 0);
     }
-    pixel::swap_gpu_buffer(60);
+    pixel::swap_gpu_buffer();
     if( record_bmpseq_basename.size() > 0 ) {
         std::string snap_fname(128, '\0');
         const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
@@ -1000,9 +1026,13 @@ int main(int argc, char *argv[])
         float a = w / h;
         printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]\n", w, h, r01, a);
     }
-    if( !load_resources() ) {
+    if( !load_textures() ) {
         return 1;
     }
+    #if !defined(__EMSCRIPTEN__)
+        jau::audio::init_audio_subsystem();
+    #endif
+    load_samples();
     reset_items();
     #if defined(__EMSCRIPTEN__)
         emscripten_set_main_loop(mainloop, 0, 1);

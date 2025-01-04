@@ -33,20 +33,29 @@
 // audio
 //
 
-static bool audio_available = false;
+static std::atomic_bool audio_subsystem_init_called = false;
+static std::atomic_bool audio_subsystem_init = false;
 
-bool jau::audio::is_audio_open() { return audio_available; }
+bool jau::audio::is_audio_subsystem_initialized() noexcept {
+    return audio_subsystem_init;
+}
 
-bool jau::audio::audio_open(int mix_channels, int out_channel, int out_frequency, Uint16 /*out_sample_format*/, int out_chunksize) {
-    if( audio_available ) {
-        return true;
+bool jau::audio::init_audio_subsystem(int init_modules, int req_modules, int mix_channels, int out_channel, int out_frequency, Uint16 /*out_sample_format*/, int out_chunksize) {
+    bool exp_init_called = false;
+    if( !audio_subsystem_init_called.compare_exchange_strong(exp_init_called, true) ) {
+        pixel::log_printf("SDL_mixer: Initialization already called: Initialized %d\n", audio_subsystem_init.load());
+        return audio_subsystem_init;
+    }
+    if (SDL_Init(SDL_INIT_AUDIO) != 0) {
+        printf("SDL: Error initializing audio: %s\n", SDL_GetError());
+        return false;
     }
     if( 0 != Mix_OpenAudio(out_frequency, AUDIO_S16SYS, out_channel, out_chunksize) ) {
         pixel::log_printf("SDL_mixer: Error Mix_OpenAudio: %s\n", SDL_GetError());
         return false;
     }
 
-    if ( ( Mix_Init(MIX_INIT_FLAC | MIX_INIT_MP3 | MIX_INIT_OGG | MIX_INIT_OPUS) & MIX_INIT_MP3 ) != MIX_INIT_MP3 ) {
+    if ( ( Mix_Init(init_modules) & req_modules ) != req_modules ) {
         pixel::log_printf("SDL_mixer: Error initializing: %s\n", SDL_GetError());
         return false;
     }
@@ -68,12 +77,15 @@ bool jau::audio::audio_open(int mix_channels, int out_channel, int out_frequency
         fprintf(stderr, "\n");
     }
     Mix_AllocateChannels(mix_channels);
-    audio_available = true;
+    audio_subsystem_init = true;
+    pixel::log_printf("SDL_mixer: Initialized\n");
     return true;
 }
 
 void jau::audio::audio_close() {
-    Mix_CloseAudio();
+    if( audio_subsystem_init ) {
+        Mix_CloseAudio();
+    }
 }
 
 jau::audio::audio_sample_t::audio_sample_t(const std::string &fname, const bool single_play, const int volume)
@@ -87,7 +99,7 @@ jau::audio::audio_sample_t::audio_sample_t(const std::string &fname, const bool 
 }
 
 void jau::audio::audio_sample_t::play(int loops) {
-    if ( nullptr != chunk.get() ) {
+    if ( audio_subsystem_init && nullptr != chunk.get() ) {
         if( !singly || 0 > channel_playing || ( 0 <= channel_playing && 0 == Mix_Playing(channel_playing) ) ) {
             channel_playing = Mix_PlayChannel(-1, chunk.get(), loops - 1);
         }
@@ -95,13 +107,13 @@ void jau::audio::audio_sample_t::play(int loops) {
 }
 
 void jau::audio::audio_sample_t::stop() {
-    if( 0 <= channel_playing ) {
+    if( audio_subsystem_init && 0 <= channel_playing ) {
         Mix_HaltChannel(channel_playing);
         channel_playing = -1;
     }
 }
 void jau::audio::audio_sample_t::set_volume(int volume) {
-    if ( nullptr != chunk.get() ) {
+    if ( audio_subsystem_init && nullptr != chunk.get() ) {
         Mix_VolumeChunk(chunk.get(), volume);
     }
 }
