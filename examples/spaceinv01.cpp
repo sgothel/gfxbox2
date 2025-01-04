@@ -621,6 +621,12 @@ class spaceship_t {
           peng_inventory(peng_inventory_max)
         {}
 
+        void reset(const pixel::f2::point_t& top_center){
+            peng_inventory = peng_inventory_max;
+            m_tl = {top_center.x - m_dim.x/2.0f, top_center.y};
+            m_tc = top_center;
+        }
+
         constexpr bool is_killed() const noexcept { return m_killed; }
 
         pixel::f2::aabbox_t box() const noexcept {
@@ -673,12 +679,15 @@ class player_t {
             alien_group.set_pause(true);
         }
 
+        pixel::f2::point_t ship_startpos() {
+            return {base_box.bl.x + base_width/2, base_box.bl.y + base_height};
+        }
         void respawn_ship() noexcept {
             if(m_lives <= 0){
                 return;
             }
             m_respawn_timer = 0;
-            m_ship = std::make_shared<spaceship_t>( pixel::f2::point_t{base_box.bl.x + base_width/2, base_box.bl.y + base_height} );
+            m_ship = std::make_shared<spaceship_t>(ship_startpos());
             alien_group.set_pause(false);
         }
 
@@ -693,6 +702,15 @@ class player_t {
             m_lives = start_live;
             respawn_ship();
         }
+        
+        void next_level(){
+            if(!m_ship){
+                respawn_ship();
+            } else {
+                m_ship->reset(ship_startpos());
+            }
+        }
+        
         bool is_killed() const noexcept { return m_ship->is_killed(); }
         constexpr int lives() const noexcept { return m_lives; }
 
@@ -890,7 +908,7 @@ void mainloop() {
 
     if(alien_group.actives.size() == 0){
         reset_items();
-        p1.reset();
+        p1.next_level();
         ++level;
     }
     pixel::set_pixel_color(255, 255, 255, 255);
