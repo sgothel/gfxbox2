@@ -21,6 +21,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#include <algorithm>
 #include <cstddef>
 #include <pixel/pixel3f.hpp>
 #include <pixel/pixel4f.hpp>
@@ -32,6 +33,7 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cmath>
+#include <pixel/unit.hpp>
 #include <vector>
 
 using namespace pixel::literals;
@@ -242,7 +244,7 @@ class alient_t {
     }
 
     constexpr int value() const noexcept { return m_value; }
-    
+
     void step(const pixel::f2::vec_t& step) noexcept {
         m_atex.next();
         m_tl += step;
@@ -304,6 +306,7 @@ class alien_group_t {
         const float cell_width = (float)tex_alien1[0]->width;
         actives.clear();
         m_box.reset();
+        m_sec_per_step = std::max(700_ms, 1_s-(level-1)/40);
         pixel::f2::point_t p = field_box.bl;
         p.y =  0.0f;
         for(int y=0; y<2; ++y) {
@@ -333,6 +336,12 @@ class alien_group_t {
             p.y +=  2.0f * cell_height;
         }
         m_dt_step_left = m_sec_per_step;
+    }
+
+    void scale_pace(float faktor) {
+        const float old = m_sec_per_step; 
+        m_sec_per_step *= faktor;
+        pixel::log_printf(0, "XX ag scale pace %f * %f = %f\n", old, faktor, m_sec_per_step); 
     }
 
     bool check_hit(const pixel::f2::aabbox_t& b, int& value) {
@@ -383,6 +392,7 @@ class alien_group_t {
         if( !m_box.inside(field_box) ) {
             m_step.x *= -1;
             m_step.y = -step_down;
+            scale_pace(1.0f-1.0f/20.f);
         }
         for(alient_t& a : actives){
             a.step(m_step);
@@ -703,7 +713,7 @@ class player_t {
             m_lives = start_live;
             respawn_ship();
         }
-        
+
         void next_level(){
             if(!m_ship){
                 respawn_ship();
@@ -711,7 +721,7 @@ class player_t {
                 m_ship->reset(ship_startpos());
             }
         }
-        
+
         bool is_killed() const noexcept { return m_ship->is_killed(); }
         constexpr int lives() const noexcept { return m_lives; }
 
@@ -778,6 +788,7 @@ void peng_alien() {
     }
     peng_from_alien(alien_group.actives[(size_t)(pixel::next_rnd() * (float)(alien_group.actives.size()-1))]);
 }
+
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
 static bool raster = false;
@@ -926,11 +937,11 @@ void mainloop() {
             animating = false;
         }
     }
-    
+
     if(p1.score() > high_score){
         high_score = p1.score();
     }
-    
+
     pixel::swap_pixel_fb(false);
     {
         const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*(float)hud_text->dest_sx) ) / 2;
