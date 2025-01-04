@@ -697,7 +697,7 @@ class player_t {
         constexpr int lives() const noexcept { return m_lives; }
 
         int peng_inventory() const noexcept { return m_ship->peng_inventory; }
-
+        spaceship_ref_t& ship() noexcept { return m_ship; }
         constexpr int score() const noexcept { return m_score; }
         void peng_completed(const peng_t& p) noexcept {
             if(!is_killed())  {
@@ -775,6 +775,7 @@ void mainloop() {
     constexpr static float max_peng_time = 2_s;
     static float peng_time = pixel::next_rnd() * max_peng_time;
     bool do_snapshot = false;
+    static const pixel::f2::aabbox_t p1_ship_box = p1.ship()->box();
 
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -863,6 +864,18 @@ void mainloop() {
             pixel::set_pixel_color(rgba_green);
             pixel::f2::rect_t r({-field_width/2.0f, +field_height/2.0f}, field_width, field_height);
             r.draw();
+        }
+    }
+    {
+        const float abstand_zsl = 5;
+        for(int i = 0; i < p1.lives()-1; ++i){
+            const float w = space_width - 2;
+            const float h = space_height - 2;
+            pixel::f2::rect_t r({-w/2.0f, +h/2.0f}, w, h);
+            spaceship_t l = {{r.m_bl.x + abstand_zsl*(float)(i + 1) +
+            p1_ship_box.width()*(float)i + p1_ship_box.width()/2,
+            r.m_bl.y + abstand_zsl + p1_ship_box.height()}};
+            l.draw();
         }
     }
     p1.draw();
