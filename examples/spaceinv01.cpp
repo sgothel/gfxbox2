@@ -223,6 +223,7 @@ static bool load_resources() {
 
 class alient_t {
   private:
+    int m_value;
     pixel::animtex_t m_atex;
     pixel::f2::vec_t m_dim;
     float dt_kill = 0;
@@ -230,8 +231,8 @@ class alient_t {
   public:
     pixel::f2::point_t m_tl;
 
-    alient_t(pixel::animtex_t atex_alien, const pixel::f2::point_t& center) noexcept
-    : m_atex(std::move(atex_alien)),
+    alient_t(int value, pixel::animtex_t atex_alien, const pixel::f2::point_t& center) noexcept
+    : m_value(value), m_atex(std::move(atex_alien)),
       m_dim((float)m_atex.width(), (float)m_atex.height()),
       m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) )
     { }
@@ -240,6 +241,8 @@ class alient_t {
         return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
     }
 
+    constexpr int value() const noexcept { return m_value; }
+    
     void step(const pixel::f2::vec_t& step) noexcept {
         m_atex.next();
         m_tl += step;
@@ -306,7 +309,7 @@ class alien_group_t {
         for(int y=0; y<2; ++y) {
             p.x = field_box.bl.x + cell_width/2.0f;
             for(int x=0; x<11; ++x) {
-                actives.emplace_back(pixel::animtex_t("Alien1", m_sec_per_step, tex_alien1), p);
+                actives.emplace_back(10, pixel::animtex_t("Alien1", m_sec_per_step, tex_alien1), p);
                 p.x += cell_width * 1.5f;
             }
             p.y +=  2.0f * cell_height;
@@ -314,7 +317,7 @@ class alien_group_t {
         for(int y=0; y<2; ++y) {
             p.x = field_box.bl.x + cell_width/2.0f;
             for(int x=0; x<11; ++x) {
-                actives.emplace_back(pixel::animtex_t("Alien2", m_sec_per_step, tex_alien2), p);
+                actives.emplace_back(20, pixel::animtex_t("Alien2", m_sec_per_step, tex_alien2), p);
                 m_box.resize(actives[actives.size()-1].box());
                 p.x += cell_width * 1.5f;
             }
@@ -323,7 +326,7 @@ class alien_group_t {
         for(int y=0; y<1; ++y) {
             p.x = field_box.bl.x + cell_width/2.0f;
             for(int x=0; x<11; ++x) {
-                actives.emplace_back(pixel::animtex_t("Alien3", m_sec_per_step, tex_alien3), p);
+                actives.emplace_back(30, pixel::animtex_t("Alien3", m_sec_per_step, tex_alien3), p);
                 m_box.resize(actives[actives.size()-1].box());
                 p.x += cell_width * 1.5f;
             }
@@ -332,12 +335,13 @@ class alien_group_t {
         m_dt_step_left = m_sec_per_step;
     }
 
-    bool check_hit(const pixel::f2::aabbox_t& b) {
+    bool check_hit(const pixel::f2::aabbox_t& b, int& value) {
         for(auto it = actives.begin(); it != actives.end(); ) {
             alient_t& a = *it;
             if( !a.box().intersects(b) ) {
                 ++it;
             } else {
+                value = a.value();
                 a.notify_killed();
                 m_killed.push_back(a);
                 it = actives.erase(it);
@@ -491,7 +495,7 @@ class peng_t {
     pixel::animtex_t m_atex;
     pixel::f2::vec_t m_dim;
     pixel::f2::point_t m_tl;
-    bool m_alien_hit;
+    int m_alien_value;
 
   public:
     constexpr static float anim_period = 0.03f; // 0.025f;
@@ -503,8 +507,8 @@ class peng_t {
         if( m_owner == alien_id ) {
             return false;
         }
-        if( alien_group.check_hit( box() ) ) {
-            m_alien_hit = true;
+        m_alien_value = 0;
+        if( alien_group.check_hit( box(), m_alien_value ) ) {
             audio_alienX->play();
             return true;
         } else {
@@ -530,7 +534,7 @@ class peng_t {
     : m_atex(std::move(atex)),
       m_dim((float)m_atex.width(), (float)m_atex.height()),
       m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ),
-      m_alien_hit(false), m_velo( v ), m_owner(owner)
+      m_alien_value(0), m_velo( v ), m_owner(owner)
     { }
 
     pixel::f2::aabbox_t box() const noexcept {
@@ -560,7 +564,7 @@ class peng_t {
         return box().intersects(o.box());
     }
 
-    bool alien_hit() const { return m_alien_hit; }
+    int alien_hit_value() const { return m_alien_value; }
 };
 std::vector<peng_t> pengs;
 
@@ -699,9 +703,7 @@ class player_t {
             if(!is_killed())  {
                 ++m_ship->peng_inventory;
             }
-            if(p.alien_hit()){
-                add_score(1);
-            }
+            add_score(p.alien_hit_value());
         }
         void add_score(int diff) noexcept { m_score += diff; }
 
