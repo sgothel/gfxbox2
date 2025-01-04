@@ -27,6 +27,7 @@
 #include <pixel/pixel2f.hpp>
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
+#include "pixel/audio.hpp"
 
 #include <cinttypes>
 #include <cstdio>
@@ -112,7 +113,26 @@ static std::vector<pixel::texture_ref> tex_peng;
 static pixel::texture_ref tex_alienm;
 int level = 1;
 
-static bool load_textures() {
+using namespace jau::audio;
+
+static std::vector<audio_sample_ref> audio_aliens;
+static audio_sample_ref audio_peng, audio_alienX, audio_baseX;
+
+static bool load_resources() {
+    if( jau::audio::audio_open() ) {
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien1.wav", false) );
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien2.wav", false) );
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien3.wav", false) );
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien4.wav", false) );
+        audio_peng = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/peng.wav", false);
+        audio_alienX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alienX.wav", false);
+        audio_baseX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/baseX.wav", false);
+    } else {
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>() );
+        audio_peng = std::make_shared<jau::audio::audio_sample_t>();
+        audio_alienX = std::make_shared<jau::audio::audio_sample_t>();
+        audio_baseX = std::make_shared<jau::audio::audio_sample_t>();
+    }
     {
         pixel::bitmap_ref empty = std::make_shared<pixel::bitmap_t>(64, 64);
         pixel::log_printf(0, "XX empty: %s\n", empty->toString().c_str());
@@ -330,6 +350,9 @@ class alien_group_t {
     void set_pause(bool v) noexcept { m_pause = v; }
 
     void tick(const float dt) {
+        static int sound_idx = 0;
+        static audio_sample_ref audio_sample = nullptr;
+
         if( m_pause ) {
             return;
         }
@@ -343,6 +366,14 @@ class alien_group_t {
         m_dt_step_left -= dt;
         if( m_dt_step_left > 0 || m_killed.size() > 0 ) {
             return;
+        }
+        {
+            if( audio_sample ) {
+                audio_sample->stop();
+            }
+            audio_sample = audio_aliens[sound_idx];
+            sound_idx = ( sound_idx + 1 ) % audio_aliens.size();
+            audio_sample->play(1);
         }
         m_dt_step_left = m_sec_per_step;
         if( !m_box.inside(field_box) ) {
@@ -472,8 +503,13 @@ class peng_t {
         if( m_owner == alien_id ) {
             return false;
         }
-        m_alien_hit = alien_group.check_hit( box() );
-        return m_alien_hit;
+        if( alien_group.check_hit( box() ) ) {
+            m_alien_hit = true;
+            audio_alienX->play();
+            return true;
+        } else {
+            return false;
+        }
     }
 
     bool check_bunker_hit() {
@@ -563,6 +599,7 @@ class spaceship_t {
                 } else {
                     it = pengs.erase(it);
                     m_atex = pixel::animtex_t("pengX", 0.3f, tex_baseX);
+                    audio_baseX->play();
                     m_killed = true;
                     return true;
                 }
@@ -593,6 +630,7 @@ class spaceship_t {
                 pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(peng_velo_0 + 10.0f * (float)level, 90_deg);
                 pengs.emplace_back(p0, v_p, ship_id, pixel::animtex_t("peng", peng_t::anim_period, tex_peng));
                 --peng_inventory;
+                audio_peng->play();
             }
         }
 
@@ -909,7 +947,7 @@ int main(int argc, char *argv[])
         float a = w / h;
         printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]\n", w, h, r01, a);
     }
-    if( !load_textures() ) {
+    if( !load_resources() ) {
         return 1;
     }
     reset_items();
