@@ -52,6 +52,7 @@
 namespace pixel::f2 {
     class vec_t; // fwd
     typedef vec_t point_t;
+    class aabbox_t;
 
 }
 namespace pixel::f4 {
@@ -474,21 +475,27 @@ namespace pixel {
 
             /** Reads abgr value */
             constexpr uint32_t get(uint32_t x, uint32_t y) const noexcept {
-                if(x > width || y > height ) {
+                if(!m_pixels || x >= width || y >= height ) {
                     return 0;
                 }
-                const uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>(y * stride) + static_cast<size_t>(x * bpp));
+                const uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp));
                 return *target_pixel;
             }
 
             /** Writes given abgr value */
             constexpr void put(uint32_t x, uint32_t y, uint32_t abgr) noexcept {
-                if(x > width || y > height ) {
+                if(!m_pixels || x >= width || y >= height ) {
                     return;
                 }
-                uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>(y * stride) + static_cast<size_t>(x * bpp));
+                uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp));
                 *target_pixel = abgr;
             }
+
+            /** Writes given abgr value into aabbox area */
+            void put(const f2::aabbox_t& box, uint32_t abgr) noexcept;
+
+            /** Test if given box equals given abgr value */
+            bool equals(const f2::aabbox_t& box, uint32_t abgr) noexcept;
 
             std::string toString() const noexcept {
                 return "id "+std::to_string(m_id) + (m_handle ? " (set) " : " (empty) ") +
@@ -684,6 +691,7 @@ namespace pixel {
             void reset() noexcept;
             void pause(bool enable) noexcept;
             void tick(const float dt) noexcept;
+            void next() noexcept;
 
             /// draw using cartesian coordinates and dimension
             void draw(const float x_pos, const float y_pos, const float w, const float h) const noexcept {
