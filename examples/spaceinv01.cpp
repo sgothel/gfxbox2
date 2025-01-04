@@ -811,7 +811,6 @@ static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
 static bool raster = false;
 static int high_score = 1000;
-static std::atomic_bool first_run = true;
 
 void mainloop() {
     static player_t p1;
@@ -825,16 +824,9 @@ void mainloop() {
     constexpr static float min_peng_time = 300_ms;
     constexpr static float max_peng_time = 2_s;
     static float peng_time = min_peng_time + pixel::next_rnd() * (max_peng_time-min_peng_time);
-
-    if( !pixel::is_gfx_subsystem_initialized() ) {
-        return;
-    }
-    bool exp_first_run = true;
-    if( first_run.compare_exchange_strong(exp_first_run, false) ) {
-    }
-    bool do_snapshot = false;
     static const pixel::f2::aabbox_t p1_ship_box = p1.ship()->box();
     static pixel::si_time_t level_time = 0;
+    bool do_snapshot = false;
 
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
