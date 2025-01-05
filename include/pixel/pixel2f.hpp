@@ -410,6 +410,8 @@ namespace pixel::f2 {
         : bl( bl_ ), tr( tr_ ) {
         }
 
+        constexpr ~aabbox_t() noexcept override = default; // gcc bug 93413 (constexpr, solved in gcc 13)
+
         constexpr aabbox_t(const aabbox_t& o) noexcept = default;
         constexpr aabbox_t(aabbox_t&& o) noexcept = default;
         constexpr aabbox_t& operator=(const aabbox_t&) noexcept = default;

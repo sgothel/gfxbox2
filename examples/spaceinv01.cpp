@@ -22,7 +22,6 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include <algorithm>
-#include <atomic>
 #include <cstddef>
 #include <memory>
 #include <pixel/pixel3f.hpp>
@@ -62,10 +61,10 @@ static pixel::input_event_t event;
 constexpr static float space_height = 260.0f; // [m]
 constexpr static float space_width = 224.0f; // [m]
 constexpr static float space_width_pct = space_width / space_height;
+
 constexpr static float field_height = 188.0f; // [m]
 constexpr static float field_width = 204.0f; // [m]
-static const pixel::f2::aabbox_t field_box( { -field_width/2.0, -field_height/2.0 }, { field_width/2.0, field_height/2.0 } );
-// static const pixel::f2::vec_t alien_dim( 172, 72 );
+static const pixel::f2::aabbox_t field_box( { -field_width/2.0, -field_height/2.0 }, { field_width/2.0, field_height/2.0 } ); // gcc bug 93413 (constexpr, solved in gcc 13)
 
 constexpr static float base_width = 13.0f; // [m]
 constexpr static float base_height = 8.0f; // [m]
@@ -78,11 +77,14 @@ constexpr static int base_peng_inventory_max = 1;
 
 constexpr static float alien_hstep = 2;
 constexpr static float alien_vstep = 8;
+constexpr static int aliens_per_row = 11;
 
-static const pixel::f2::point_t bunk1_tl( -80, -62 );
-static const pixel::f2::point_t bunk2_tl( -35, -62 );
-static const pixel::f2::point_t bunk3_tl(  10, -62 );
-static const pixel::f2::point_t bunk4_tl(  55, -62 );
+constexpr static pixel::f2::point_t bunk1_tl( -80, -62 );
+constexpr static pixel::f2::point_t bunk2_tl( -35, -62 );
+constexpr static pixel::f2::point_t bunk3_tl(  10, -62 );
+constexpr static pixel::f2::point_t bunk4_tl(  55, -62 );
+
+static const pixel::f2::aabbox_t base_box( { bunk1_tl.x-base_width, -field_height/2.0 }, { bunk4_tl.x+bunk_width+base_width, field_height/2.0 } );
 
 //
 //
@@ -90,9 +92,6 @@ static const pixel::f2::point_t bunk4_tl(  55, -62 );
 
 constexpr static int base_id = 1;
 constexpr static int alien_id = 2;
-
-
-static const pixel::f2::aabbox_t base_box( { bunk1_tl.x-base_width, -field_height/2.0 }, { bunk4_tl.x+bunk_width+base_width, field_height/2.0 } );
 
 // static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
 static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
@@ -127,7 +126,7 @@ static std::vector<pixel::texture_ref> tex_peng;
 
 // row-6
 static pixel::texture_ref tex_alienm;
-int level = 1;
+static int level = 1;
 
 using namespace jau::audio;
 
@@ -327,7 +326,7 @@ class alien_group_t {
         p.y =  0.0f;
         for(int y=0; y<2; ++y) {
             p.x = field_box.bl.x + cell_width/2.0f;
-            for(int x=0; x<11; ++x) {
+            for(int x=0; x<aliens_per_row; ++x) {
                 actives.emplace_back(10, pixel::animtex_t("Alien1", m_sec_per_step, tex_alien1), p);
                 p.x += cell_width * 1.5f;
             }
@@ -335,7 +334,7 @@ class alien_group_t {
         }
         for(int y=0; y<2; ++y) {
             p.x = field_box.bl.x + cell_width/2.0f;
-            for(int x=0; x<11; ++x) {
+            for(int x=0; x<aliens_per_row; ++x) {
                 actives.emplace_back(20, pixel::animtex_t("Alien2", m_sec_per_step, tex_alien2), p);
                 m_box.resize(actives[actives.size()-1].box());
                 p.x += cell_width * 1.5f;
@@ -344,7 +343,7 @@ class alien_group_t {
         }
         for(int y=0; y<1; ++y) {
             p.x = field_box.bl.x + cell_width/2.0f;
-            for(int x=0; x<11; ++x) {
+            for(int x=0; x<aliens_per_row; ++x) {
                 actives.emplace_back(30, pixel::animtex_t("Alien3", m_sec_per_step, tex_alien3), p);
                 m_box.resize(actives[actives.size()-1].box());
                 p.x += cell_width * 1.5f;
