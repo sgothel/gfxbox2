@@ -87,7 +87,7 @@ static const pixel::f2::aabbox_t field_box( { -field_width/2.0, -field_height/2.
 constexpr static float base_width = 13.0f; // [m]
 constexpr static float base_height = 8.0f; // [m]
 
-constexpr static float bunk_width = 22.0f;
+// constexpr static float bunk_width = 22.0f;
 // constexpr static float bunk_height = 16.0f;
 
 constexpr static float base_velo_h = 1.0f*60.0f; // 1 pixel per frame, half of max single alien speed
@@ -1245,6 +1245,7 @@ int main(int argc, char *argv[])
     load_samples();
     reset_items();
     #if defined(__EMSCRIPTEN__)
+        (void)use_audio;
         emscripten_set_main_loop(mainloop, 0, 1);
     #else
         while( true ) { mainloop(); }
