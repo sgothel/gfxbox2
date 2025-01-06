@@ -51,6 +51,7 @@ static pixel::input_event_t event;
  *   - Screen  224 x 256
  *   - Field   204 x 216  (w: min-max, h: base -> mothership)
  *   - Base    [16..185]  base horizontal range
+ *   - Saucer  x=[9..192], y=206
  *   - Bunker  1: 32/50, 2: 77/50, 3: 122/50, 4: 167/50
  * - Object Dimension
  *   - Alien-1  12 x   8
@@ -62,12 +63,18 @@ static pixel::input_event_t event;
  *   - Base     13 x   8  (incl. explosions 1-3)
  *   - peng      1 x   4
  *   - Bunker   22 x  16  (aspect 1.375)
- *   - Aline-M  16 x   8  (mothership at y=206)
+ *   - Saucer   16 x   8  (mothership at y=206)
  *   - Peng      1 x   4
+ * - Timings
+ *   - Saucer appears every ~25.6s
+ * - Velocity
+ *   - Rendering 1 frame is done at 60Hz (fps) after vsync
+ *   - Alien   2*60/N (2/N per frame with N = alient count, see below)
+ *   - Saucer  183/4  (183 in 4s, 183 saucer distance)
+ *   - Base    1*60   (1 per frame, i.e. 60 in 1s)
+ *   -
  *
  * Orig hardware vs this code:
- * - Rendering 1 frame is done at 60Hz (fps) after vsync
- * - Base moves 1 pixel per frame, i.e. 60 pixels in 1 second
  * - Alien velovity
  *   - Original hardware renders only 1 alien per frame
  *   - Single alien moves at max-speed 2 pixel/frame @ 60fps -> 120 pixel/s
@@ -75,17 +82,19 @@ static pixel::input_event_t event;
  *   - This `emulation` renders all at once, but paused 1/60*N for N aliens,
  *     giving proper group movement, removes artifacts and simplifies code
 */
-constexpr static float screen_width = 224.0f; // [m]
-constexpr static float screen_height = 256.0f; // [m]
+constexpr static float screen_width = 224.0f;
+constexpr static float screen_height = 256.0f;
 constexpr static float screen_width_pct = screen_width / screen_height;
 constexpr float scrn2cartx(const float v) noexcept { return v - screen_width/2.0f; }
 constexpr float scrn2carty(const float v) noexcept { return v - screen_height/2.0f; }
-constexpr static float field_width = 204.0f; // [m]
-constexpr static float field_height = 216.0f; // [m]
-static const pixel::f2::aabbox_t field_box( { -field_width/2.0, -field_height/2.0 }, { field_width/2.0, field_height/2.0 } ); // gcc bug 93413 (constexpr, solved in gcc 13)
+constexpr static float field_width = 204.0f;
+constexpr static float field_height = 216.0f;
+static constexpr float field_yshift = 0;
+static const pixel::f2::aabbox_t field_box( { -field_width/2.0, -field_height/2.0 +field_yshift}, { field_width/2.0, field_height/2.0 +field_yshift} ); // gcc bug 93413 (constexpr, solved in gcc 13)
+static const pixel::f2::vec_t field_tl( -field_width/2.0, field_height/2.0 +field_yshift );
 
-constexpr static float base_width = 13.0f; // [m]
-constexpr static float base_height = 8.0f; // [m]
+constexpr static float base_width = 13.0f;
+constexpr static float base_height = 8.0f;
 
 // constexpr static float bunk_width = 22.0f;
 // constexpr static float bunk_height = 16.0f;
@@ -97,6 +106,11 @@ constexpr static int base_peng_inventory_max = 1;
 constexpr static int aliens_per_row = 11;
 constexpr static int aliens_rows = 5;
 constexpr static int aliens_total_default = aliens_rows * aliens_per_row;
+
+constexpr static float alien_saucer_period = 25.6f;
+constexpr static pixel::f2::vec_t saucer_lpos(scrn2cartx(9), scrn2carty(206));
+constexpr static pixel::f2::vec_t saucer_rpos(scrn2cartx(192), scrn2carty(206));
+constexpr static pixel::f2::vec_t saucer_velo( (saucer_rpos.x - saucer_lpos.x)/4.0f, 0.0f); // ([1/s], [1]) 183 in 4s
 
 /// horizontal: [1/s], single-alien full-speed 2 pixel/frame @ 60fps -> 120 pixel/s
 ///             Due to orig hardware limitation, must be divided by current alien_count,
@@ -153,13 +167,13 @@ static pixel::texture_ref tex_bunk[] { nullptr, nullptr, nullptr, nullptr };
 static std::vector<pixel::texture_ref> tex_peng;
 
 // row-6
-static pixel::texture_ref tex_alienm;
+static std::vector<pixel::texture_ref> tex_saucer;
 static int level = 1;
 
 using namespace jau::audio;
 
 static std::vector<audio_sample_ref> audio_aliens;
-static audio_sample_ref audio_peng, audio_alienX, audio_baseX;
+static audio_sample_ref audio_saucer, audio_peng, audio_alienX, audio_baseX;
 
 static bool load_samples() {
     audio_aliens.clear();
@@ -168,12 +182,14 @@ static bool load_samples() {
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien2.wav", false, MIX_MAX_VOLUME) );
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien3.wav", false, MIX_MAX_VOLUME) );
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien4.wav", false, MIX_MAX_VOLUME) );
+        audio_saucer = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alienM.wav", false, MIX_MAX_VOLUME/4);
         audio_peng = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/peng.wav", false, MIX_MAX_VOLUME/4);
         audio_alienX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alienX.wav", false, MIX_MAX_VOLUME/4);
         audio_baseX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/baseX.wav", false, MIX_MAX_VOLUME);
         return true;
     } else {
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>() );
+        audio_saucer = std::make_shared<jau::audio::audio_sample_t>();
         audio_peng = std::make_shared<jau::audio::audio_sample_t>();
         audio_alienX = std::make_shared<jau::audio::audio_sample_t>();
         audio_baseX = std::make_shared<jau::audio::audio_sample_t>();
@@ -224,7 +240,7 @@ static bool load_textures() {
     y_off+=16;
 
     // row-6
-    tex_alienm = pixel::add_sub_texture(all_images, 0, y_off, 16, 7);
+    tex_saucer.push_back( pixel::add_sub_texture(all_images, 0, y_off, 16, 7) );
 
     // row-1
     pixel::log_printf(0, "XX alien1: %d textures\n", tex_alien1.size());
@@ -266,7 +282,7 @@ static bool load_textures() {
     pixel::log_printf(0, "XX peng: %s\n", tex_peng[0]->toString().c_str());
 
     // row-6
-    pixel::log_printf(0, "XX alien MS: %s\n", tex_alienm->toString().c_str());
+    pixel::log_printf(0, "XX saucer: %s\n", tex_saucer[0]->toString().c_str());
     return true;
 }
 
@@ -344,6 +360,7 @@ class alient_t : public gobject_t {
     pixel::f2::point_t m_bl;
     pixel::f2::vec_t m_dim;
     float m_killanim_d = 0;
+    bool m_killed = false;
 
   public:
 
@@ -395,11 +412,13 @@ class alient_t : public gobject_t {
         m_bl += d;
     }
 
-    void notify_killed() {
+    void notify_killed() noexcept {
         m_atex = pixel::animtex_t("AlienX", 1.0f, tex_alienX);
         m_killanim_d = alien_explosion_d;
         audio_alienX->play();
+        m_killed = true;
     }
+    bool is_killed() noexcept { return m_killed; }
 
     pixel::animtex_t& atex() { return m_atex; }
 };
@@ -409,12 +428,15 @@ class alien_group_t : public gobject_t {
   private:
     constexpr static float m_sec_step_delay = 1.0f/60.0f; // orig 1 alien per frame moves
     pixel::f2::aabbox_t m_box;
-    pixel::f2::vec_t m_velo = alien_max_velo;
-    float m_delay_left;
+    pixel::f2::vec_t m_alien_velo = alien_max_velo;
+    pixel::f2::vec_t m_saucer_velo;
+    float m_step_delay_left;
+    float m_saucer_delay_left;
     size_t m_current_idx = 0;
     bool m_pause = false;
     std::vector<alien_ref> m_actives;
     std::vector<alien_ref> m_killed;
+    alien_ref m_saucer = nullptr;
 
   public:
     alien_group_t() = default;
@@ -444,7 +466,7 @@ class alien_group_t : public gobject_t {
         m_current_idx = 0;
         m_box.reset();
         pixel::f2::point_t bl = field_box.bl;
-        bl.y = 2.0f * cell_height * aliens_rows - cell_height;
+        bl.y = 2.0f * cell_height * aliens_rows - 2.5f * cell_height;
         for(int y=0; y<1; ++y) {
             // bl.x = field_box.bl.x + float( tex_alien1[0]->width - tex_alien3[0]->width )/2.0f;
             bl.x = field_box.bl.x + 1.0f;
@@ -472,7 +494,8 @@ class alien_group_t : public gobject_t {
             }
             bl.y -=  2.0f * cell_height;
         }
-        m_delay_left = m_sec_step_delay * float(active_count());
+        m_step_delay_left = m_sec_step_delay * float(active_count());
+        m_saucer_delay_left = alien_saucer_period;
     }
 
     size_t active_count() const noexcept { return m_actives.size(); }
@@ -500,6 +523,13 @@ class alien_group_t : public gobject_t {
                 return a->value();
             }
         }
+        if( m_saucer ) {
+            if( m_saucer->box().intersects(b) ) {
+                audio_saucer->stop();
+                m_saucer->notify_killed();
+                return m_saucer->value();
+            }
+        }
         return 0;
     }
 
@@ -523,25 +553,51 @@ class alien_group_t : public gobject_t {
             }
             return true;
         }
-        m_delay_left -= avg_fd;
-        if( m_delay_left > 0 ) {
+        m_saucer_delay_left -= avg_fd;
+        if( m_saucer_delay_left <= 0 ) {
+            if( !m_saucer ) {
+                const uint8_t lr = pixel::next_rnd<uint8_t>(0, 1);
+                m_saucer = std::make_shared<alient_t>(90, lr ? saucer_rpos : saucer_lpos, pixel::animtex_t("Saucer", 1.0f, tex_saucer));
+                m_saucer_velo = { saucer_velo.x * ( lr ? -1.0f : +1.0f), 0 };
+                audio_saucer->play(1);
+                // pixel::log_printf("XX saucer: lr %u, velo %s, bl %s\n", lr, m_saucer_velo.toString().c_str(), m_saucer->pos().toString().c_str());
+            }
+            m_saucer_delay_left = alien_saucer_period;
+        }
+        if( m_saucer ) {
+            pixel::f2::vec_t dxy = avg_fd * m_saucer_velo;
+            if( (m_alien_velo.x > 0 && m_saucer->pos().x > saucer_rpos.x+1) ||
+                (m_alien_velo.x < 0 && m_saucer->pos().x < saucer_lpos.x-1) ) {
+                // exit
+                m_saucer = nullptr;
+                audio_saucer->stop();
+            } else {
+                if( m_saucer->is_killed() ) {
+                    m_saucer->tick(avg_fd);
+                } else {
+                    m_saucer->step(dxy);
+                }
+            }
+        }
+        m_step_delay_left -= avg_fd;
+        if( m_step_delay_left > 0 ) {
             return true;
         }
-        m_delay_left = m_sec_step_delay * float(active_count());
+        m_step_delay_left = m_sec_step_delay * float(active_count());
         {
             audio_sample = audio_aliens[sound_idx];
             sound_idx = ( sound_idx + 1 ) % int(audio_aliens.size());
             audio_sample->play(1);
         }
         {
-            pixel::f2::vec_t dxy = { alien_velo_amp * avg_fd * m_velo.x, 0 };
+            pixel::f2::vec_t dxy = { alien_velo_amp * avg_fd * m_alien_velo.x, 0 };
 
             constexpr float lx_adjust = 1;
-            if( (m_velo.x > 0 && m_box.tr.x > field_box.tr.x) ||
-                (m_velo.x < 0 && m_box.bl.x < field_box.bl.x - lx_adjust) ) {
-                m_velo.x *= -1;
+            if( (m_alien_velo.x > 0 && m_box.tr.x > field_box.tr.x) ||
+                (m_alien_velo.x < 0 && m_box.bl.x < field_box.bl.x - lx_adjust) ) {
+                m_alien_velo.x *= -1;
                 dxy.x *= -1;
-                dxy.y = m_velo.y;
+                dxy.y = m_alien_velo.y;
             }
             for(const alien_ref& a : m_actives){
                 a->step(dxy);
@@ -552,6 +608,9 @@ class alien_group_t : public gobject_t {
 
     void draw() noexcept override {
         m_box.reset();
+        if( m_saucer ) {
+            m_saucer->draw();
+        }
         for(const alien_ref& a : m_actives){
             a->draw();
             m_box.resize(a->box());
@@ -1021,6 +1080,8 @@ void mainloop() {
             level = 1;
         } else if( event.released_and_clr(pixel::input_event_type_t::F12) ) {
             do_snapshot = true;
+        } else if( event.released_and_clr(pixel::input_event_type_t::F9) ) {
+            debug_gfx = !debug_gfx;
         }
         if( event.paused() ) {
             animating = false;
@@ -1093,7 +1154,7 @@ void mainloop() {
         }
         {
             pixel::set_pixel_color(rgba_green);
-            pixel::f2::rect_t r({-field_width/2.0f, +field_height/2.0f}, field_width, field_height);
+            pixel::f2::rect_t r(field_tl, field_width, field_height);
             r.draw();
         }
     }
@@ -1112,7 +1173,7 @@ void mainloop() {
 
     {
         pixel::set_pixel_color(rgba_green);
-        pixel::f2::rect_t r1({-field_width/2.0f, -field_height/2.0f}, field_width, 1.0f);
+        pixel::f2::rect_t r1(field_box.bl, field_width, 1.0f);
         r1.draw(false);
 
         const float abstand_zsl = 5;
