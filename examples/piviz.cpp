@@ -481,7 +481,7 @@ void mainloop() {
     anim1 = animating && demo_index == 1;
     anim2 = animating && demo_index == 2;
 
-    float fps = pixel::get_gpu_fps();
+    float fps = pixel::gpu_avg_fps();
     texts.push_back( pixel::make_text(
             point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), 0, text_color,
             // "fps "+std::to_string(fps)+", anim[g "+std::to_string(animating)+", a1 "+std::to_string(anim1)+", a2 "+std::to_string(anim2)+"], m "+std::to_string(manual) ));

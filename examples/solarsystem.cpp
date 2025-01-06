@@ -611,7 +611,7 @@ void mainloop() {
                     cbodies[number(max_planet_id)]->ids().c_str(),
                     to_magnitude_timestr(tick_ts).c_str(),
                     static_cast<unsigned>(t1/1000),
-                    global_scale(), get_gpu_fps());
+                    global_scale(), gpu_avg_fps());
     {
         fraction_timespec next_time_min = world_t0_sec-fraction_timespec(1_month);
         fraction_timespec next_time_max = world_t0_sec+fraction_timespec(1_year);
@@ -669,7 +669,7 @@ void mainloop() {
 int main(int argc, char *argv[])
 {
     int window_width = 1920, window_height = 1000;
-    pixel::forced_fps = 30;
+    pixel::set_gpu_forced_fps(30);
     #if defined(__EMSCRIPTEN__)
         window_width = 1024, window_height = 576; // 16:9
     #endif
@@ -682,7 +682,7 @@ int main(int argc, char *argv[])
                 window_height = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
-                pixel::forced_fps = atoi(argv[i+1]);
+                pixel::set_gpu_forced_fps(atoi(argv[i+1]));
                 ++i;
             } else if( 0 == strcmp("-color_inv", argv[i]) ) {
                 set_colorinv(true);
@@ -717,7 +717,7 @@ int main(int argc, char *argv[])
     }
     {
         pixel::log_printf(0, "- win size %d x %d\n", window_width, window_height);
-        pixel::log_printf(0, "- forced_fps %d\n", pixel::forced_fps);
+        pixel::log_printf(0, "- forced_fps %d\n", pixel::gpu_forced_fps());
         pixel::log_printf(0, "- data_stop %d\n", ref_cbody_stop);
         pixel::log_printf(0, "- gravity_scale %f\n", gravity_scale);
     }

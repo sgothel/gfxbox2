@@ -33,7 +33,7 @@ void mainloop() {
     const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, text_color, text_height,
             "Tron %4d (%.2f m/s), MCP %4d (%.2f m/s), fps %5.2f, %s",
-            a1, p1.velo, a2, p2.velo, pixel::get_gpu_fps(), animating?"animating":"paused");
+            a1, p1.velo, a2, p2.velo, pixel::gpu_avg_fps(), animating?"animating":"paused");
     while(pixel::handle_one_event(event)) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");

@@ -43,6 +43,7 @@ static size_t fb_pixels_byte_size = 0;
 static size_t fb_pixels_byte_width = 0;
 static SDL_Texture * fb_texture = nullptr;
 static TTF_Font* sdl_font = nullptr;
+static int monitor_frames_per_sec=60;
 static float gpu_fps = 0.0f;
 static int gpu_frame_count = 0;
 static uint64_t gpu_fps_t0 = 0;
@@ -65,7 +66,12 @@ void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t&
     b = ( ui32 & 0x000000ffU );
 }
 
+int pixel::monitor_fps() noexcept { return monitor_frames_per_sec; }
+
 static void on_window_resized(int wwidth, int wheight) noexcept {
+    if( nullptr == sdl_rend ) {
+        return;
+    }
     const int old_fb_width = fb_width;
     const int old_fb_height = fb_height;
     SDL_GetRendererOutputSize(sdl_rend, &fb_width, &fb_height);
@@ -93,8 +99,10 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
         const int win_display_idx = SDL_GetWindowDisplayIndex(sdl_win);
         ::bzero(&mode, sizeof(mode));
         SDL_GetCurrentDisplayMode(win_display_idx, &mode); // SDL_GetWindowDisplayMode(..) fails on some systems (wrong refresh_rate and logical size
-        printf("WindowDisplayMode: %d x %d @ %d Hz @ display %d\n", mode.w, mode.h, mode.refresh_rate, win_display_idx);
-        display_frames_per_sec = mode.refresh_rate;
+        if( mode.refresh_rate > 0 ) {
+            monitor_frames_per_sec = mode.refresh_rate;
+        }
+        printf("WindowDisplayMode: %d x %d @ %d (-> %d) Hz @ display %d\n", mode.w, mode.h, mode.refresh_rate, monitor_frames_per_sec, win_display_idx);
     }
     printf("Renderer %s\n", sdi.name);
     printf("%s\n", cart_coord.toString().c_str());
@@ -200,21 +208,23 @@ bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const
         return false;
     }
 
-    gpu_fps = 0.0f;
-    gpu_fps_t0 = getCurrentMilliseconds();
-    gpu_swap_t0 = gpu_fps_t0;
-    gpu_swap_t1 = gpu_fps_t0;
     gpu_frame_count = 0;
     gfx_subsystem_init = true;
 
     on_window_resized(wwidth, wheight);
+
+    gpu_fps = float(monitor_frames_per_sec);
+    gpu_fps_t0 = getCurrentMilliseconds();
+    gpu_swap_t0 = gpu_fps_t0;
+    gpu_swap_t1 = gpu_fps_t0;
+
     return true;
 }
 
 extern "C" {
-    EMSCRIPTEN_KEEPALIVE void set_forced_fps(int v) noexcept { forced_fps = v; }
+    EMSCRIPTEN_KEEPALIVE void set_forced_fps(int v) noexcept { set_gpu_forced_fps(v); }
 
-    EMSCRIPTEN_KEEPALIVE int get_forced_fps() noexcept { return forced_fps; }
+    EMSCRIPTEN_KEEPALIVE int get_forced_fps() noexcept { return gpu_forced_fps(); }
 
     EMSCRIPTEN_KEEPALIVE void set_window_size(int ww, int wh) noexcept {
         static bool warn_once = true;
@@ -291,7 +301,7 @@ void pixel::swap_gpu_buffer(int fps) noexcept {
     }
 }
 
-float pixel::get_gpu_fps() noexcept {
+float pixel::gpu_avg_fps() noexcept {
     return gpu_fps;
 }
 

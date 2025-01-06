@@ -211,7 +211,7 @@ void mainloop() {
 
     const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, text_color, text_height,
-            "fps %5.2f, %.2f / %.2f: grid %.0f, type > %s", pixel::get_gpu_fps(),
+            "fps %5.2f, %.2f / %.2f: grid %.0f, type > %s", pixel::gpu_avg_fps(),
             pixel::cart_coord.from_win_x(event.pointer_x),
             pixel::cart_coord.from_win_y(event.pointer_y),
             grid_gap, input_text.c_str());
@@ -223,7 +223,7 @@ void mainloop() {
 
     const uint64_t t = pixel::getElapsedMillisecond(); // [ms]
     const float dt = (float)( t - t_last ) / 1000.0f; // [s]
-    const float dt_exp = 1.0f / (float)pixel::display_frames_per_sec; // [s]
+    const float dt_exp = 1.0f / (float)pixel::monitor_fps(); // [s]
     const float dt_diff = (float)( dt_exp - dt ) * 1000.0f; // [ms]
     t_last = t;
 

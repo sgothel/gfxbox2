@@ -313,7 +313,7 @@ void mainloop() {
     const point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
 
-    float fps = get_gpu_fps();
+    float fps = gpu_avg_fps();
     hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
                     "fps %f, td %d [ms], energie %f, adeg %3.3f, points %d, ball %d",
                     fps, t1, player.velocity(), player.adeg(), player.score(), player.ball());
@@ -359,7 +359,7 @@ int main(int argc, char *argv[])
     int window_width = 1920, window_height = 1000;
     float adeg=0, velocity=1;
     bool auto_shoot = false;
-    pixel::forced_fps = 30;
+    pixel::set_gpu_forced_fps(30);
     #if defined(__EMSCRIPTEN__)
         window_width = 1024, window_height = 576; // 16:9
     #endif
@@ -374,7 +374,7 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-debug_gfx", argv[i]) ) {
                 debug_gfx = true;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
-                pixel::forced_fps = atoi(argv[i+1]);
+                pixel::set_gpu_forced_fps(atoi(argv[i+1]));
                 ++i;
             } else if( 0 == strcmp("-adeg", argv[i]) && i+1<argc) {
                 adeg = static_cast<float>( std::atof(argv[i+1]) );
@@ -397,7 +397,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(0, "Usage %s -1p -width <int> -height <int> "
                                       " -debug_gfx -show_velo\n", argv[0]);
         pixel::log_printf(0, "- win size %d x %d\n", window_width, window_height);
-        pixel::log_printf(0, "- forced_fps %d\n", pixel::forced_fps);
+        pixel::log_printf(0, "- forced_fps %d\n", pixel::gpu_forced_fps());
         pixel::log_printf(0, "- debug_gfx %d\n", debug_gfx);
     }
     {

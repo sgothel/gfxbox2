@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
         // resized = event.has_and_clr( pixel::input_event_type_t::WINDOW_RESIZED );
 
         if( true ) {
-            float fps = pixel::get_gpu_fps();
+            float fps = pixel::gpu_avg_fps();
             texts.push_back( pixel::make_text(tl_text, 0, text_color,
                     "fps "+std::to_string(fps)+", "+(event.paused()?"paused":"animating")));
             texts.push_back( pixel::make_text(tl_text, 1, text_color,

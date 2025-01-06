@@ -107,7 +107,7 @@ void mainloop() {
     pixel::clear_pixel_fb(255, 255, 255, 255);
 
     pixel::texture_ref hud_text = pixel::make_text_texture("td %s, fps %2.2f, rho %.2f",
-            pixel::to_decstring(t1, ',', 9).c_str(), pixel::get_gpu_fps(), rho);
+            pixel::to_decstring(t1, ',', 9).c_str(), pixel::gpu_avg_fps(), rho);
 
     for(ball_ref_t &g : ball_list) {
         g->tick(dt);
@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-debug_gfx", argv[i]) ) {
                 debug_gfx = true;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
-                pixel::forced_fps = atoi(argv[i+1]);
+                pixel::set_gpu_forced_fps(atoi(argv[i+1]));
                 ++i;
             } else if( 0 == strcmp("-no_vsync", argv[i]) ) {
                 enable_vsync = false;
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
-        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::forced_fps);
+        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
         pixel::log_printf(elapsed_ms, "- rho %f\n", rho);
     }
 

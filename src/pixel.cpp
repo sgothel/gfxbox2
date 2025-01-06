@@ -40,8 +40,7 @@ int pixel::fb_height=0;
 int pixel::fb_max_x=0;
 int pixel::fb_max_y=0;
 pixel::pixel_buffer_t pixel::fb_pixels;
-int pixel::display_frames_per_sec=60;
-int pixel::forced_fps = -1;
+static int forced_fps = -1;
 int pixel::font_height = 24;
 
 pixel::cart_coord_t pixel::cart_coord;
@@ -109,6 +108,14 @@ void pixel::log_printf(const char * format, ...) noexcept {
     vfprintf(stderr, format, args);
     va_end (args);
 }
+
+//
+//
+//
+
+int pixel::gpu_forced_fps() noexcept { return forced_fps; }
+
+void pixel::set_gpu_forced_fps(int fps) noexcept { forced_fps=fps; }
 
 //
 //

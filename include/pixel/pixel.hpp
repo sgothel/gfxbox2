@@ -174,10 +174,6 @@ namespace pixel {
     extern int fb_max_y;
     typedef std::vector<uint32_t> pixel_buffer_t; // 32-bit pixel
     extern pixel_buffer_t fb_pixels;
-    /** Display frames per seconds */
-    extern int display_frames_per_sec;
-    /** Optional custom forced frames per seconds, pass to swap_gpu_buffer() by default. */
-    extern int forced_fps;
     extern int font_height;
 
     /**
@@ -732,6 +728,25 @@ namespace pixel {
     // gfx toolkit dependent API
     //
 
+    /** Monitor frames per seconds */
+    int monitor_fps() noexcept;
+
+    /**
+     * Returns optional forced frames per seconds or -1 if unset, set via set_gpu_forced_fps().
+     * Passed to swap_gpu_buffer() by default.
+     */
+    int gpu_forced_fps() noexcept;
+
+    /** Optional forced frames per seconds, pass to swap_gpu_buffer() by default. */
+    void set_gpu_forced_fps(int fps) noexcept;
+
+    /** Returns expected fps, either gpu_forced_fps() if set, otherwise monitor_fps(). */
+    inline int expected_fps() noexcept { int v=gpu_forced_fps(); return v>0?v:monitor_fps(); }
+    /** Returns the measured gpu frame duration in [s] */
+    inline float expected_framedur() noexcept {
+        return 1.0f/float(expected_fps());
+    }
+
     bool is_gfx_subsystem_initialized() noexcept;
     /** GFX Toolkit: Initialize a window of given size with a usable framebuffer. */
     bool init_gfx_subsystem(const char* title, int window_width, int window_height, const float origin_norm[2],
@@ -739,10 +754,16 @@ namespace pixel {
     /** GFX Toolkit: Clear the soft-framebuffer. */
     void clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
     /** GFX Toolkit: Copy the soft-framebuffer to the GPU back-buffer, if swap_buffer is true (default) also swap_gpu_buffer(). */
-    void swap_pixel_fb(const bool swap_buffer=true, int fps=forced_fps) noexcept;
+    void swap_pixel_fb(const bool swap_buffer=true, int fps=gpu_forced_fps()) noexcept;
     /** GFX Toolkit: Swap GPU back to front framebuffer while maintaining vertical monitor synchronization if possible. */
-    void swap_gpu_buffer(int fps=forced_fps) noexcept;
-    float get_gpu_fps() noexcept;
+    void swap_gpu_buffer(int fps=gpu_forced_fps()) noexcept;
+    /** Returns the measured gpu fps each 5s, starting with monitor_fps() */
+    float gpu_avg_fps() noexcept;
+    /** Returns the measured gpu frame duration in [s] each 5s, starting with 1/monitor_fps() */
+    inline float gpu_avg_framedur() noexcept {
+        const float fps = gpu_avg_fps();
+        return fps > 0 ? 1.0f/fps : 0;
+    }
 
     texture_ref make_text_texture(const std::string& text) noexcept;
 

@@ -1105,7 +1105,7 @@ void mainloop() {
     pixel::set_pixel_color(255, 255, 255, 255);
     sun->draw();
 
-    float fps = pixel::get_gpu_fps();
+    float fps = pixel::gpu_avg_fps();
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     pixel::texture_ref hud_text;
     {
@@ -1182,7 +1182,7 @@ int main(int argc, char *argv[])
                 ++i;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
                 fps_set = true;
-                pixel::forced_fps = atoi(argv[i+1]);
+                pixel::set_gpu_forced_fps(atoi(argv[i+1]));
                 ++i;
             } else if( 0 == strcmp("-no_vsync", argv[i]) ) {
                 enable_vsync = false;
@@ -1207,7 +1207,7 @@ int main(int argc, char *argv[])
             }
         }
         if( !fps_set && !use_subsys_primitives ) {
-            pixel::forced_fps = 30;
+            pixel::set_gpu_forced_fps(30);
         }
     }
     {
@@ -1218,7 +1218,7 @@ int main(int argc, char *argv[])
         pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
         pixel::log_printf(elapsed_ms, "- subsys_primitives %d\n", use_subsys_primitives);
         pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
-        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::forced_fps);
+        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
         pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         pixel::log_printf(elapsed_ms, "- show_ship_velo %d\n", show_ship_velo);
         pixel::log_printf(elapsed_ms, "- players %d\n", player_count);
