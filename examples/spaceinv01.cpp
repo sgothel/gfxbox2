@@ -90,7 +90,8 @@ constexpr static float base_height = 8.0f; // [m]
 constexpr static float bunk_width = 22.0f;
 // constexpr static float bunk_height = 16.0f;
 
-constexpr static float base_peng_velo = field_height / 1.5f; // [m/s]
+constexpr static float base_velo_h = 1.0f*60.0f; // 1 pixel per frame, half of max single alien speed
+constexpr static float base_peng_velo = field_height / 1.0f; // approx 1s for field
 constexpr static int base_peng_inventory_max = 1;
 
 constexpr static int aliens_per_row = 11;
@@ -619,13 +620,18 @@ class peng_t {
         return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
     }
 
-    bool tick(const float dt) noexcept {
-        m_atex.tick(dt);
+    bool tick(const float /*dt*/) noexcept {
+        const float avg_fd = pixel::gpu_avg_framedur();
+        m_atex.tick(avg_fd);
         if( !box().inside(field_box) ) {
             return false;
         }
         if(!m_velo.is_zero()){
-            m_bl += m_velo * dt;
+            const pixel::f2::vec_t dxy = m_velo * avg_fd;
+            m_bl += dxy;
+            if( false && m_owner == base_id ) {
+                pixel::log_printf("XX: peng: v %s, dt %f, dxy %s\n", m_velo.toString().c_str(), avg_fd, dxy.toString().c_str());
+            }
         }
         return !check_alien_hit() && !check_bunker_hit();
     }
@@ -710,9 +716,8 @@ class base_t {
             if(peng_inventory > 0){
                 // adjust start posision to geometric base model
                 constexpr float x_adjust = 0.5f;
-                pixel::f2::point_t bl = {m_bl.x + m_dim.x/2.0f + x_adjust - float(tex_peng[0]->width),
-                                         m_bl.y + m_dim.y};
-                pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(base_peng_velo + 10.0f * (float)level, 90_deg);
+                pixel::f2::point_t bl = {m_bl.x + m_dim.x/2.0f + x_adjust - float(tex_peng[0]->width), m_bl.y };
+                pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(base_peng_velo, 90_deg);
                 pengs.emplace_back(bl, v_p, base_id, pixel::animtex_t("peng", peng_t::anim_period, tex_peng));
                 --peng_inventory;
                 audio_peng->play();
@@ -818,19 +823,22 @@ class player_t {
             m_base->draw();
         }
         void handle_event0() noexcept {
-            if( !m_base->is_killed() && event.has_any_p1() ) {
-                if( event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
+        }
+        void handle_event1(const float /* dt [s] */) noexcept {
+            if( m_base->is_killed() ) {
+                return;
+            }
+            const float avg_fd = pixel::gpu_avg_framedur();
+            if( event.has_any_p2() ) {
+                if( event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
                     m_base->peng();
                 }
             }
-        }
-        void handle_event1(const float dt /* [s] */) noexcept {
-            const float v = 35.0f;
-            if( !m_base->is_killed() && event.has_any_p1() ) {
+            if( event.has_any_p1() ) {
                 if( event.pressed(pixel::input_event_type_t::P1_LEFT) ){
-                    m_base->move( { -v * dt, 0 } );
+                    m_base->move( { -base_velo_h * avg_fd, 0 } );
                 } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
-                    m_base->move( { v * dt, 0 } );
+                    m_base->move( { base_velo_h * avg_fd, 0 } );
                 }
             }
         }
