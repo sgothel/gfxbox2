@@ -602,18 +602,24 @@ namespace pixel {
             /** update texture */
             void update(const bitmap_ref& bmap) noexcept;
 
-            /// draw using FB coordinates and dimension
+            /// draw using FB coordinates and dimension, 0/0 is top-left
             void draw_raw(const uint32_t fb_x, const uint32_t fb_y, const uint32_t fb_w, const uint32_t fb_h) const noexcept;
-            /// draw using FB coordinates and optional scale
+            /// draw using FB coordinates and optional scale, 0/0 is top-left
             void draw_fbcoord(const uint32_t x_pos, const uint32_t y_pos, const float scale_x=1.0f, const float scale_y=1.0f) const noexcept {
                 draw_raw(x_pos + dest_x, y_pos + dest_y,
                          round_to_int((float)width*dest_sx*scale_x),
                          round_to_int((float)height*dest_sy*scale_y));
             }
-            /// draw using cartesian coordinates and dimension
+            /// draw using cartesian coordinates and dimension, 0/0 is top-left
             void draw(const float x_pos, const float y_pos, const float w, const float h) const noexcept {
                 draw_raw(pixel::cart_coord.to_fb_x( x_pos ), pixel::cart_coord.to_fb_y( y_pos ),
                          pixel::cart_coord.to_fb_dy(w), pixel::cart_coord.to_fb_dy(h));
+            }
+
+            /// draw using cartesian coordinates with scaled texture-source-dimension to FB, 0/0 is top-left
+            void draw(const float x_pos, const float y_pos) const noexcept {
+                draw_raw(pixel::cart_coord.to_fb_x( x_pos ), pixel::cart_coord.to_fb_y( y_pos ),
+                         pixel::cart_coord.to_fb_dy(float(width)), pixel::cart_coord.to_fb_dy(float(height)));
             }
 
             std::string toString() const noexcept {
@@ -715,18 +721,18 @@ namespace pixel {
             void tick(const float dt) noexcept;
             void next() noexcept;
 
-            /// draw using cartesian coordinates and dimension
+            /// draw using cartesian coordinates and dimension, 0/0 is top-left
             void draw(const float x_pos, const float y_pos, const float w, const float h) const noexcept {
                 texture_ref tex = texture();
                 if( nullptr != tex ) {
                     tex->draw(x_pos, y_pos, w, h);
                 }
             }
-            /// draw using cartesian coordinates with scaled texture-source-dimension to FB
+            /// draw using cartesian coordinates with scaled texture-source-dimension to FB, 0/0 is top-left
             void draw(const float x_pos, const float y_pos) const noexcept {
                 texture_ref tex = texture();
                 if( nullptr != tex ) {
-                    tex->draw(x_pos, y_pos, (float)tex->width, (float)tex->height);
+                    tex->draw(x_pos, y_pos);
                 }
             }
 
