@@ -270,6 +270,54 @@ static bool load_textures() {
     return true;
 }
 
+class sprite_t {
+    private:
+        pixel::animtex_t m_atex;
+        float m_duration;
+        pixel::f2::point_t m_bl;
+        pixel::f2::vec_t m_dim;
+  public:
+
+    sprite_t(const pixel::f2::point_t& bl, pixel::animtex_t atex, float duration) noexcept
+    : m_atex(std::move(atex)), m_duration(duration),
+      m_bl( bl ), m_dim((float)m_atex.width(), (float)m_atex.height())
+    { }
+
+    pixel::f2::aabbox_t box() const noexcept {
+        return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
+    }
+
+    /// Returns bottom-left position
+    pixel::f2::point_t pos() const noexcept { return m_bl; }
+
+    bool tick(const float dt) noexcept {
+        m_atex.tick(dt);
+        if( 0 < m_duration ) {
+            m_duration -= dt;
+            if( 0 >= m_duration ) {
+                m_atex.clear();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void draw() const noexcept {
+        m_atex.draw(m_bl.x, m_bl.y+m_dim.y);
+    }
+
+    bool on_screen(){
+        return box().inside(field_box);
+    }
+
+    bool intersection(const pixel::f2::aabbox_t& o) const {
+        return box().intersects(o);
+    }
+
+    pixel::animtex_t& atex() { return m_atex; }
+};
+std::vector<sprite_t> extra_sprites;
+
 class alient_t {
   private:
     int m_value;
@@ -280,7 +328,7 @@ class alient_t {
 
   public:
 
-    alient_t(int value, pixel::animtex_t atex_alien, const pixel::f2::point_t& bl) noexcept
+    alient_t(int value, const pixel::f2::point_t& bl, pixel::animtex_t atex_alien) noexcept
     : m_value(value), m_atex(std::move(atex_alien)),
       m_bl( bl ), m_dim((float)m_atex.width(), (float)m_atex.height())
     { }
@@ -368,7 +416,7 @@ class alien_group_t {
             // bl.x = field_box.bl.x + float( tex_alien1[0]->width - tex_alien3[0]->width )/2.0f;
             bl.x = field_box.bl.x + 1.0f;
             for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(30, pixel::animtex_t("Alien3", m_sec_step_delay, tex_alien3), bl));
+                m_actives.emplace_back(std::make_shared<alient_t>(30, bl, pixel::animtex_t("Alien3", m_sec_step_delay, tex_alien3)));
                 m_box.resize(m_actives[m_actives.size()-1]->box());
                 bl.x += cell_width * 1.5f;
             }
@@ -377,7 +425,7 @@ class alien_group_t {
         for(int y=0; y<2; ++y) {
             bl.x = field_box.bl.x;
             for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(20, pixel::animtex_t("Alien2", m_sec_step_delay, tex_alien2), bl));
+                m_actives.emplace_back(std::make_shared<alient_t>(20, bl, pixel::animtex_t("Alien2", m_sec_step_delay, tex_alien2)));
                 m_box.resize(m_actives[m_actives.size()-1]->box());
                 bl.x += cell_width * 1.5f;
             }
@@ -386,7 +434,7 @@ class alien_group_t {
         for(int y=0; y<2; ++y) {
             bl.x = field_box.bl.x;
             for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(10, pixel::animtex_t("Alien1", m_sec_step_delay, tex_alien1), bl));
+                m_actives.emplace_back(std::make_shared<alient_t>(10, bl, pixel::animtex_t("Alien1", m_sec_step_delay, tex_alien1)));
                 bl.x += cell_width * 1.5f;
             }
             bl.y -=  2.0f * cell_height;
@@ -624,6 +672,10 @@ class peng_t {
         const float avg_fd = pixel::gpu_avg_framedur();
         m_atex.tick(avg_fd);
         if( !box().inside(field_box) ) {
+            if( m_owner == base_id ) {
+                pixel::f2::point_t bl = {m_bl.x + m_dim.x/2.0f - float(tex_redX[0]->width)/2.0f, m_bl.y };
+                extra_sprites.emplace_back( bl, pixel::animtex_t("peng", 1.0f, tex_redX), 0.5f );
+            }
             return false;
         }
         if(!m_velo.is_zero()){
@@ -653,6 +705,7 @@ class peng_t {
 std::vector<peng_t> pengs;
 
 void reset_items() {
+    extra_sprites.clear();
     bunks.clear();
     bunks.emplace_back(0, bunk1_bl);
     bunks.emplace_back(1, bunk2_bl);
@@ -939,17 +992,15 @@ void mainloop() {
         alien_group.tick(dt);
 
         // pengs tick
-        {
-            for(auto it = pengs.begin(); it != pengs.end(); ) {
-                peng_t& p = *it;
-                if( p.tick(dt) ) {
-                    ++it;
-                } else {
-                    if(p.m_owner == base_id){
-                        p1.peng_completed(p);
-                    }
-                    it = pengs.erase(it);
+        for(auto it = pengs.begin(); it != pengs.end(); ) {
+            peng_t& p = *it;
+            if( p.tick(dt) ) {
+                ++it;
+            } else {
+                if(p.m_owner == base_id){
+                    p1.peng_completed(p);
                 }
+                it = pengs.erase(it);
             }
         }
         if( !p1.is_killed() ) {
@@ -957,6 +1008,14 @@ void mainloop() {
             if(peng_time <= 0){
                 peng_from_alien();
                 peng_time = pixel::next_rnd(min_peng_time, max_peng_time-(float)level*50_ms-level_time/2_min);
+            }
+        }
+        for(auto it = extra_sprites.begin(); it != extra_sprites.end(); ) {
+            sprite_t& s = *it;
+            if( s.tick(dt) ) {
+                ++it;
+            } else {
+                it = extra_sprites.erase(it);
             }
         }
     }
@@ -982,10 +1041,12 @@ void mainloop() {
     for(auto & bunk : bunks) {
         bunk.draw();
     }
-    // printf("XXX: aliens %zu\n", aliens.size());
     alien_group.draw();
     for(auto & peng : pengs) {
         peng.draw();
+    }
+    for(auto & s : extra_sprites) {
+        s.draw();
     }
 
     {
