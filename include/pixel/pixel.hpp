@@ -147,6 +147,15 @@ namespace pixel {
 
     float next_rnd() noexcept;
 
+    inline float next_rnd(float min, float max) noexcept {
+        return next_rnd() * float(max - min) + float(min);
+    }
+    template <typename T,
+              std::enable_if_t< std::is_integral_v<T> && std::is_unsigned_v<T>, bool> = true>
+    T next_rnd(T min, T max) noexcept {
+        return (T)std::round(next_rnd() * float(max - min) + float(min));
+    }
+
     enum class orientation_t {
         /** Collinear **/
         COL,

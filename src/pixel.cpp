@@ -50,15 +50,17 @@ uint32_t pixel::draw_color = 0;
 static std::random_device rng;
 
 constexpr float rng_to_norm(float v) noexcept {
-    constexpr float a = (float)std::random_device::min();
-    constexpr float b = (float)std::random_device::max();
-    return (v - a) / (b - a);
+    // std::random_device::result_type integral integer type
+    constexpr std::random_device::result_type a = std::random_device::min();
+    constexpr std::random_device::result_type b = std::random_device::max();
+    return float(v - a) / float(b - a);
 }
 
 constexpr float rng_from_norm(float v) noexcept {
-    constexpr float a = (float)std::random_device::min();
-    constexpr float b = (float)std::random_device::max();
-    return v * (b - a) + a;
+    // std::random_device::result_type integral integer type
+    constexpr std::random_device::result_type a = std::random_device::min();
+    constexpr std::random_device::result_type b = std::random_device::max();
+    return v * float(b - a) + float(a);
 }
 
 float pixel::next_rnd() noexcept {
