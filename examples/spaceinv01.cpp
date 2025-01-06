@@ -136,13 +136,13 @@ static audio_sample_ref audio_peng, audio_alienX, audio_baseX;
 static bool load_samples() {
     audio_aliens.clear();
     if( jau::audio::is_audio_subsystem_initialized() ) {
-        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien1.wav", false) );
-        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien2.wav", false) );
-        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien3.wav", false) );
-        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien4.wav", false) );
-        audio_peng = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/peng.wav", false);
-        audio_alienX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alienX.wav", false);
-        audio_baseX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/baseX.wav", false);
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien1.wav", false, MIX_MAX_VOLUME) );
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien2.wav", false, MIX_MAX_VOLUME) );
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien3.wav", false, MIX_MAX_VOLUME) );
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien4.wav", false, MIX_MAX_VOLUME) );
+        audio_peng = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/peng.wav", false, MIX_MAX_VOLUME/4);
+        audio_alienX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alienX.wav", false, MIX_MAX_VOLUME/4);
+        audio_baseX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/baseX.wav", false, MIX_MAX_VOLUME);
         return true;
     } else {
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>() );
