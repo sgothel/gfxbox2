@@ -46,20 +46,24 @@ static pixel::input_event_t event;
 /**
  * Space Invaders (1978 by Taito)
  *
- * - Space   224 x 256
- * - Field   204 x 184  (w: min-max, h: base -> mothership)
- * - base    [16..185]  base horizontal range
- * - Alien-1  12 x   8
- * - Alien-2  11 x   8
- * - Alien-3   8 x   8
- * - Alien-X  13 x   8
- * - Alien-S   3 x   7  (shot sets 2x3)
- * - Red-X     8 x   8
- * - Base     13 x   8  (incl. explosions 1-3)
- * - peng      1 x   4
- * - Bunker   22 x  16  (aspect 1.375) 1: 32/192, 2: 77/192, 3: 122/192, 4: 176/192
- * - Aline-M  16 x   8  (mothership)
- * - Peng      1 x   4
+ * - Playfield Area
+ *   - Origin bottom-left (orig hardware coordinate system)
+ *   - Screen  224 x 256
+ *   - Field   204 x 216  (w: min-max, h: base -> mothership)
+ *   - Base    [16..185]  base horizontal range
+ *   - Bunker  1: 32/50, 2: 77/50, 3: 122/50, 4: 167/50
+ * - Object Dimension
+ *   - Alien-1  12 x   8
+ *   - Alien-2  11 x   8
+ *   - Alien-3   8 x   8
+ *   - Alien-X  13 x   8
+ *   - Alien-S   3 x   7  (shot sets 2x3)
+ *   - Red-X     8 x   8
+ *   - Base     13 x   8  (incl. explosions 1-3)
+ *   - peng      1 x   4
+ *   - Bunker   22 x  16  (aspect 1.375)
+ *   - Aline-M  16 x   8  (mothership at y=206)
+ *   - Peng      1 x   4
  *
  * Orig hardware vs this code:
  * - Rendering 1 frame is done at 60Hz (fps) after vsync
@@ -71,12 +75,13 @@ static pixel::input_event_t event;
  *   - This `emulation` renders all at once, but paused 1/60*N for N aliens,
  *     giving proper group movement, removes artifacts and simplifies code
 */
-constexpr static float space_width = 224.0f; // [m]
-constexpr static float space_height = 256.0f; // [m]
-constexpr static float space_width_pct = space_width / space_height;
-
+constexpr static float screen_width = 224.0f; // [m]
+constexpr static float screen_height = 256.0f; // [m]
+constexpr static float screen_width_pct = screen_width / screen_height;
+constexpr float scrn2cartx(const float v) noexcept { return v - screen_width/2.0f; }
+constexpr float scrn2carty(const float v) noexcept { return v - screen_height/2.0f; }
 constexpr static float field_width = 204.0f; // [m]
-constexpr static float field_height = 188.0f; // [m]
+constexpr static float field_height = 216.0f; // [m]
 static const pixel::f2::aabbox_t field_box( { -field_width/2.0, -field_height/2.0 }, { field_width/2.0, field_height/2.0 } ); // gcc bug 93413 (constexpr, solved in gcc 13)
 
 constexpr static float base_width = 13.0f; // [m]
@@ -99,12 +104,12 @@ constexpr static int aliens_total_default = aliens_rows * aliens_per_row;
 constexpr static pixel::f2::vec_t alien_max_velo( 2.0f*60.0f, -8.0f); // ([1/s], [1])
 constexpr static float alien_explosion_d = 16.0f/60.f; // [s], 16 frames @ 60fps
 
-constexpr static pixel::f2::point_t bunk1_tl( -80, -62 );
-constexpr static pixel::f2::point_t bunk2_tl( -35, -62 );
-constexpr static pixel::f2::point_t bunk3_tl(  10, -62 );
-constexpr static pixel::f2::point_t bunk4_tl(  55, -62 );
+constexpr static pixel::f2::point_t bunk1_bl( scrn2cartx( 32), scrn2carty(50) );
+constexpr static pixel::f2::point_t bunk2_bl( scrn2cartx( 77), scrn2carty(50) );
+constexpr static pixel::f2::point_t bunk3_bl( scrn2cartx(122), scrn2carty(50) );
+constexpr static pixel::f2::point_t bunk4_bl( scrn2cartx(167), scrn2carty(50) );
 
-static const pixel::f2::aabbox_t base_box( { bunk1_tl.x-base_width, -field_height/2.0 }, { bunk4_tl.x+bunk_width+base_width, field_height/2.0 } );
+static const pixel::f2::aabbox_t base_box( { scrn2cartx(16), -field_height/2.0f +base_height*2.0f }, { scrn2cartx(185)+base_width, field_height/2.0f } );
 
 //
 //
@@ -115,7 +120,7 @@ static float alien_velo_amp = 1.0f;
 constexpr static int base_id = 1;
 constexpr static int alien_id = 2;
 
-// static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
+static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
 static const uint8_t rgba_yellow[/*4*/] = { 255, 255, 0, 255 };
 // static const uint8_t rgba_red[/*4*/] = { 255, 0, 0, 255 };
 static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
@@ -268,27 +273,28 @@ class alient_t {
   private:
     int m_value;
     pixel::animtex_t m_atex;
+    pixel::f2::point_t m_bl;
     pixel::f2::vec_t m_dim;
     float m_killanim_d = 0;
 
   public:
-    pixel::f2::point_t m_tl;
 
-    alient_t(int value, pixel::animtex_t atex_alien, const pixel::f2::point_t& center) noexcept
+    alient_t(int value, pixel::animtex_t atex_alien, const pixel::f2::point_t& bl) noexcept
     : m_value(value), m_atex(std::move(atex_alien)),
-      m_dim((float)m_atex.width(), (float)m_atex.height()),
-      m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) )
+      m_bl( bl ), m_dim((float)m_atex.width(), (float)m_atex.height())
     { }
 
     pixel::f2::aabbox_t box() const noexcept {
-        return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
+        return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
     }
 
+    /// Returns bottom-left position
+    pixel::f2::point_t pos() const noexcept { return m_bl; }
     constexpr int value() const noexcept { return m_value; }
 
     void tick_step(const pixel::f2::vec_t& d) noexcept {
         m_atex.next();
-        m_tl += d;
+        m_bl += d;
     }
 
     void notify_killed() {
@@ -310,7 +316,12 @@ class alient_t {
     }
 
     void draw() const noexcept {
-        m_atex.draw(m_tl.x, m_tl.y);
+        m_atex.draw(m_bl.x, m_bl.y+m_dim.y);
+        if( debug_gfx ) {
+            pixel::set_pixel_color(rgba_yellow);
+            pixel::f2::rect_t r({m_bl.x, m_bl.y+m_dim.y}, m_dim.x, m_dim.y);
+            r.draw();
+        }
     }
 
     bool on_screen(){
@@ -350,33 +361,34 @@ class alien_group_t {
         m_actives.reserve(aliens_total);
         m_current_idx = 0;
         m_box.reset();
-        pixel::f2::point_t p = field_box.bl;
-        p.y = 2.0f * cell_height * aliens_rows;
+        pixel::f2::point_t bl = field_box.bl;
+        bl.y = 2.0f * cell_height * aliens_rows - cell_height;
         for(int y=0; y<1; ++y) {
-            p.x = field_box.bl.x + cell_width/2.0f;
+            // bl.x = field_box.bl.x + float( tex_alien1[0]->width - tex_alien3[0]->width )/2.0f;
+            bl.x = field_box.bl.x + 1.0f;
             for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(30, pixel::animtex_t("Alien3", m_sec_step_delay, tex_alien3), p));
+                m_actives.emplace_back(std::make_shared<alient_t>(30, pixel::animtex_t("Alien3", m_sec_step_delay, tex_alien3), bl));
                 m_box.resize(m_actives[m_actives.size()-1]->box());
-                p.x += cell_width * 1.5f;
+                bl.x += cell_width * 1.5f;
             }
-            p.y -=  2.0f * cell_height;
+            bl.y -=  2.0f * cell_height;
         }
         for(int y=0; y<2; ++y) {
-            p.x = field_box.bl.x + cell_width/2.0f;
+            bl.x = field_box.bl.x;
             for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(20, pixel::animtex_t("Alien2", m_sec_step_delay, tex_alien2), p));
+                m_actives.emplace_back(std::make_shared<alient_t>(20, pixel::animtex_t("Alien2", m_sec_step_delay, tex_alien2), bl));
                 m_box.resize(m_actives[m_actives.size()-1]->box());
-                p.x += cell_width * 1.5f;
+                bl.x += cell_width * 1.5f;
             }
-            p.y -=  2.0f * cell_height;
+            bl.y -=  2.0f * cell_height;
         }
         for(int y=0; y<2; ++y) {
-            p.x = field_box.bl.x + cell_width/2.0f;
+            bl.x = field_box.bl.x;
             for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(10, pixel::animtex_t("Alien1", m_sec_step_delay, tex_alien1), p));
-                p.x += cell_width * 1.5f;
+                m_actives.emplace_back(std::make_shared<alient_t>(10, pixel::animtex_t("Alien1", m_sec_step_delay, tex_alien1), bl));
+                bl.x += cell_width * 1.5f;
             }
-            p.y -=  2.0f * cell_height;
+            bl.y -=  2.0f * cell_height;
         }
         m_delay_left = m_sec_step_delay * float(active_count());
     }
@@ -444,8 +456,9 @@ class alien_group_t {
         {
             pixel::f2::vec_t dxy = { alien_velo_amp * avg_fd * m_velo.x, 0 };
 
+            constexpr float lx_adjust = 1;
             if( (m_velo.x > 0 && m_box.tr.x > field_box.tr.x) ||
-                (m_velo.x < 0 && m_box.bl.x < field_box.bl.x) ) {
+                (m_velo.x < 0 && m_box.bl.x < field_box.bl.x - lx_adjust) ) {
                 m_velo.x *= -1;
                 dxy.x *= -1;
                 dxy.y = m_velo.y;
@@ -462,6 +475,11 @@ class alien_group_t {
             a->draw();
             m_box.resize(a->box());
         }
+        if( debug_gfx ) {
+            pixel::set_pixel_color(rgba_white);
+            pixel::f2::rect_t r({m_box.bl.x, m_box.bl.y+m_box.height()}, m_box.width(), m_box.height());
+            r.draw();
+        }
         for(const alien_ref& a : m_killed){
             a->draw();
         }
@@ -473,7 +491,7 @@ class bunker_t {
   private:
     size_t idx;
     pixel::f2::vec_t m_dim;
-    pixel::f2::point_t m_tl;
+    pixel::f2::point_t m_bl;
     pixel::bitmap_ref m_bunk;
 
     void put_bunk(const pixel::f2::aabbox_t& box, uint32_t abgr) noexcept {
@@ -495,15 +513,15 @@ class bunker_t {
         }
     }
   public:
-    bunker_t(size_t idx_, const pixel::f2::point_t& tl) noexcept
+    bunker_t(size_t idx_, const pixel::f2::point_t& bl) noexcept
     : idx(idx_), m_dim((float)tex_bunk[idx]->width, (float)tex_bunk[idx]->height),
-      m_tl(tl), m_bunk(bmp_bunk->clone())
+      m_bl(bl), m_bunk(bmp_bunk->clone())
     {
         tex_bunk[idx]->update(m_bunk);
     }
 
     pixel::f2::aabbox_t box() const noexcept {
-        return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
+        return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
     }
 
     bool hit(pixel::f2::aabbox_t& hitbox, pixel::f2::vec_t amp={0, 0} ) {
@@ -525,8 +543,8 @@ class bunker_t {
         // printf("XXX bunk.hit: ibox1.1 %s\n", ibox.toString().c_str());
         ibox.bl.x = std::max(0.0f, ibox.bl.x - ibox.width() * amp.x);
         ibox.bl.y = std::max(0.0f, ibox.bl.y - ibox.height() * amp.y);
-        ibox.tr.x += ibox.width() * amp.x ;
-        ibox.tr.y += ibox.height() * amp.y ;
+        ibox.tr.x += ibox.width() * amp.x * 2.5f;
+        ibox.tr.y += ibox.height() * amp.y * 2.5f;
         // printf("XXX bunk.hit: ibox1.2 %s, amp %s\n", ibox.toString().c_str(), amp.toString().c_str());
         if( m_bunk->equals(ibox, clrpix) ) {
             // printf("XXX bunk.hit: clear -> false\n");
@@ -537,7 +555,7 @@ class bunker_t {
         return true;
     }
     void draw() const noexcept {
-        tex_bunk[idx]->draw(m_tl.x, m_tl.y, m_dim.x, m_dim.y);
+        tex_bunk[idx]->draw(m_bl.x, m_bl.y + m_dim.y);
     }
 
     bool on_screen(){
@@ -557,13 +575,13 @@ struct hit_result{
 class peng_t {
   private:
     pixel::animtex_t m_atex;
+    pixel::f2::point_t m_bl;
     pixel::f2::vec_t m_dim;
-    pixel::f2::point_t m_tl;
+    pixel::f2::vec_t m_velo; // [m/s]
     int m_alien_hit_value;
 
   public:
     constexpr static float anim_period = 0.03f; // 0.025f;
-    pixel::f2::vec_t m_velo; // [m/s]
     int m_owner;
 
   private:
@@ -591,15 +609,14 @@ class peng_t {
     }
 
   public:
-    peng_t(const pixel::f2::point_t& center, const pixel::f2::vec_t& v, const int owner, pixel::animtex_t atex) noexcept
-    : m_atex(std::move(atex)),
-      m_dim((float)m_atex.width(), (float)m_atex.height()),
-      m_tl( center + pixel::f2::point_t(-m_dim.x/2, +m_dim.y/2) ),
-      m_alien_hit_value(0), m_velo( v ), m_owner(owner)
+    peng_t(const pixel::f2::point_t& bl, const pixel::f2::vec_t& v, const int owner, pixel::animtex_t atex) noexcept
+    : m_atex(std::move(atex)), m_bl( bl ),
+      m_dim((float)m_atex.width(), (float)m_atex.height()), m_velo( v ),
+      m_alien_hit_value(0), m_owner(owner)
     { }
 
     pixel::f2::aabbox_t box() const noexcept {
-        return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
+        return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
     }
 
     bool tick(const float dt) noexcept {
@@ -608,13 +625,13 @@ class peng_t {
             return false;
         }
         if(!m_velo.is_zero()){
-            m_tl += m_velo * dt;
+            m_bl += m_velo * dt;
         }
         return !check_alien_hit() && !check_bunker_hit();
     }
 
     void draw() const noexcept {
-        m_atex.draw(m_tl.x, m_tl.y, m_dim.x, m_dim.y);
+        m_atex.draw(m_bl.x, m_bl.y + m_dim.y);
     }
 
     bool on_screen(){
@@ -631,10 +648,10 @@ std::vector<peng_t> pengs;
 
 void reset_items() {
     bunks.clear();
-    bunks.emplace_back(0, bunk1_tl);
-    bunks.emplace_back(1, bunk2_tl);
-    bunks.emplace_back(2, bunk3_tl);
-    bunks.emplace_back(3, bunk4_tl);
+    bunks.emplace_back(0, bunk1_bl);
+    bunks.emplace_back(1, bunk2_bl);
+    bunks.emplace_back(2, bunk3_bl);
+    bunks.emplace_back(3, bunk4_bl);
     alien_group.reset();
     pengs.clear();
 }
@@ -645,8 +662,8 @@ class base_t {
 
     private:
         pixel::animtex_t m_atex;
+        pixel::f2::point_t m_bl;
         pixel::f2::vec_t m_dim;
-        pixel::f2::point_t m_tl, m_tc;
         bool m_killed;
 
         bool check_hit() {
@@ -656,7 +673,7 @@ class base_t {
             pixel::f2::aabbox_t b = box();
             for(auto it = pengs.begin(); it != pengs.end(); ) {
                 peng_t& a = *it;
-                if( !a.box().intersects(b) ) {
+                if( a.m_owner == base_id || !a.box().intersects(b) ) {
                     ++it;
                 } else {
                     it = pengs.erase(it);
@@ -671,44 +688,42 @@ class base_t {
     public:
         int peng_inventory;
 
-        base_t(const pixel::f2::point_t& top_center) noexcept
-        : m_atex(pixel::animtex_t("peng", 1.0f, tex_base)),
+        base_t(const pixel::f2::point_t& bl) noexcept
+        : m_atex(pixel::animtex_t("peng", 1.0f, tex_base)), m_bl(bl),
           m_dim((float)tex_base[0]->width, (float)tex_base[0]->height),
-          m_tl(top_center.x - m_dim.x/2.0f, top_center.y), m_tc(top_center),
           m_killed(false),
           peng_inventory(base_peng_inventory_max)
         {}
 
-        void reset(const pixel::f2::point_t& top_center){
+        void reset(const pixel::f2::point_t& bl){
             peng_inventory = base_peng_inventory_max;
-            m_tl = {top_center.x - m_dim.x/2.0f, top_center.y};
-            m_tc = top_center;
+            m_bl = bl;
         }
 
         constexpr bool is_killed() const noexcept { return m_killed; }
 
         pixel::f2::aabbox_t box() const noexcept {
-            return pixel::f2::aabbox_t().resize(m_tl).resize(m_tl.x + m_dim.x, m_tl.y - m_dim.y);
+            return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
         }
 
         void peng() noexcept {
             if(peng_inventory > 0){
                 // adjust start posision to geometric base model
-                pixel::f2::point_t p0 = {m_tc.x, m_tc.y + (float)tex_peng[0]->height/2 + 0.05f};
+                constexpr float x_adjust = 0.5f;
+                pixel::f2::point_t bl = {m_bl.x + m_dim.x/2.0f + x_adjust - float(tex_peng[0]->width),
+                                         m_bl.y + m_dim.y};
                 pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(base_peng_velo + 10.0f * (float)level, 90_deg);
-                pengs.emplace_back(p0, v_p, base_id, pixel::animtex_t("peng", peng_t::anim_period, tex_peng));
+                pengs.emplace_back(bl, v_p, base_id, pixel::animtex_t("peng", peng_t::anim_period, tex_peng));
                 --peng_inventory;
                 audio_peng->play();
             }
         }
 
         void move(const pixel::f2::point_t& d) noexcept {
-            m_tl += d;
-            m_tc += d;
+            m_bl += d;
             if( !box().inside(base_box) ) {
                 // pixel::log_printf(0, "XX %s -> %s, %s\n", d.toString().c_str(), box().toString().c_str(), base_box.toString().c_str());
-                m_tl -= d;
-                m_tc -= d;
+                m_bl -= d;
             }
         }
         bool tick(const float dt) noexcept {
@@ -717,7 +732,12 @@ class base_t {
         }
 
         void draw() const noexcept {
-            m_atex.draw(m_tl.x, m_tl.y, m_dim.x, m_dim.y);
+            m_atex.draw(m_bl.x, m_bl.y + m_dim.y);
+            if( debug_gfx ) {
+                pixel::set_pixel_color(rgba_yellow);
+                pixel::f2::rect_t r({m_bl.x, m_bl.y+m_dim.y}, m_dim.x, m_dim.y);
+                r.draw();
+            }
         }
 };
 typedef std::shared_ptr<base_t> base_ref_t;
@@ -736,16 +756,15 @@ class player_t {
             alien_group.set_pause(true);
         }
 
-        pixel::f2::point_t base_startpos() {
-            return {base_box.bl.x + base_width/2, base_box.bl.y + base_height};
-        }
+        /// Returns base bottom-left start-pos
+        pixel::f2::point_t base_start_pos_bl() { return base_box.bl; }
 
         void respawn_base() noexcept {
             if(m_lives <= 0){
                 return;
             }
             m_respawn_timer = 0;
-            m_base = std::make_shared<base_t>(base_startpos());
+            m_base = std::make_shared<base_t>(base_start_pos_bl());
             alien_group.set_pause(false);
         }
 
@@ -765,7 +784,7 @@ class player_t {
             if(!m_base){
                 respawn_base();
             } else {
-                m_base->reset(base_startpos());
+                m_base->reset(base_start_pos_bl());
             }
         }
 
@@ -824,11 +843,11 @@ void peng_from_alien() {
     static int alt = 0;
     std::vector<pixel::texture_ref>& vtex = 0 == alt ? tex_ashot1 : tex_ashot2;
     // adjust start posision to geometric alien model
-    pixel::f2::point_t p0 = {alien->m_tl.x + (float)alien->atex().width()/2,
-                             alien->m_tl.y - (float)alien->atex().height() - 0.05f};
-    p0.add(0, (float)vtex[0]->height/2);
+    constexpr float x_adjust = 1.5f;
+    pixel::f2::point_t bl = {alien->pos().x + (float)alien->atex().width()/2.0f + x_adjust - float(vtex[0]->width),
+                             alien->pos().y - (float)vtex[0]->height};
     pixel::f2::vec_t v_p = pixel::f2::vec_t::from_length_angle(field_height/2 + 10.0f * (float)level, 270_deg);
-    pengs.emplace_back(p0, v_p, alien_id, pixel::animtex_t("ashot", peng_t::anim_period, vtex));
+    pengs.emplace_back(bl, v_p, alien_id, pixel::animtex_t("ashot", peng_t::anim_period, vtex));
     alt = (alt + 1)%2;
 }
 
@@ -871,7 +890,7 @@ void mainloop() {
                 exit(0);
             #endif
         } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
-            pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
+            pixel::cart_coord.set_height(-screen_height/2.0f, screen_height/2.0f);
         } else if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
             reset_items();
             p1.reset();
@@ -938,8 +957,8 @@ void mainloop() {
     // Draw all objects
     if( debug_gfx ) {
         {
-            const float w = space_width - 2;
-            const float h = space_height - 2;
+            const float w = screen_width - 2;
+            const float h = screen_height - 2;
             pixel::set_pixel_color(rgba_yellow);
             pixel::f2::rect_t r({-w/2.0f, +h/2.0f}, w, h);
             r.draw();
@@ -950,18 +969,7 @@ void mainloop() {
             r.draw();
         }
     }
-    {
-        const float abstand_zsl = 5;
-        for(int i = 0; i < p1.lives()-1; ++i){
-            const float w = space_width - 2;
-            const float h = space_height - 2;
-            pixel::f2::rect_t r({-w/2.0f, +h/2.0f}, w, h);
-            base_t l = {{r.m_bl.x + abstand_zsl*(float)(i + 1) +
-            p1_base_box.width()*(float)i + p1_base_box.width()/2,
-            r.m_bl.y + abstand_zsl + p1_base_box.height()}};
-            l.draw();
-        }
-    }
+
     p1.draw();
     for(auto & bunk : bunks) {
         bunk.draw();
@@ -971,6 +979,27 @@ void mainloop() {
     for(auto & peng : pengs) {
         peng.draw();
     }
+
+    {
+        pixel::set_pixel_color(rgba_green);
+        pixel::f2::rect_t r1({-field_width/2.0f, -field_height/2.0f}, field_width, 1.0f);
+        r1.draw(false);
+
+        const float abstand_zsl = 5;
+        for(int i = 0; i < p1.lives()-1; ++i){
+            const float w = screen_width - 2;
+            const float h = screen_height - 2;
+            pixel::f2::rect_t r2( {-w/2.0f, +h/2.0f }, w, h);
+            base_t l = { { r2.m_bl.x + abstand_zsl*(float)(i + 1) +
+                           p1_base_box.width()*(float)i + p1_base_box.width()/2,
+                           r2.m_bl.y + abstand_zsl}};
+            l.draw();
+        }
+    }
+
+    //
+    //
+    //
 
     if(alien_group.active_count() == 0){
         reset_items();
@@ -1024,17 +1053,25 @@ void mainloop() {
 
 int main(int argc, char *argv[])
 {
+    bool use_audio = true;
     int window_height = 1024;
-    int window_width = (int)std::round( (float)window_height * space_width_pct );
+    int window_width = (int)std::round( (float)window_height * screen_width_pct );
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
                 window_height = atoi(argv[i+1]);
-                window_width = (int)std::round( (float)window_height * space_width_pct );
+                window_width = (int)std::round( (float)window_height * screen_width_pct );
                 ++i;
+            } else if( 0 == strcmp("-record", argv[i]) && i+1<argc) {
+                record_bmpseq_basename = argv[i+1];
+                ++i;
+            } else if( 0 == strcmp("-debug_gfx", argv[i]) ) {
+                debug_gfx = true;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
                 pixel::set_gpu_forced_fps(atoi(argv[i+1]));
                 ++i;
+            } else if( 0 == strcmp("-noaudio", argv[i])) {
+                use_audio = false;
             } else if( 0 == strcmp("-aliens", argv[i]) && i+1<argc) {
                 aliens_total = atoi(argv[i+1]);
                 ++i;
@@ -1044,10 +1081,12 @@ int main(int argc, char *argv[])
             }
 
         }
-        pixel::log_printf("- forced_fps %d\n", pixel::gpu_forced_fps());
-        pixel::log_printf("- debug_gfx %d\n", debug_gfx);
-        pixel::log_printf("- aliens %zu\n", aliens_total);
-        pixel::log_printf("- alien velo amp %f\n", alien_velo_amp);
+        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
+        pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
+        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
+        pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
+        pixel::log_printf(elapsed_ms, "- aliens %zu\n", aliens_total);
+        pixel::log_printf(elapsed_ms, "- alien velo amp %f\n", alien_velo_amp);
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
@@ -1055,7 +1094,7 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
-    pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
+    pixel::cart_coord.set_height(-screen_height/2.0f, screen_height/2.0f);
 
     pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
     {
@@ -1069,7 +1108,9 @@ int main(int argc, char *argv[])
         return 1;
     }
     #if !defined(__EMSCRIPTEN__)
-        jau::audio::init_audio_subsystem();
+        if( use_audio ) {
+            jau::audio::init_audio_subsystem();
+        }
     #endif
     load_samples();
     reset_items();
