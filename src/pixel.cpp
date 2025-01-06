@@ -354,10 +354,6 @@ pixel::animtex_t::animtex_t(std::string name, float sec_per_atex, const texture_
     m_paused = false;
 }
 
-void pixel::animtex_t::destroy() noexcept {
-    m_textures.clear();
-}
-
 void pixel::animtex_t::pause(bool enable) noexcept {
     m_paused = enable;
     if( enable ) {

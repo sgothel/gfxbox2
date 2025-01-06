@@ -682,8 +682,6 @@ namespace pixel {
             size_t m_animation_index;
             bool m_paused;
 
-            void destroy() noexcept;
-
         public:
             animtex_t(std::string name, float sec_per_atex, const std::vector<texture_ref>& textures) noexcept;
 
@@ -701,14 +699,16 @@ namespace pixel {
             animtex_t& operator=(animtex_t&&) = default;
 
             ~animtex_t() noexcept {
-                destroy();
+                clear();
             }
+
+            void clear() noexcept { m_textures.clear(); m_sec_per_atex=0; m_atex_sec_left=0; m_animation_index=0; m_paused=true; }
 
             const texture_ref texture(const size_t idx) const noexcept { return idx < m_textures.size() ? m_textures[idx] : nullptr; }
             const texture_ref texture() const noexcept { return m_animation_index < m_textures.size() ? m_textures[m_animation_index] : nullptr; }
 
-            int width() noexcept { texture_ref tex = texture(); return nullptr!=tex ? tex->width : 0; }
-            int height() noexcept { texture_ref tex = texture(); return nullptr!=tex ? tex->height : 0; }
+            uint32_t width() noexcept { texture_ref tex = texture(); return nullptr!=tex ? tex->width : 0; }
+            uint32_t height() noexcept { texture_ref tex = texture(); return nullptr!=tex ? tex->height : 0; }
 
             void reset() noexcept;
             void pause(bool enable) noexcept;
