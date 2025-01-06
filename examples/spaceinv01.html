@@ -224,7 +224,7 @@
       }
       function maximizeCanvas(scale) {
         var ecr = document.getElementById('canvas_border').getBoundingClientRect();
-        var h = ecr.width*scale*260/224; // ecr.height is not maxed-out
+        var h = ecr.width*scale*256/224; // ecr.height is not maxed-out
         wasm_set_window_size(ecr.width*scale, Math.min(h, window.innerHeight));
       }
     </script>
