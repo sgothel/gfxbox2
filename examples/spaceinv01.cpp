@@ -444,7 +444,7 @@ class bunker_t {
         const uint32_t y1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.y));
         const uint32_t y2 = std::min<uint32_t>(height, pixel::ceil_to_uint32(box.tr.y));
         for(uint32_t y=y1; y<y2; ++y) {
-            const uint32_t o = pixel::round_to_uint32(pixel::next_rnd()*4);
+            const uint32_t o = pixel::next_rnd((uint32_t)0, (uint32_t)4);
             const uint32_t x1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.x)+1-o);
             const uint32_t x2 = std::min<uint32_t>(width, pixel::ceil_to_uint32(box.tr.x)-1+o);
             for(uint32_t x=x1; x<x2; ++x) {
@@ -825,7 +825,7 @@ void mainloop() {
     static bool game_over = false;
     constexpr static float min_peng_time = 300_ms;
     constexpr static float max_peng_time = 2_s;
-    static float peng_time = min_peng_time + pixel::next_rnd() * (max_peng_time-min_peng_time);
+    static float peng_time = pixel::next_rnd(min_peng_time, max_peng_time);
     static const pixel::f2::aabbox_t p1_base_box = p1.base()->box();
     static pixel::si_time_t level_time = 0;
     bool do_snapshot = false;
@@ -897,8 +897,7 @@ void mainloop() {
             peng_time -= dt;
             if(peng_time <= 0){
                 peng_alien();
-                peng_time = min_peng_time +
-                        pixel::next_rnd() * (max_peng_time-min_peng_time-(float)level*50_ms-level_time/2_min);
+                peng_time = pixel::next_rnd(min_peng_time, max_peng_time-(float)level*50_ms-level_time/2_min);
             }
         }
     }
