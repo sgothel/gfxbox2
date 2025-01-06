@@ -592,8 +592,8 @@ class bunker_t {
         // printf("XXX bunk.hit: ibox1.1 %s\n", ibox.toString().c_str());
         ibox.bl.x = std::max(0.0f, ibox.bl.x - ibox.width() * amp.x);
         ibox.bl.y = std::max(0.0f, ibox.bl.y - ibox.height() * amp.y);
-        ibox.tr.x += ibox.width() * amp.x * 2.5f;
-        ibox.tr.y += ibox.height() * amp.y * 2.5f;
+        ibox.tr.x += ibox.width() * amp.x;
+        ibox.tr.y += ibox.height() * amp.y;
         // printf("XXX bunk.hit: ibox1.2 %s, amp %s\n", ibox.toString().c_str(), amp.toString().c_str());
         if( m_bunk->equals(ibox, clrpix) ) {
             // printf("XXX bunk.hit: clear -> false\n");
@@ -647,7 +647,7 @@ class peng_t {
         for(auto it = bunks.begin(); it != bunks.end(); ) {
             bunker_t& bunk = *it;
             if( bunk.box().intersects(b) &&
-                bunk.hit(b, m_owner == alien_id ? pixel::f2::vec_t{ 0.6f, 2.5f } : pixel::f2::vec_t{ 0.0f, 0.0f }) )
+                bunk.hit(b, m_owner == alien_id ? pixel::f2::vec_t{ 0.6f, 2.5f } : pixel::f2::vec_t{ 0.6f, 0.6f }) )
             {
                 return true;
             } else {
