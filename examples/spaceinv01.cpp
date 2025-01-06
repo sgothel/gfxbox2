@@ -270,27 +270,46 @@ static bool load_textures() {
     return true;
 }
 
-class sprite_t {
-    private:
-        pixel::animtex_t m_atex;
-        float m_duration;
-        pixel::f2::point_t m_bl;
-        pixel::f2::vec_t m_dim;
+class gobject_t {
   public:
+    virtual ~gobject_t() noexcept = default;
 
+    /// Returns bottom-left position
+    virtual pixel::f2::point_t pos() const noexcept = 0;
+
+    /// returns the AA bounding box
+    virtual pixel::f2::aabbox_t box() const noexcept = 0;
+
+    virtual bool tick(const float dt) noexcept = 0;
+
+    virtual void draw() noexcept = 0;
+
+    virtual bool on_screen() const noexcept = 0;
+
+    virtual bool intersection(const pixel::f2::aabbox_t& o) const noexcept = 0;
+};
+
+class sprite_t : public gobject_t {
+  private:
+    pixel::animtex_t m_atex;
+    float m_duration;
+    pixel::f2::point_t m_bl;
+    pixel::f2::vec_t m_dim;
+
+  public:
     sprite_t(const pixel::f2::point_t& bl, pixel::animtex_t atex, float duration) noexcept
     : m_atex(std::move(atex)), m_duration(duration),
       m_bl( bl ), m_dim((float)m_atex.width(), (float)m_atex.height())
     { }
 
-    pixel::f2::aabbox_t box() const noexcept {
+    /// Returns bottom-left position
+    pixel::f2::point_t pos() const noexcept override { return m_bl; }
+
+    pixel::f2::aabbox_t box() const noexcept override {
         return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
     }
 
-    /// Returns bottom-left position
-    pixel::f2::point_t pos() const noexcept { return m_bl; }
-
-    bool tick(const float dt) noexcept {
+    bool tick(const float dt) noexcept override {
         m_atex.tick(dt);
         if( 0 < m_duration ) {
             m_duration -= dt;
@@ -302,15 +321,15 @@ class sprite_t {
         return true;
     }
 
-    void draw() const noexcept {
+    void draw() noexcept override {
         m_atex.draw(m_bl.x, m_bl.y+m_dim.y);
     }
 
-    bool on_screen(){
+    bool on_screen() const noexcept override {
         return box().inside(field_box);
     }
 
-    bool intersection(const pixel::f2::aabbox_t& o) const {
+    bool intersection(const pixel::f2::aabbox_t& o) const noexcept override {
         return box().intersects(o);
     }
 
@@ -318,7 +337,7 @@ class sprite_t {
 };
 std::vector<sprite_t> extra_sprites;
 
-class alient_t {
+class alient_t : public gobject_t {
   private:
     int m_value;
     pixel::animtex_t m_atex;
@@ -333,26 +352,14 @@ class alient_t {
       m_bl( bl ), m_dim((float)m_atex.width(), (float)m_atex.height())
     { }
 
-    pixel::f2::aabbox_t box() const noexcept {
+    /// Returns bottom-left position
+    pixel::f2::point_t pos() const noexcept override { return m_bl; }
+
+    pixel::f2::aabbox_t box() const noexcept override {
         return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
     }
 
-    /// Returns bottom-left position
-    pixel::f2::point_t pos() const noexcept { return m_bl; }
-    constexpr int value() const noexcept { return m_value; }
-
-    void tick_step(const pixel::f2::vec_t& d) noexcept {
-        m_atex.next();
-        m_bl += d;
-    }
-
-    void notify_killed() {
-        m_atex = pixel::animtex_t("AlienX", 1.0f, tex_alienX);
-        m_killanim_d = alien_explosion_d;
-        audio_alienX->play();
-    }
-
-    bool tick_killed(const float dt) noexcept {
+    bool tick(const float dt) noexcept override {
         if( 0 < m_killanim_d ) {
             m_killanim_d -= dt;
             if( 0 >= m_killanim_d ) {
@@ -364,7 +371,7 @@ class alient_t {
         return true;
     }
 
-    void draw() const noexcept {
+    void draw() noexcept override {
         m_atex.draw(m_bl.x, m_bl.y+m_dim.y);
         if( debug_gfx ) {
             pixel::set_pixel_color(rgba_yellow);
@@ -373,19 +380,32 @@ class alient_t {
         }
     }
 
-    bool on_screen(){
+    bool on_screen() const noexcept override {
         return box().inside(field_box);
     }
 
-    bool intersection(const alient_t& o) const {
-        return box().intersects(o.box());
+    bool intersection(const pixel::f2::aabbox_t& o) const noexcept override {
+        return box().intersects(o);
+    }
+
+    constexpr int value() const noexcept { return m_value; }
+
+    void step(const pixel::f2::vec_t& d) noexcept {
+        m_atex.next();
+        m_bl += d;
+    }
+
+    void notify_killed() {
+        m_atex = pixel::animtex_t("AlienX", 1.0f, tex_alienX);
+        m_killanim_d = alien_explosion_d;
+        audio_alienX->play();
     }
 
     pixel::animtex_t& atex() { return m_atex; }
 };
 typedef std::shared_ptr<alient_t> alien_ref;
 
-class alien_group_t {
+class alien_group_t : public gobject_t {
   private:
     constexpr static float m_sec_step_delay = 1.0f/60.0f; // orig 1 alien per frame moves
     pixel::f2::aabbox_t m_box;
@@ -402,6 +422,19 @@ class alien_group_t {
     alien_group_t(alien_group_t&&)      = default;
     alien_group_t& operator=(const alien_group_t&) = default;
     alien_group_t& operator=(alien_group_t&&)      = default;
+
+    /// Returns bottom-left position
+    pixel::f2::point_t pos() const noexcept override { return m_box.bl; }
+
+    pixel::f2::aabbox_t box() const noexcept override { return m_box; }
+
+    bool on_screen() const noexcept override {
+        return m_box.inside(field_box);
+    }
+
+    bool intersection(const pixel::f2::aabbox_t& o) const noexcept override {
+        return m_box.intersects(o);
+    }
 
     void reset() {
         const float cell_height = (float)tex_alien1[0]->height;
@@ -444,8 +477,6 @@ class alien_group_t {
 
     size_t active_count() const noexcept { return m_actives.size(); }
 
-    const pixel::f2::aabbox_t& box() const noexcept { return m_box; }
-
     alien_ref get_random() const noexcept {
         if( 0 == active_count() ) {
             return nullptr;
@@ -457,7 +488,7 @@ class alien_group_t {
     }
 
     /// return the hit alien value or zero if non hit
-    int check_hit(const pixel::f2::aabbox_t& b) {
+    int check_hit(const pixel::f2::aabbox_t& b) noexcept {
         for(auto it = m_actives.begin(); it != m_actives.end(); ) {
             const alien_ref& a = *it;
             if( !a->box().intersects(b) ) {
@@ -474,27 +505,27 @@ class alien_group_t {
 
     void set_pause(bool v) noexcept { m_pause = v; }
 
-    void tick(const float /*dt*/) {
+    bool tick(const float /*dt*/) noexcept override {
         static int sound_idx = 0;
         static audio_sample_ref audio_sample = nullptr;
         const float avg_fd = pixel::gpu_avg_framedur();
 
         if( m_pause ) {
-            return;
+            return true;
         }
         if( m_killed.size() > 0 ) {
             for(auto it = m_killed.begin(); it != m_killed.end(); ) {
-                if( (*it)->tick_killed(avg_fd) ) {
+                if( (*it)->tick(avg_fd) ) {
                     ++it;
                 } else {
                     it = m_killed.erase(it);
                 }
             }
-            return;
+            return true;
         }
         m_delay_left -= avg_fd;
         if( m_delay_left > 0 ) {
-            return;
+            return true;
         }
         m_delay_left = m_sec_step_delay * float(active_count());
         {
@@ -513,12 +544,13 @@ class alien_group_t {
                 dxy.y = m_velo.y;
             }
             for(const alien_ref& a : m_actives){
-                a->tick_step(dxy);
+                a->step(dxy);
             }
         }
+        return true;
     }
 
-    void draw(){
+    void draw() noexcept override {
         m_box.reset();
         for(const alien_ref& a : m_actives){
             a->draw();
@@ -536,7 +568,7 @@ class alien_group_t {
 };
 alien_group_t alien_group;
 
-class bunker_t {
+class bunker_t : public gobject_t {
   private:
     size_t idx;
     pixel::f2::vec_t m_dim;
@@ -569,9 +601,22 @@ class bunker_t {
         tex_bunk[idx]->update(m_bunk);
     }
 
-    pixel::f2::aabbox_t box() const noexcept {
+    /// Returns bottom-left position
+    pixel::f2::point_t pos() const noexcept override { return m_bl; }
+
+    pixel::f2::aabbox_t box() const noexcept override {
         return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
     }
+
+    bool on_screen() const noexcept override {
+        return box().inside(field_box);
+    }
+
+    bool intersection(const pixel::f2::aabbox_t& o) const noexcept override {
+        return box().intersects(o);
+    }
+
+    bool tick(const float /*dt*/) noexcept override { return true; }
 
     bool hit(pixel::f2::aabbox_t& hitbox, pixel::f2::vec_t amp={0, 0} ) {
         const uint32_t clrpix = 0x00000000;
@@ -603,15 +648,8 @@ class bunker_t {
         tex_bunk[idx]->update(m_bunk);
         return true;
     }
-    void draw() const noexcept {
+    void draw() noexcept override {
         tex_bunk[idx]->draw(m_bl.x, m_bl.y + m_dim.y);
-    }
-
-    bool on_screen(){
-        return box().inside(field_box);
-    }
-    bool intersection(const pixel::f2::aabbox_t& o) const {
-        return box().intersects(o);
     }
 };
 std::vector<bunker_t> bunks;
@@ -621,7 +659,7 @@ struct hit_result{
     bool live;
 };
 
-class peng_t {
+class peng_t : public gobject_t {
   private:
     pixel::animtex_t m_atex;
     pixel::f2::point_t m_bl;
@@ -664,11 +702,22 @@ class peng_t {
       m_alien_hit_value(0), m_owner(owner)
     { }
 
-    pixel::f2::aabbox_t box() const noexcept {
+    /// Returns bottom-left position
+    pixel::f2::point_t pos() const noexcept override { return m_bl; }
+
+    pixel::f2::aabbox_t box() const noexcept override {
         return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
     }
 
-    bool tick(const float /*dt*/) noexcept {
+    bool on_screen() const noexcept override {
+        return box().inside(field_box);
+    }
+
+    bool intersection(const pixel::f2::aabbox_t& o) const noexcept override {
+        return box().intersects(o);
+    }
+
+    bool tick(const float /*dt*/) noexcept override {
         const float avg_fd = pixel::gpu_avg_framedur();
         m_atex.tick(avg_fd);
         if( !box().inside(field_box) ) {
@@ -688,16 +737,8 @@ class peng_t {
         return !check_alien_hit() && !check_bunker_hit();
     }
 
-    void draw() const noexcept {
+    void draw() noexcept override {
         m_atex.draw(m_bl.x, m_bl.y + m_dim.y);
-    }
-
-    bool on_screen(){
-        return box().inside(field_box);
-    }
-
-    bool intersection(const peng_t& o) const {
-        return box().intersects(o.box());
     }
 
     constexpr int alien_hit_value() const { return m_alien_hit_value; }
@@ -715,7 +756,7 @@ void reset_items() {
     pengs.clear();
 }
 
-class base_t {
+class base_t : public gobject_t {
     public:
         constexpr static const float height = base_height; // [m]
 
@@ -754,16 +795,27 @@ class base_t {
           peng_inventory(base_peng_inventory_max)
         {}
 
+        /// Returns bottom-left position
+        pixel::f2::point_t pos() const noexcept override { return m_bl; }
+
+        pixel::f2::aabbox_t box() const noexcept override {
+            return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
+        }
+
+        bool on_screen() const noexcept override {
+            return box().inside(field_box);
+        }
+
+        bool intersection(const pixel::f2::aabbox_t& o) const noexcept override {
+            return box().intersects(o);
+        }
+
         void reset(const pixel::f2::point_t& bl){
             peng_inventory = base_peng_inventory_max;
             m_bl = bl;
         }
 
         constexpr bool is_killed() const noexcept { return m_killed; }
-
-        pixel::f2::aabbox_t box() const noexcept {
-            return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
-        }
 
         void peng() noexcept {
             if(peng_inventory > 0){
@@ -784,12 +836,12 @@ class base_t {
                 m_bl -= d;
             }
         }
-        bool tick(const float dt) noexcept {
+        bool tick(const float dt) noexcept override {
             m_atex.tick(dt);
             return !check_hit();
         }
 
-        void draw() const noexcept {
+        void draw() noexcept override {
             m_atex.draw(m_bl.x, m_bl.y + m_dim.y);
             if( debug_gfx ) {
                 pixel::set_pixel_color(rgba_yellow);
@@ -800,7 +852,7 @@ class base_t {
 };
 typedef std::shared_ptr<base_t> base_ref_t;
 
-class player_t {
+class player_t : public gobject_t {
     private:
         int m_lives;
         base_ref_t m_base;
@@ -832,6 +884,15 @@ class player_t {
           m_base(nullptr), m_respawn_timer(0), m_score(0)
         { respawn_base(); }
 
+        /// Returns bottom-left position
+        pixel::f2::point_t pos() const noexcept override { return m_base->pos(); }
+
+        pixel::f2::aabbox_t box() const noexcept override { return m_base->box(); }
+
+        bool on_screen() const noexcept override { return m_base->on_screen(); }
+
+        bool intersection(const pixel::f2::aabbox_t& o) const noexcept override { return m_base->intersection(o); }
+
         void reset() noexcept {
             m_score = 0;
             m_lives = start_live;
@@ -860,7 +921,7 @@ class player_t {
         }
         void add_score(int diff) noexcept { m_score += diff; }
 
-        bool tick(const float dt) noexcept {
+        bool tick(const float dt) noexcept override {
             if( !m_base->tick(dt) ) {
                 base_dtor();
             }
@@ -872,7 +933,7 @@ class player_t {
             }
             return true;
         }
-        void draw() const noexcept {
+        void draw() noexcept override {
             m_base->draw();
         }
         void handle_event0() noexcept {
