@@ -32,19 +32,21 @@
 
 static std::random_device rng;
 
-constexpr float rng_to_norm(float v) noexcept {
+static constexpr float rng_to_norm(float v) noexcept {
     // std::random_device::result_type integral integer type
     constexpr std::random_device::result_type a = std::random_device::min();
     constexpr std::random_device::result_type b = std::random_device::max();
     return float(v - a) / float(b - a);
 }
 
-constexpr float rng_from_norm(float v) noexcept {
+#if 0
+static constexpr float rng_from_norm(float v) noexcept {
     // std::random_device::result_type integral integer type
     constexpr std::random_device::result_type a = std::random_device::min();
     constexpr std::random_device::result_type b = std::random_device::max();
     return v * float(b - a) + float(a);
 }
+#endif
 
 float jau::next_rnd() noexcept {
     return rng_to_norm((float)rng());
