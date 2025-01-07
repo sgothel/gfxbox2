@@ -10,6 +10,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <vector>
 
 
 #include "rpn_calc.hpp"
@@ -19,6 +20,8 @@
 #include <pixel/pixel2i.hpp>
 #include <pixel/pixel2f.hpp>
 #include "pixel/pixel.hpp"
+
+using namespace jau;
 
 std::vector<rpn_calc::rpn_expression_t> rpn_funcs;
 rpn_calc::variable_set variables;
@@ -157,7 +160,7 @@ void mainloop() {
     static const pixel::f4::vec_t text_color(0.4f, 0.4f, 0.4f, 1.0f);
     static const int text_height = 28;
 
-    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static pixel::f2::lineseg_t l_x = { { pixel::cart_coord.min_x(),  0.0f }, { pixel::cart_coord.max_x(), 0.0f } };
     static pixel::f2::lineseg_t l_y = { { 0.0f, pixel::cart_coord.min_y() }, {  0.0f, pixel::cart_coord.max_y() } };
     static float grid_gap = std::max(1.0f, std::floor( std::min(pixel::cart_coord.width(), pixel::cart_coord.height()) / 10.0f ));
@@ -165,7 +168,7 @@ void mainloop() {
     static std::string input_text;
     {
         while( pixel::handle_one_event(event) ) {
-            if( 0 != event.last_key_code && pixel::is_ascii_code(event.last_key_code) ) {
+            if( 0 != event.last_key_code && is_ascii_code(event.last_key_code) ) {
                 const int key_code = event.last_key_code;
                 event.last_key_code = 0;
                 fprintf(stdout, "%c", (char)key_code);
@@ -221,7 +224,7 @@ void mainloop() {
             225 /* r */, 225 /* g */, 225 /* b */, 255 /* a */,
             200 /* r */, 200 /* g */, 200 /* b */, 255 /* a */);
 
-    const uint64_t t = pixel::getElapsedMillisecond(); // [ms]
+    const uint64_t t = getElapsedMillisecond(); // [ms]
     const float dt = (float)( t - t_last ) / 1000.0f; // [s]
     const float dt_exp = 1.0f / (float)pixel::monitor_fps(); // [s]
     const float dt_diff = (float)( dt_exp - dt ) * 1000.0f; // [ms]
@@ -242,7 +245,7 @@ void mainloop() {
     draw_funcs();
 
     if( dt_diff > 1.0f ) {
-        pixel::milli_sleep( (uint64_t)dt_diff );
+        milli_sleep( (uint64_t)dt_diff );
     }
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {

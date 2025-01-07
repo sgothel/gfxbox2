@@ -116,7 +116,7 @@ namespace pixel::f3 {
             std::string toString() const noexcept { return std::to_string(x)+"/"+std::to_string(y)+"/"+std::to_string(z); }
 
             constexpr bool is_zero() const noexcept {
-                return pixel::is_zero(x) && pixel::is_zero(y) && pixel::is_zero(z);
+                return jau::is_zero(x) && jau::is_zero(y) && jau::is_zero(z);
             }
 
             /**
@@ -138,7 +138,7 @@ namespace pixel::f3 {
              */
             constexpr vec_t& normalize() noexcept {
                 const float lengthSq = length_sq();
-                if ( pixel::is_zero( lengthSq ) ) {
+                if ( jau::is_zero( lengthSq ) ) {
                     x = 0.0f;
                     y = 0.0f;
                     z = 0.0f;

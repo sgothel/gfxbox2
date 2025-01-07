@@ -29,6 +29,8 @@
 #include <cstdint>
 #include <ctime>
 
+using namespace jau;
+
 bool pixel::use_subsys_primitives_val = true;
 int pixel::win_width=0;
 int pixel::win_height=0;
@@ -101,8 +103,8 @@ void pixel::bitmap_t::put(const f2::aabbox_t& box, uint32_t abgr) noexcept {
     if(!m_pixels || 0 == width || 0 == height ) {
         return;
     }
-    const uint32_t x1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.x));
-    const uint32_t y1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.y));
+    const uint32_t x1 = std::max<uint32_t>(0, floor_to_uint32(box.bl.x));
+    const uint32_t y1 = std::max<uint32_t>(0, floor_to_uint32(box.bl.y));
     const uint32_t x2 = std::min<uint32_t>(width, ceil_to_uint32(box.tr.x));
     const uint32_t y2 = std::min<uint32_t>(height, ceil_to_uint32(box.tr.y));
     for(uint32_t y=y1; y<y2; ++y) {
@@ -117,8 +119,8 @@ bool pixel::bitmap_t::equals(const f2::aabbox_t& box, uint32_t abgr) noexcept {
     if(!m_pixels || 0 == width || 0 == height ) {
         return false;
     }
-    const uint32_t x1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.x));
-    const uint32_t y1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.y));
+    const uint32_t x1 = std::max<uint32_t>(0, floor_to_uint32(box.bl.x));
+    const uint32_t y1 = std::max<uint32_t>(0, floor_to_uint32(box.bl.y));
     const uint32_t x2 = std::min<uint32_t>(width, ceil_to_uint32(box.tr.x));
     const uint32_t y2 = std::min<uint32_t>(height, ceil_to_uint32(box.tr.y));
     for(uint32_t y=y1; y<y2; ++y) {
@@ -270,7 +272,7 @@ void pixel::animtex_t::tick(const float dt) noexcept {
         if( 0 < m_atex_sec_left ) {
             m_atex_sec_left = std::max( 0.0f, m_atex_sec_left - dt );
         }
-        if( pixel::is_zero(m_atex_sec_left) ) {
+        if( is_zero(m_atex_sec_left) ) {
             next();
         }
     }

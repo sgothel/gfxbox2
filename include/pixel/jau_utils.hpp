@@ -21,9 +21,10 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef PIXEL_UTILS_HPP_
-#define PIXEL_UTILS_HPP_
+#ifndef JAU_UTILS_HPP_
+#define JAU_UTILS_HPP_
 
+#include <unistd.h>
 #include <cstddef>
 #include <limits>
 #include <string>
@@ -36,13 +37,13 @@
 #include <cstring>
 #include <cctype>
 
-#include <pixel/unit.hpp>
+#include <pixel/jau_unit.hpp>
 #include <pixel/version.hpp>
 
 /**
  * Basic computer graphics math and utilities helping with the framebuffer and I/O tooling.
  */
-namespace pixel {
+namespace jau {
     inline constexpr float epsilon() noexcept {
         float a = 1.0f;
         float b;
@@ -251,5 +252,5 @@ namespace pixel {
     }
 }
 
-#endif /*  PIXEL_UTILS_HPP_ */
+#endif /*  JAU_UTILS_HPP_ */
 

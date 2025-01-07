@@ -24,17 +24,16 @@
 #include <pixel/pixel3f.hpp>
 #include <pixel/pixel2f.hpp>
 #include <pixel/pixel2i.hpp>
-#include "pixel/pixel.hpp"
+#include <pixel/pixel.hpp>
 #include "physics.hpp"
-#include "pixel/pixel4f.hpp"
 
-#include <algorithm>
 #include <string>
 #include <vector>
-#include <random>
 #include <cstdio>
 #include <cmath>
-#include <iostream>
+#include <cinttypes>
+
+using namespace jau;
 
 // const float field_width = 4.0f;
 const float field_height = 3.0f;
@@ -96,9 +95,9 @@ void reset_playfield() {
         divider = pixel::f2::dashed_lineseg_t(pixel::f2::lineseg_t(p0, p1), pad_thickness, 20.0f);
     }
     {
-        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
+        const uint64_t elapsed_ms = getElapsedMillisecond();
         if( debug_gfx ) {
-            pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
+            log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
         }
         pixel::f2::geom_list_t& list = pixel::f2::gobjects();
         list.clear();
@@ -110,7 +109,7 @@ void reset_playfield() {
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-7.0f*pad_thickness, pad_thickness);
             list.push_back(r);
             if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RT %s\n", r->toString().c_str());
+                log_printf(elapsed_ms, "XX RT %s\n", r->toString().c_str());
             }
         }
         {
@@ -119,7 +118,7 @@ void reset_playfield() {
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(bottom_tl, pixel::cart_coord.width()-7.0f*pad_thickness, pad_thickness);
             list.push_back(r);
             if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
+                log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
             }
         }
     }
@@ -131,7 +130,7 @@ extern "C" {
 
 void mainloop() {
     static uint64_t frame_count_total = 0;
-    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static bool animating = true;
     static int r_score = 0;
@@ -152,7 +151,7 @@ void mainloop() {
             animating = false;
         } else {
             if( !animating ) {
-                t_last = pixel::getElapsedMillisecond(); // [ms]
+                t_last = getElapsedMillisecond(); // [ms]
             }
             animating = true;
         }
@@ -161,7 +160,7 @@ void mainloop() {
     float dt; // [s]
 
     if(animating){
-        t1 = pixel::getElapsedMillisecond();
+        t1 = getElapsedMillisecond();
         dt = (float)( t1 - t_last ) / 1000.0f; // [s]
 
         const float pad_rot_step = 180.0f; // [ang-degrees / s]
@@ -182,9 +181,9 @@ void mainloop() {
                     pad_r->move(pad_step_up);
                 }
             } else if( event.pressed(pixel::input_event_type_t::P1_LEFT) ) {
-                pad_r->rotate(pixel::adeg_to_rad(pad_rot_step*dt));
+                pad_r->rotate(adeg_to_rad(pad_rot_step*dt));
             } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ) {
-                pad_r->rotate(pixel::adeg_to_rad(-pad_rot_step*dt));
+                pad_r->rotate(adeg_to_rad(-pad_rot_step*dt));
             }
         }
         if( !one_player && event.has_any_p2() ) {
@@ -199,9 +198,9 @@ void mainloop() {
                     pad_l->move(pad_step_up);
                 }
             } else if( event.pressed(pixel::input_event_type_t::P2_LEFT) ) {
-                pad_l->rotate(pixel::adeg_to_rad(pad_rot_step*dt));
+                pad_l->rotate(adeg_to_rad(pad_rot_step*dt));
             } else if( event.pressed(pixel::input_event_type_t::P2_RIGHT) ) {
-                pad_l->rotate(pixel::adeg_to_rad(-pad_rot_step*dt));
+                pad_l->rotate(adeg_to_rad(-pad_rot_step*dt));
             }
         }
     } else {
@@ -222,13 +221,13 @@ void mainloop() {
     static std::vector<pixel::texture_ref> texts;
     pixel::texture_ref hud_text;
     {
-        std::string hud_s = pixel::to_string("td %s, %5.2f m/s",
-                pixel::to_decstring(t1, ',', 9).c_str(), ball->velocity.length());
+        std::string hud_s = to_string("td %s, %5.2f m/s",
+                to_decstring(t1, ',', 9).c_str(), ball->velocity.length());
         if( one_player ) {
-            hud_s.append( pixel::to_string(", angle %6.2f deg", pixel::rad_to_adeg(pad_l->dir_angle)) );
+            hud_s.append( to_string(", angle %6.2f deg", rad_to_adeg(pad_l->dir_angle)) );
         }
-        hud_s.append( pixel::to_string(", fps %2.2f", pixel::gpu_avg_fps()) );
-        hud_s.append( pixel::to_string(", score %d : %d", l_score, r_score) );
+        hud_s.append( to_string(", fps %2.2f", pixel::gpu_avg_fps()) );
+        hud_s.append( to_string(", score %d : %d", l_score, r_score) );
         hud_text = pixel::make_text_texture(hud_s);
     }
 
@@ -317,13 +316,13 @@ int main(int argc, char *argv[])
         }
     }
     {
-        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        pixel::log_printf(elapsed_ms, "Usage %s -2p -width <int> -height <int> -record <bmp-files-basename> -debug_gfx -fps <int>\n", argv[0]);
-        pixel::log_printf(elapsed_ms, "- win size %d x %d\n", window_width, window_height);
-        pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
-        pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
-        pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
-        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
+        const uint64_t elapsed_ms = getElapsedMillisecond();
+        log_printf(elapsed_ms, "Usage %s -2p -width <int> -height <int> -record <bmp-files-basename> -debug_gfx -fps <int>\n", argv[0]);
+        log_printf(elapsed_ms, "- win size %d x %d\n", window_width, window_height);
+        log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
+        log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
+        log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
+        log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
     }
 
     {
@@ -335,7 +334,7 @@ int main(int argc, char *argv[])
     pixel::cart_coord.set_height(-field_height/2.0f, field_height/2.0f);
 
     ball = physiks::ball_t::create("one", pixel::f2::point_t(0.0f, 0.0f), ball_radius,
-                                    4.0f /* [m/s] */, pixel::adeg_to_rad(0),
+                                    4.0f /* [m/s] */, adeg_to_rad(0),
                                     max_velocity, false, player_pads);
 
     reset_playfield();

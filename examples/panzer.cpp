@@ -18,6 +18,8 @@
 #include <cmath>
 #include <iostream>
 
+using namespace jau;
+
 int main(int argc, char *argv[])
 {
     int window_width = 1920, window_height = 1000;
@@ -46,7 +48,7 @@ int main(int argc, char *argv[])
     pixel::f2::point_t origin(0, 0);
     const pixel::f4::vec_t text_color(0, 0, 0, 1);
 
-    pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
+    log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
     {
         float w = pixel::cart_coord.width();
         float h = pixel::cart_coord.height();
@@ -60,7 +62,7 @@ int main(int argc, char *argv[])
     const float ay1 = pixel::cart_coord.min_y() + 100;
     Tron::Panzer p1(pixel::f2::point_t(ax1, ay1));
     Tron::Panzer p2(pixel::f2::point_t(ax2, ay1));
-    uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    uint64_t t_last = getElapsedMillisecond(); // [ms]
     int a1 = 0;
     int a2 = 0;
     pixel::input_event_t event;
@@ -105,7 +107,7 @@ int main(int argc, char *argv[])
 
         // white background
         pixel::clear_pixel_fb( 255, 255, 255, 255);
-        const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
+        const uint64_t t1 = getElapsedMillisecond(); // [ms]
         const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
         t_last = t1;
         if (!event.paused()) {

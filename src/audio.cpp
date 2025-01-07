@@ -23,13 +23,14 @@
  */
 
 #include "pixel/audio.hpp"
-#include "pixel/utils.hpp"
+#include "pixel/jau_utils.hpp"
 
 #include <atomic>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_timer.h>
 
+using namespace jau;
 //
 // audio
 //
@@ -44,7 +45,7 @@ bool jau::audio::is_audio_subsystem_initialized() noexcept {
 bool jau::audio::init_audio_subsystem(int init_modules, int req_modules, int mix_channels, int out_channel, int out_frequency, Uint16 /*out_sample_format*/, int out_chunksize) {
     bool exp_init_called = false;
     if( !audio_subsystem_init_called.compare_exchange_strong(exp_init_called, true) ) {
-        pixel::log_printf("SDL_mixer: Initialization already called: Initialized %d\n", audio_subsystem_init.load());
+        log_printf("SDL_mixer: Initialization already called: Initialized %d\n", audio_subsystem_init.load());
         return audio_subsystem_init;
     }
     if (SDL_Init(SDL_INIT_AUDIO) != 0) {
@@ -52,17 +53,17 @@ bool jau::audio::init_audio_subsystem(int init_modules, int req_modules, int mix
         return false;
     }
     if( 0 != Mix_OpenAudio(out_frequency, AUDIO_S16SYS, out_channel, out_chunksize) ) {
-        pixel::log_printf("SDL_mixer: Error Mix_OpenAudio: %s\n", SDL_GetError());
+        log_printf("SDL_mixer: Error Mix_OpenAudio: %s\n", SDL_GetError());
         return false;
     }
 
     if ( ( Mix_Init(init_modules) & req_modules ) != req_modules ) {
-        pixel::log_printf("SDL_mixer: Error initializing: %s\n", SDL_GetError());
+        log_printf("SDL_mixer: Error initializing: %s\n", SDL_GetError());
         return false;
     }
 
     {
-        pixel::log_printf("SDL_mixer: ChunkDecoder: ");
+        log_printf("SDL_mixer: ChunkDecoder: ");
         const int max=Mix_GetNumChunkDecoders();
         for(int i=0; i<max; ++i) {
             fprintf(stderr, "%s, ", Mix_GetChunkDecoder(i));
@@ -70,7 +71,7 @@ bool jau::audio::init_audio_subsystem(int init_modules, int req_modules, int mix
         fprintf(stderr, "\n");
     }
     {
-        pixel::log_printf("SDL_mixer: MusicDecoder: ");
+        log_printf("SDL_mixer: MusicDecoder: ");
         const int max=Mix_GetNumMusicDecoders();
         for(int i=0; i<max; ++i) {
             fprintf(stderr, "%s, ", Mix_GetMusicDecoder(i));
@@ -79,7 +80,7 @@ bool jau::audio::init_audio_subsystem(int init_modules, int req_modules, int mix
     }
     Mix_AllocateChannels(mix_channels);
     audio_subsystem_init = true;
-    pixel::log_printf("SDL_mixer: Initialized\n");
+    log_printf("SDL_mixer: Initialized\n");
     return true;
 }
 
@@ -93,7 +94,7 @@ jau::audio::audio_sample_t::audio_sample_t(const std::string &fname, const bool 
 : chunk(Mix_LoadWAV(fname.c_str()), Mix_FreeChunk), channel_playing(-1), singly(single_play)
 {
     if ( nullptr == chunk.get() ) {
-        pixel::log_printf("Mix_LoadWAV: Load '%s' Error: %s\n", fname.c_str(), SDL_GetError());
+        log_printf("Mix_LoadWAV: Load '%s' Error: %s\n", fname.c_str(), SDL_GetError());
     } else {
         Mix_VolumeChunk(chunk.get(), volume);
     }

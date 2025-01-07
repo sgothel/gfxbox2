@@ -32,7 +32,8 @@
 #include <algorithm>
 #include <cinttypes>
 
-using namespace pixel::literals;
+using namespace jau;
+using namespace jau::literals;
 
 static pixel::input_event_t event;
 constexpr static int player_id_1 = 1;
@@ -113,7 +114,7 @@ class star_t {
         pixel::f2::vec_t gravity(const pixel::f2::point_t& p, const float g0) {
             pixel::f2::vec_t v_d = body.center - p;
             const float d = v_d.length();
-            if( pixel::is_zero(d) ) {
+            if( is_zero(d) ) {
                 return pixel::f2::vec_t();
             } else {
                 // v.normalize() -> v / d
@@ -358,7 +359,7 @@ class peng_t {
         return m_fuse2 > 0 && !sun->hit( m_peng.p_center ) &&
                !hits_fragment();
     }
-    bool armed() const noexcept { return pixel::is_zero(m_fuse); }
+    bool armed() const noexcept { return is_zero(m_fuse); }
     float fuse2() const noexcept { return m_fuse2; }
 
     void draw() const noexcept {
@@ -498,7 +499,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
             }
         }
         void rotate_adeg(const float da_adeg) {
-            rotate(pixel::adeg_to_rad(da_adeg));
+            rotate(adeg_to_rad(da_adeg));
         }
 
         bool shield() const noexcept { return m_shield; }
@@ -756,14 +757,14 @@ void reset_asteroids(int count) {
     fragments.clear();
     for(int i = 0; i < count; ++i) {
         const float height_h = spaceship_t::height*2.0f;
-        const float height = height_h + height_h*pixel::next_rnd();
-        const float angle = pixel::adeg_to_rad(pixel::next_rnd() * 360.0f);
-        const float velocity = 10.0f + pixel::next_rnd() * 10.0f; // m/s
+        const float height = height_h + height_h*next_rnd();
+        const float angle = adeg_to_rad(next_rnd() * 360.0f);
+        const float velocity = 10.0f + next_rnd() * 10.0f; // m/s
         const float rot_velocity = ( 15_deg +
-                                     pixel::next_rnd() * 15_deg )
+                                     next_rnd() * 15_deg )
                                    * ( i%2 == 0 ? 1.0f : -1.0f ); // angle/s
-        const float jitter = 1.0f / ( 4.0f + 4.0f * pixel::next_rnd() );
-        pixel::f2::point_t p0(pixel::cart_coord.min_x()+(pixel::cart_coord.width()*pixel::next_rnd()),
+        const float jitter = 1.0f / ( 4.0f + 4.0f * next_rnd() );
+        pixel::f2::point_t p0(pixel::cart_coord.min_x()+(pixel::cart_coord.width()*next_rnd()),
                               i%2 == 0 ? pixel::cart_coord.min_y()+height/2 : pixel::cart_coord.max_y()-height/2);
         fragment_ref_t asteroid1 = make_asteroid(p0, height,
                 angle, velocity, rot_velocity, jitter );
@@ -981,7 +982,7 @@ void mainloop() {
     static player_t p3(player_id_3);
 
     static uint64_t frame_count_total = 0;
-    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
     static bool animating = true;
 
@@ -1000,7 +1001,7 @@ void mainloop() {
             animating = false;
         } else {
             if( !animating ) {
-                t_last = pixel::getElapsedMillisecond(); // [ms]
+                t_last = getElapsedMillisecond(); // [ms]
             }
             animating = true;
         }
@@ -1029,7 +1030,7 @@ void mainloop() {
             }
         }
     }
-    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]
+    const uint64_t t1 = animating ? getElapsedMillisecond() : t_last; // [ms]
     const float dt = (float)(t1 - t_last) / 1000.0f; // [s]
     t_last = t1;
 
@@ -1113,34 +1114,34 @@ void mainloop() {
         {
             std::string c;
             if( cloak_enabled ) {
-                c = pixel::to_string(", %6.2f / %6.2f", p1.center().x, p1.center().y);
+                c = to_string(", %6.2f / %6.2f", p1.center().x, p1.center().y);
             }
-            sp1 = pixel::to_string("S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s%s)",
+            sp1 = to_string("S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s%s)",
                 p1.score(), p1.peng_inventory(), p1.mine_inventory(), p1.shield_time(), p1.velocity(), c.c_str());
             }
         if(1 < player_count) {
             std::string c;
             if( cloak_enabled ) {
-                c = pixel::to_string(", %6.2f / %6.2f", p2.center().x, p2.center().y);
+                c = to_string(", %6.2f / %6.2f", p2.center().x, p2.center().y);
             }
-            sp2 = pixel::to_string(", S2 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s)",
+            sp2 = to_string(", S2 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s)",
                 p2.score(), p2.peng_inventory(), p2.mine_inventory(), p2.shield_time(), p2.velocity(), c.c_str());
         }
         if(2 < player_count) {
             std::string c;
             if( cloak_enabled ) {
-                c = pixel::to_string(", %6.2f / %6.2f", p3.center().x, p3.center().y);
+                c = to_string(", %6.2f / %6.2f", p3.center().x, p3.center().y);
             }
-            sp3 = pixel::to_string(", S3 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s)",
+            sp3 = to_string(", S3 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s)",
                 p3.score(), p3.peng_inventory(), p3.mine_inventory(), p3.shield_time(), p3.velocity(), c.c_str());
         }
         hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, %s%s%s",
-                        pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
+                        to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
                         fps, sp1.c_str(), sp2.c_str(), sp3.c_str());
     }
     pixel::swap_pixel_fb(false);
     {
-        const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
+        const int dx = ( pixel::fb_width - round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
         hud_text->draw_fbcoord(dx, 0);
     }
     pixel::swap_gpu_buffer();
@@ -1211,22 +1212,22 @@ int main(int argc, char *argv[])
         }
     }
     {
-        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        pixel::log_printf(elapsed_ms, "Usage %s -1p -width <int> -height <int> -record <bmp-files-basename> -fps <int> -no_vsync"
+        const uint64_t elapsed_ms = getElapsedMillisecond();
+        log_printf(elapsed_ms, "Usage %s -1p -width <int> -height <int> -record <bmp-files-basename> -fps <int> -no_vsync"
                                       " -debug_gfx -show_velo -asteroids <int> -sung_env <int> -sung_ships <int>\n", argv[0]);
-        pixel::log_printf(elapsed_ms, "- win size %d x %d\n", window_width, window_height);
-        pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
-        pixel::log_printf(elapsed_ms, "- subsys_primitives %d\n", use_subsys_primitives);
-        pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
-        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
-        pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
-        pixel::log_printf(elapsed_ms, "- show_ship_velo %d\n", show_ship_velo);
-        pixel::log_printf(elapsed_ms, "- players %d\n", player_count);
-        pixel::log_printf(elapsed_ms, "- raster %d\n", raster);
-        pixel::log_printf(elapsed_ms, "- asteroid_count %d\n", asteroid_count);
-        pixel::log_printf(elapsed_ms, "- sun_gravity_scale_env %d -> %f [m/s^2]\n", sun_gravity_scale_env, sun_gravity * (float)sun_gravity_scale_env);
-        pixel::log_printf(elapsed_ms, "- sun_gravity_scale_ships %d -> %f [m/s^2]\n", sun_gravity_scale_ships, sun_gravity * (float)sun_gravity_scale_ships);
-        pixel::log_printf(elapsed_ms, "- cloak enabled %d\n", cloak_enabled);
+        log_printf(elapsed_ms, "- win size %d x %d\n", window_width, window_height);
+        log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
+        log_printf(elapsed_ms, "- subsys_primitives %d\n", use_subsys_primitives);
+        log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
+        log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
+        log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
+        log_printf(elapsed_ms, "- show_ship_velo %d\n", show_ship_velo);
+        log_printf(elapsed_ms, "- players %d\n", player_count);
+        log_printf(elapsed_ms, "- raster %d\n", raster);
+        log_printf(elapsed_ms, "- asteroid_count %d\n", asteroid_count);
+        log_printf(elapsed_ms, "- sun_gravity_scale_env %d -> %f [m/s^2]\n", sun_gravity_scale_env, sun_gravity * (float)sun_gravity_scale_env);
+        log_printf(elapsed_ms, "- sun_gravity_scale_ships %d -> %f [m/s^2]\n", sun_gravity_scale_ships, sun_gravity * (float)sun_gravity_scale_ships);
+        log_printf(elapsed_ms, "- cloak enabled %d\n", cloak_enabled);
     }
 
     {

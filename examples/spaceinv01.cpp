@@ -21,6 +21,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#include <pixel/jau_unit.hpp>
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -36,10 +37,10 @@
 #include <cinttypes>
 #include <cstdio>
 #include <cmath>
-#include <pixel/unit.hpp>
 #include <vector>
 
-using namespace pixel::literals;
+using namespace jau;
+using namespace jau::literals;
 
 static pixel::input_event_t event;
 
@@ -200,10 +201,10 @@ static bool load_samples() {
 static bool load_textures() {
     {
         pixel::bitmap_ref empty = std::make_shared<pixel::bitmap_t>(64, 64);
-        pixel::log_printf(0, "XX empty: %s\n", empty->toString().c_str());
+        log_printf(0, "XX empty: %s\n", empty->toString().c_str());
     }
     bmp_bunk = std::make_shared<pixel::bitmap_t>("resources/spaceinv/spaceinv-bunk.png");
-    pixel::log_printf(0, "XX bmp bunk: %s\n", bmp_bunk->toString().c_str());
+    log_printf(0, "XX bmp bunk: %s\n", bmp_bunk->toString().c_str());
 
     int y_off=0;
     all_images = std::make_shared<pixel::texture_t>("resources/spaceinv/spaceinv-sprites.png");
@@ -243,46 +244,46 @@ static bool load_textures() {
     tex_saucer.push_back( pixel::add_sub_texture(all_images, 0, y_off, 16, 7) );
 
     // row-1
-    pixel::log_printf(0, "XX alien1: %d textures\n", tex_alien1.size());
+    log_printf(0, "XX alien1: %d textures\n", tex_alien1.size());
     for(const pixel::texture_ref& t : tex_alien1) {
-        pixel::log_printf(0, "XX alien1: %s\n", t->toString().c_str());
+        log_printf(0, "XX alien1: %s\n", t->toString().c_str());
     }
-    pixel::log_printf(0, "XX alienX: %s\n", tex_alienX[0]->toString().c_str());
-    pixel::log_printf(0, "XX redX:   %s\n", tex_redX[0]->toString().c_str());
+    log_printf(0, "XX alienX: %s\n", tex_alienX[0]->toString().c_str());
+    log_printf(0, "XX redX:   %s\n", tex_redX[0]->toString().c_str());
 
     // row-2
-    pixel::log_printf(0, "XX alien2: %d textures\n", tex_alien2.size());
+    log_printf(0, "XX alien2: %d textures\n", tex_alien2.size());
     for(const pixel::texture_ref& t : tex_alien2) {
-        pixel::log_printf(0, "XX alien2: %s\n", t->toString().c_str());
+        log_printf(0, "XX alien2: %s\n", t->toString().c_str());
     }
 
     // row-3
-    pixel::log_printf(0, "XX alien3: %d textures\n", tex_alien3.size());
+    log_printf(0, "XX alien3: %d textures\n", tex_alien3.size());
     for(const pixel::texture_ref& t : tex_alien3) {
-        pixel::log_printf(0, "XX alien3: %s\n", t->toString().c_str());
+        log_printf(0, "XX alien3: %s\n", t->toString().c_str());
     }
-    pixel::log_printf(0, "XX ashot1: %d textures\n", tex_ashot1.size());
+    log_printf(0, "XX ashot1: %d textures\n", tex_ashot1.size());
     for(const pixel::texture_ref& t : tex_ashot1) {
-        pixel::log_printf(0, "XX ashot1: %s\n", t->toString().c_str());
+        log_printf(0, "XX ashot1: %s\n", t->toString().c_str());
     }
-    pixel::log_printf(0, "XX ashot2: %d textures\n", tex_ashot2.size());
+    log_printf(0, "XX ashot2: %d textures\n", tex_ashot2.size());
     for(const pixel::texture_ref& t : tex_ashot2) {
-        pixel::log_printf(0, "XX ashot2: %s\n", t->toString().c_str());
+        log_printf(0, "XX ashot2: %s\n", t->toString().c_str());
     }
 
     // row-4
-    pixel::log_printf(0, "XX base: %s\n", tex_base[0]->toString().c_str());
-    pixel::log_printf(0, "XX baseX: %d textures\n", tex_baseX.size());
+    log_printf(0, "XX base: %s\n", tex_base[0]->toString().c_str());
+    log_printf(0, "XX baseX: %d textures\n", tex_baseX.size());
     for(const pixel::texture_ref& t : tex_baseX) {
-        pixel::log_printf(0, "XX baseX: %s\n", t->toString().c_str());
+        log_printf(0, "XX baseX: %s\n", t->toString().c_str());
     }
 
     // row-5
-    pixel::log_printf(0, "XX bunk: %s\n", tex_bunk[0]->toString().c_str());
-    pixel::log_printf(0, "XX peng: %s\n", tex_peng[0]->toString().c_str());
+    log_printf(0, "XX bunk: %s\n", tex_bunk[0]->toString().c_str());
+    log_printf(0, "XX peng: %s\n", tex_peng[0]->toString().c_str());
 
     // row-6
-    pixel::log_printf(0, "XX saucer: %s\n", tex_saucer[0]->toString().c_str());
+    log_printf(0, "XX saucer: %s\n", tex_saucer[0]->toString().c_str());
     return true;
 }
 
@@ -507,7 +508,7 @@ class alien_group_t : public gobject_t {
         if( 1 == active_count() ) {
             return m_actives[0];
         }
-        return m_actives[ pixel::next_rnd((size_t)0, m_actives.size()-1) ];
+        return m_actives[ next_rnd((size_t)0, m_actives.size()-1) ];
     }
 
     /// return the hit alien value or zero if non hit
@@ -556,7 +557,7 @@ class alien_group_t : public gobject_t {
         m_saucer_delay_left -= avg_fd;
         if( m_saucer_delay_left <= 0 ) {
             if( !m_saucer ) {
-                const uint8_t lr = pixel::next_rnd<uint8_t>(0, 1);
+                const uint8_t lr = next_rnd<uint8_t>(0, 1);
                 m_saucer = std::make_shared<alient_t>(90, lr ? saucer_rpos : saucer_lpos, pixel::animtex_t("Saucer", 1.0f, tex_saucer));
                 m_saucer_velo = { saucer_velo.x * ( lr ? -1.0f : +1.0f), 0 };
                 audio_saucer->play(1);
@@ -640,12 +641,12 @@ class bunker_t : public gobject_t {
         }
         const uint32_t width = m_bunk->width;
         const uint32_t height = m_bunk->height;
-        const uint32_t y1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.y));
-        const uint32_t y2 = std::min<uint32_t>(height, pixel::ceil_to_uint32(box.tr.y));
+        const uint32_t y1 = std::max<uint32_t>(0, floor_to_uint32(box.bl.y));
+        const uint32_t y2 = std::min<uint32_t>(height, ceil_to_uint32(box.tr.y));
         for(uint32_t y=y1; y<y2; ++y) {
-            const uint32_t o = pixel::next_rnd((uint32_t)0, (uint32_t)4);
-            const uint32_t x1 = std::max<uint32_t>(0, pixel::floor_to_uint32(box.bl.x)+1-o);
-            const uint32_t x2 = std::min<uint32_t>(width, pixel::ceil_to_uint32(box.tr.x)-1+o);
+            const uint32_t o = next_rnd((uint32_t)0, (uint32_t)4);
+            const uint32_t x1 = std::max<uint32_t>(0, floor_to_uint32(box.bl.x)+1-o);
+            const uint32_t x2 = std::min<uint32_t>(width, ceil_to_uint32(box.tr.x)-1+o);
             for(uint32_t x=x1; x<x2; ++x) {
                 uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_bunk->pixels() + static_cast<size_t>((m_bunk->height - y - 1) * m_bunk->stride) + static_cast<size_t>(x * m_bunk->bpp));
                 *target_pixel = abgr;
@@ -790,7 +791,7 @@ class peng_t : public gobject_t {
             const pixel::f2::vec_t dxy = m_velo * avg_fd;
             m_bl += dxy;
             if( false && m_owner == base_id ) {
-                pixel::log_printf("XX: peng: v %s, dt %f, dxy %s\n", m_velo.toString().c_str(), avg_fd, dxy.toString().c_str());
+                log_printf("XX: peng: v %s, dt %f, dxy %s\n", m_velo.toString().c_str(), avg_fd, dxy.toString().c_str());
             }
         }
         return !check_alien_hit() && !check_bunker_hit();
@@ -1051,15 +1052,15 @@ void mainloop() {
     static player_t p1;
     static uint64_t frame_count_total = 0;
     static uint64_t snap_count = 0;
-    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
     static bool animating = true;
     static bool game_over = false;
     constexpr static float min_peng_time = 300_ms;
     constexpr static float max_peng_time = 2_s;
-    static float peng_time = pixel::next_rnd(min_peng_time, max_peng_time);
+    static float peng_time = next_rnd(min_peng_time, max_peng_time);
     static const pixel::f2::aabbox_t p1_base_box = p1.base()->box();
-    static pixel::si_time_t level_time = 0;
+    static si_time_t level_time = 0;
     bool do_snapshot = false;
 
     while( pixel::handle_one_event(event) ) {
@@ -1087,7 +1088,7 @@ void mainloop() {
             animating = false;
         } else {
             if( !animating ) {
-                t_last = pixel::getElapsedMillisecond(); // [ms]
+                t_last = getElapsedMillisecond(); // [ms]
             }
             animating = true;
         }
@@ -1097,7 +1098,7 @@ void mainloop() {
             p1.handle_event0();
         }
     }
-    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]
+    const uint64_t t1 = animating ? getElapsedMillisecond() : t_last; // [ms]
     const float dt = (float)(t1 - t_last) / 1000.0f; // [s]
     t_last = t1;
     level_time += dt;
@@ -1129,7 +1130,7 @@ void mainloop() {
             peng_time -= dt;
             if(peng_time <= 0){
                 peng_from_alien();
-                peng_time = pixel::next_rnd(min_peng_time, max_peng_time-(float)level*50_ms-level_time/2_min);
+                peng_time = next_rnd(min_peng_time, max_peng_time-(float)level*50_ms-level_time/2_min);
             }
         }
         for(auto it = extra_sprites.begin(); it != extra_sprites.end(); ) {
@@ -1203,7 +1204,7 @@ void mainloop() {
     float fps = pixel::gpu_avg_fps();
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, score %4d, high score %d, level %d",
-                    pixel::to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
+                    to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
                     fps, p1.score(), high_score, level);
     if( alien_group.box().bl.y < -62-bunks[0].box().height() || p1.lives() <= 0) {
         game_over = true;
@@ -1216,13 +1217,13 @@ void mainloop() {
 
     pixel::swap_pixel_fb(false);
     {
-        const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*(float)hud_text->dest_sx) ) / 2;
+        const int dx = ( pixel::fb_width - round_to_int((float)hud_text->width*(float)hud_text->dest_sx) ) / 2;
         hud_text->draw_fbcoord(dx, 0);
     }
     if(game_over){
         tl_text.set(pixel::cart_coord.min_x(), 1.0f*pixel::cart_coord.height()/4.0f);
         pixel::texture_ref game_over_text = pixel::make_text(tl_text, 0, {1, 0, 0, 1}, text_height*5 , "GAME OVER");
-        const int dx = ( pixel::fb_width - pixel::round_to_int((float)game_over_text->width*game_over_text->dest_sx) ) / 2;
+        const int dx = ( pixel::fb_width - round_to_int((float)game_over_text->width*game_over_text->dest_sx) ) / 2;
         game_over_text->draw_fbcoord(dx, 0);
     }
     pixel::swap_gpu_buffer();
@@ -1272,12 +1273,12 @@ int main(int argc, char *argv[])
             }
 
         }
-        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
-        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
-        pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
-        pixel::log_printf(elapsed_ms, "- aliens %zu\n", aliens_total);
-        pixel::log_printf(elapsed_ms, "- alien velo amp %f\n", alien_velo_amp);
+        const uint64_t elapsed_ms = getElapsedMillisecond();
+        log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
+        log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
+        log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
+        log_printf(elapsed_ms, "- aliens %zu\n", aliens_total);
+        log_printf(elapsed_ms, "- alien velo amp %f\n", alien_velo_amp);
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
@@ -1287,7 +1288,7 @@ int main(int argc, char *argv[])
     }
     pixel::cart_coord.set_height(-screen_height/2.0f, screen_height/2.0f);
 
-    pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
+    log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
     {
         float w = pixel::cart_coord.width();
         float h = pixel::cart_coord.height();

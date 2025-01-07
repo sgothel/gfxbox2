@@ -7,10 +7,9 @@
 #include <pixel/pixel2f.hpp>
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
-#include <random>
+
 #include <cstdio>
 #include <cmath>
-#include <iostream>
 
 void mainloop() {
     static const pixel::f4::vec_t text_color(0.5f, 0.5f, 0.5f, 1.0f);
@@ -21,13 +20,13 @@ void mainloop() {
 
     static Tron::Motorrad p1(pixel::f2::point_t(ax2, ay1));
     static Tron::Motorrad p2(pixel::f2::point_t(ax1, ay1));
-    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static int a1 = 0;
     static int a2 = 0;
     static pixel::input_event_t event;
 
     bool animating = !event.paused();
-    const uint64_t t1 = pixel::getElapsedMillisecond();  // [ms]
+    const uint64_t t1 = getElapsedMillisecond();  // [ms]
     const float dt = (float)(t1 - t_last) / 1000.0f;     // [s]
     t_last = t1;
     const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
@@ -159,7 +158,7 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
-    pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
+    log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
     {
         float w = pixel::cart_coord.width();
         float h = pixel::cart_coord.height();

@@ -28,6 +28,10 @@
 #include "pixel/pixel.hpp"
 #include "physics.hpp"
 
+#include <cinttypes>
+
+using namespace jau;
+
 const float rho_default = 0.75f;
 const float drop_height = 2.0f; // [m]
 const float earth_accel = 9.81f; // [m/s*s]
@@ -58,7 +62,7 @@ static ball_list_t ball_list;
 void mainloop() {
     static uint64_t frame_count_total = 0;
 
-    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static bool animating = true;
 
@@ -82,14 +86,14 @@ void mainloop() {
             animating = false;
         } else {
             if( !animating ) {
-                t_last = pixel::getElapsedMillisecond(); // [ms]
+                t_last = getElapsedMillisecond(); // [ms]
             }
             animating = true;
         }
     }
     uint64_t t1;
     if(animating){
-        t1 = pixel::getElapsedMillisecond(); // [ms]
+        t1 = getElapsedMillisecond(); // [ms]
     } else {
         t1 = t_last;
         if (event.has_any_p1()) {
@@ -107,7 +111,7 @@ void mainloop() {
     pixel::clear_pixel_fb(255, 255, 255, 255);
 
     pixel::texture_ref hud_text = pixel::make_text_texture("td %s, fps %2.2f, rho %.2f",
-            pixel::to_decstring(t1, ',', 9).c_str(), pixel::gpu_avg_fps(), rho);
+            to_decstring(t1, ',', 9).c_str(), pixel::gpu_avg_fps(), rho);
 
     for(ball_ref_t &g : ball_list) {
         g->tick(dt);
@@ -182,14 +186,14 @@ int main(int argc, char *argv[])
         }
     }
     {
-        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-        pixel::log_printf(elapsed_ms, "Usage %s -width <int> -height <int> -record <bmp-files-basename> -debug_gfx -fps <int>\n", argv[0]);
-        pixel::log_printf(elapsed_ms, "- win size %d x %d\n", window_width, window_height);
-        pixel::log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
-        pixel::log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
-        pixel::log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
-        pixel::log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
-        pixel::log_printf(elapsed_ms, "- rho %f\n", rho);
+        const uint64_t elapsed_ms = getElapsedMillisecond();
+        log_printf(elapsed_ms, "Usage %s -width <int> -height <int> -record <bmp-files-basename> -debug_gfx -fps <int>\n", argv[0]);
+        log_printf(elapsed_ms, "- win size %d x %d\n", window_width, window_height);
+        log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
+        log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
+        log_printf(elapsed_ms, "- enable_vsync %d\n", enable_vsync);
+        log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
+        log_printf(elapsed_ms, "- rho %f\n", rho);
     }
 
     {
@@ -202,9 +206,9 @@ int main(int argc, char *argv[])
     pixel::cart_coord.set_height(0.0f, drop_height+6.0f*thickness);
 
     {
-        const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
+        const uint64_t elapsed_ms = getElapsedMillisecond();
         if( debug_gfx ) {
-            pixel::log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
+            log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
         }
 
         std::shared_ptr<physiks::ball_t> ball_1 = physiks::ball_t::create(
@@ -212,7 +216,7 @@ int main(int argc, char *argv[])
             pixel::f2::point_t(-4.0f*ball_height, drop_height-ball_radius),
             ball_radius,
             0.0f /* [m/s] */,
-            pixel::adeg_to_rad(90),
+            adeg_to_rad(90),
             earth_accel,
             drop_height,
             debug_gfx);
@@ -221,7 +225,7 @@ int main(int argc, char *argv[])
             pixel::f2::point_t(+2.0f*ball_height, drop_height-ball_radius),
             ball_radius,
             0.0f /* [m/s] */,
-            pixel::adeg_to_rad(90),
+            adeg_to_rad(90),
             earth_accel,
             drop_height,
             debug_gfx);
@@ -230,7 +234,7 @@ int main(int argc, char *argv[])
             pixel::f2::point_t(pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height),
             ball_radius,
             6.8f /* [m/s] */,
-            pixel::adeg_to_rad(64),
+            adeg_to_rad(64),
             earth_accel,
             0,
             debug_gfx);
@@ -248,7 +252,7 @@ int main(int argc, char *argv[])
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
             list.push_back(r);
             if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RT %s\n", r->toString().c_str());
+                log_printf(elapsed_ms, "XX RT %s\n", r->toString().c_str());
             }
         }
         {
@@ -257,7 +261,7 @@ int main(int argc, char *argv[])
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-2.0f*small_gap, thickness);
             list.push_back(r);
             if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
+                log_printf(elapsed_ms, "XX RB %s\n", r->toString().c_str());
             }
         }
         if(true) {
@@ -266,7 +270,7 @@ int main(int argc, char *argv[])
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-2.0f*small_gap-2.0f*thickness);
             list.push_back(r);
             if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RL %s\n", r->toString().c_str());
+                log_printf(elapsed_ms, "XX RL %s\n", r->toString().c_str());
             }
         }
         if(true) {
@@ -275,7 +279,7 @@ int main(int argc, char *argv[])
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, thickness, pixel::cart_coord.height()-2.0f*small_gap-2.0f*thickness);
             list.push_back(r);
             if( debug_gfx ) {
-                pixel::log_printf(elapsed_ms, "XX RR %s\n", r->toString().c_str());
+                log_printf(elapsed_ms, "XX RR %s\n", r->toString().c_str());
             }
         }
     }

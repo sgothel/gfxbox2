@@ -25,7 +25,7 @@
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
 
-// #include <random>
+using namespace jau;
 
 void rebuild_objects() {
     pixel::f2::ageom_list_t& list = pixel::f2::agobjects();
@@ -40,7 +40,7 @@ void rebuild_objects() {
         if( 0 == i % 2 ) { // modulo (divisionsrest) mit zwei, d.h. durch zwei teilbar?
             const pixel::f2::vec_t c_diff(-sz/2.0f, sz/2.0f);
             std::shared_ptr<pixel::f2::rect_t> o = std::make_shared<pixel::f2::rect_t>(p+c_diff, sz, sz);
-            o->rotate(pixel::adeg_to_rad(45.0f));
+            o->rotate(adeg_to_rad(45.0f));
             list.push_back(o);
         } else {
             std::shared_ptr<pixel::f2::disk_t> o = std::make_shared<pixel::f2::disk_t>(p, radius);
@@ -105,10 +105,10 @@ void mainloop() {
             blob0_speed = 1;
         }
         if( event.pressed(pixel::input_event_type_t::P1_LEFT) ) {
-            hero.rotate(pixel::adeg_to_rad(2.0f));
+            hero.rotate(adeg_to_rad(2.0f));
             // hero.move(-blob0_speed, 0);
         } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ) {
-            hero.rotate(pixel::adeg_to_rad(-2.0f));
+            hero.rotate(adeg_to_rad(-2.0f));
             // hero.move(blob0_speed, 0);
         }
         if( !hero.on_screen() ) {
@@ -143,7 +143,7 @@ void mainloop() {
         pixel::f2::ageom_list_t& list = pixel::f2::agobjects();
         for(const pixel::f2::ageom_ref_t& g : list) {
             if( animating ) {
-                g->rotate(pixel::adeg_to_rad(1.0f));
+                g->rotate(adeg_to_rad(1.0f));
             }
             g->draw();
 
@@ -178,7 +178,7 @@ void mainloop() {
             printf("XXX coll.blob %d, 0: %s, 1: %s\n",
                     blob1_hit, hero.toString().c_str(), blob1.toString().c_str());
         }
-        la.rotate(pixel::adeg_to_rad(1.0f));
+        la.rotate(adeg_to_rad(1.0f));
     }
     pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
     la.draw();

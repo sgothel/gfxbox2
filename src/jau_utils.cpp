@@ -21,8 +21,8 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "pixel/utils.hpp"
-#include "pixel/unit.hpp"
+#include "pixel/jau_utils.hpp"
+#include "pixel/jau_unit.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -46,7 +46,7 @@ constexpr float rng_from_norm(float v) noexcept {
     return v * float(b - a) + float(a);
 }
 
-float pixel::next_rnd() noexcept {
+float jau::next_rnd() noexcept {
     return rng_to_norm((float)rng());
 }
 
@@ -58,20 +58,20 @@ float pixel::next_rnd() noexcept {
  * clock_gettime seems to be well supported at least on kernel >= 4.4.
  * Only bfin and sh are missing, while ia64 seems to be complicated.
  */
-uint64_t pixel::getCurrentMilliseconds() noexcept {
+uint64_t jau::getCurrentMilliseconds() noexcept {
     struct timespec t;
     ::clock_gettime(CLOCK_MONOTONIC, &t);
     return static_cast<uint64_t>( t.tv_sec ) * (uint64_t)MilliPerOne +
            static_cast<uint64_t>( t.tv_nsec ) / (uint64_t)NanoPerMilli;
 }
 
-static uint64_t _exe_start_time = pixel::getCurrentMilliseconds();
+static uint64_t _exe_start_time = jau::getCurrentMilliseconds();
 
-uint64_t pixel::getElapsedMillisecond() noexcept {
+uint64_t jau::getElapsedMillisecond() noexcept {
     return getCurrentMilliseconds() - _exe_start_time;
 }
 
-void pixel::milli_sleep(uint64_t td_ms) noexcept {
+void jau::milli_sleep(uint64_t td_ms) noexcept {
     const int64_t td_ns_0 = (int64_t)( (td_ms * (uint64_t)NanoPerMilli) % (uint64_t)NanoPerOne );
     struct timespec ts;
     ts.tv_sec = static_cast<decltype(ts.tv_sec)>(td_ms/(uint64_t)MilliPerOne); // signed 32- or 64-bit integer
@@ -79,14 +79,14 @@ void pixel::milli_sleep(uint64_t td_ms) noexcept {
     ::nanosleep( &ts, nullptr );
 }
 
-void pixel::log_printf(const uint64_t elapsed_ms, const char * format, ...) noexcept {
+void jau::log_printf(const uint64_t elapsed_ms, const char * format, ...) noexcept {
     fprintf(stderr, "[%s] ", to_decstring(elapsed_ms, ',', 9).c_str());
     va_list args;
     va_start (args, format);
     vfprintf(stderr, format, args); // NOLINT(format-nonliteral)
     va_end (args);
 }
-void pixel::log_printf(const char * format, ...) noexcept {
+void jau::log_printf(const char * format, ...) noexcept {
     fprintf(stderr, "[%s] ", to_decstring(getElapsedMillisecond(), ',', 9).c_str());
     va_list args;
     va_start (args, format);
@@ -98,9 +98,9 @@ void pixel::log_printf(const char * format, ...) noexcept {
 //
 //
 
-using namespace pixel::literals;
+using namespace jau::literals;
 
-std::string pixel::to_stringva(const char* format, va_list args) noexcept {
+std::string jau::to_stringva(const char* format, va_list args) noexcept {
     size_t nchars;
     std::string str;
     {
@@ -124,7 +124,7 @@ std::string pixel::to_stringva(const char* format, va_list args) noexcept {
     }
 }
 
-std::string pixel::to_string(const char* format, ...) noexcept {
+std::string jau::to_string(const char* format, ...) noexcept {
     va_list args;
     va_start (args, format);
     std::string str = to_stringva(format, args);
@@ -136,7 +136,7 @@ std::string pixel::to_string(const char* format, ...) noexcept {
 //
 //
 
-using pixel::fraction_timespec;
+using jau::fraction_timespec;
 
 fraction_timespec fraction_timespec::from(int year, unsigned month, unsigned day,
                                           unsigned hour, unsigned minute,
@@ -212,3 +212,4 @@ std::string fraction_timespec::to_iso8601_string(bool space_separator, bool mute
         return std::string(b);
     }
 }
+

@@ -135,7 +135,7 @@ namespace pixel::f2 {
         std::string toString() const noexcept { return std::to_string(x)+" / "+std::to_string(y); }
 
         constexpr bool is_zero() const noexcept {
-            return pixel::is_zero(x) && pixel::is_zero(y);
+            return jau::is_zero(x) && jau::is_zero(y);
         }
 
         /**
@@ -163,7 +163,7 @@ namespace pixel::f2 {
         /** Normalize this vector in place, returns *this */
         constexpr vec_t& normalize() noexcept {
             const float lengthSq = length_sq();
-            if ( pixel::is_zero( lengthSq ) ) {
+            if ( jau::is_zero( lengthSq ) ) {
                 x = 0.0f;
                 y = 0.0f;
             } else {
@@ -298,11 +298,11 @@ namespace pixel::f2 {
     }
 
     constexpr bool operator==(const vec_t& lhs, const vec_t& rhs ) noexcept {
-        return pixel::is_zero(lhs.x - rhs.x) && pixel::is_zero(lhs.x - rhs.x);
+        return jau::is_zero(lhs.x - rhs.x) && jau::is_zero(lhs.x - rhs.x);
     }
     /** TODO
     constexpr bool operator<=>(const vec_t& lhs, const vec_t& rhs ) noexcept {
-        return pixel::is_zero(lhs.x - rhs.x) && pixel::is_zero(lhs.x - rhs.x);
+        return jau::is_zero(lhs.x - rhs.x) && jau::is_zero(lhs.x - rhs.x);
     } */
 
     constexpr vec_t min(const vec_t& lhs, const vec_t& rhs) noexcept {
@@ -337,7 +337,7 @@ namespace pixel::f2 {
      */
     constexpr pixel::orientation_t orientation(const point_t& a, const point_t& b, const point_t& c) noexcept {
         const double area = tri_area(a, b, c);
-        if ( pixel::is_zero( area ) ) {
+        if ( jau::is_zero( area ) ) {
             return pixel::orientation_t::COL;
         }
         return ( area > 0.0f ) ? pixel::orientation_t::CCW : pixel::orientation_t::CLW;
@@ -665,7 +665,7 @@ namespace pixel::f2 {
                         return;
                     }
                 }
-            } else if( !is_zero(dx_abs) ) {
+            } else if( !jau::is_zero(dx_abs) ) {
                 const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
                 const float step_x = ( dx >= 0 ) ? x_ival : -x_ival;
                 const float step_y = dy / dx_abs * x_ival;
@@ -698,7 +698,7 @@ namespace pixel::f2 {
             // which is the area of the parallelogram of the three points,
             // same as the area of the triangle defined by the three points, multiplied by 2.
             const float perpDotProduct = (p0.x - p2.x) * (p1.y - p2.y) - (p0.y - p2.y) * (p1.x - p2.x);
-            return pixel::is_zero( perpDotProduct );
+            return jau::is_zero( perpDotProduct );
 
         }
         bool is_on_line2(const point_t& p2) const noexcept {
@@ -747,11 +747,11 @@ namespace pixel::f2 {
             const vec_t s = q2 - q;
             const float rxs = r.cross(s);
 
-            if ( pixel::is_zero(rxs) ) {
+            if ( jau::is_zero(rxs) ) {
                 if ( do_collinear ) {
                     const vec_t q_p = q - p;
                     const float qpxr = q_p.cross(r);
-                    if ( pixel::is_zero(qpxr) ) // disabled collinear case
+                    if ( jau::is_zero(qpxr) ) // disabled collinear case
                     {
                         // 1) r x s = 0 and (q - p) x r = 0, the two lines are collinear.
 
@@ -1083,7 +1083,7 @@ namespace pixel::f2 {
                                 area(p_a, o,   p_c)
                         ) );
             } else {
-                return 0 == pixel::compare(area(p_a, p_b, p_c),
+                return 0 == jau::compare(area(p_a, p_b, p_c),
                         area(p_a, p_b, o) +
                         area(o,   p_b, p_c) +
                         area(p_a, o,   p_c));

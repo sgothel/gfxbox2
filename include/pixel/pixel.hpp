@@ -37,9 +37,9 @@
 #include <cstring>
 #include <cctype>
 
-#include <pixel/utils.hpp>
-#include <pixel/unit.hpp>
+#include <pixel/jau_utils.hpp>
 #include <pixel/version.hpp>
+#include <pixel/jau_unit.hpp>
 
 #if defined(__EMSCRIPTEN__)
     #include <emscripten.h>
@@ -232,19 +232,19 @@ namespace pixel {
             constexpr float height() const noexcept { return m_y2 - m_y1; }
 
             /** Convert cartesian x-axis value to framebuffer pixel value. */
-            int to_fb_dx(const float dx) const noexcept { return round_to_int( dx / m_w_to_fbw ); }
+            int to_fb_dx(const float dx) const noexcept { return jau::round_to_int( dx / m_w_to_fbw ); }
             /** Convert cartesian y-axis value to framebuffer pixel value. */
-            int to_fb_dy(const float dy) const noexcept { return round_to_int( dy / m_h_to_fbh ); }
+            int to_fb_dy(const float dy) const noexcept { return jau::round_to_int( dy / m_h_to_fbh ); }
 
             /** Convert framebuffer x-axis value in pixels to cartesian pixel value. */
-            int from_fb_dx(const int dx) const noexcept { return round_to_int((float)dx * m_w_to_fbw); }
+            int from_fb_dx(const int dx) const noexcept { return jau::round_to_int((float)dx * m_w_to_fbw); }
             /** Convert framebuffer y-axis value in pixels to cartesian pixel value. */
-            int from_fb_dy(const int dy) const noexcept { return round_to_int((float)dy * m_h_to_fbh); }
+            int from_fb_dy(const int dy) const noexcept { return jau::round_to_int((float)dy * m_h_to_fbh); }
 
             /** Convert cartesian x-axis coordinate to framebuffer coordinate in pixels. */
-            int to_fb_x(const float x) const noexcept { return round_to_int( ( x - m_x1 ) / m_w_to_fbw ); }
+            int to_fb_x(const float x) const noexcept { return jau::round_to_int( ( x - m_x1 ) / m_w_to_fbw ); }
             /** Convert cartesian y-axis coordinate in pixels to framebuffer coordinate in pixels. */
-            int to_fb_y(const float y) const noexcept { return fb_height - round_to_int( ( y - m_y1 ) / m_h_to_fbh ); }
+            int to_fb_y(const float y) const noexcept { return fb_height - jau::round_to_int( ( y - m_y1 ) / m_h_to_fbh ); }
 
             /** Convert framebuffer x-axis coordinate in pixels to cartesian coordinate. */
             float from_fb_x(const int x) const noexcept { return (float)x * m_w_to_fbw + m_x1; }
@@ -514,8 +514,8 @@ namespace pixel {
             /// draw using FB coordinates and optional scale, 0/0 is top-left
             void draw_fbcoord(const uint32_t x_pos, const uint32_t y_pos, const float scale_x=1.0f, const float scale_y=1.0f) const noexcept {
                 draw_raw(x_pos + dest_x, y_pos + dest_y,
-                         round_to_int((float)width*dest_sx*scale_x),
-                         round_to_int((float)height*dest_sy*scale_y));
+                         jau::round_to_int((float)width*dest_sx*scale_x),
+                         jau::round_to_int((float)height*dest_sy*scale_y));
             }
             /// draw using cartesian coordinates and dimension, 0/0 is top-left
             void draw(const float x_pos, const float y_pos, const float w, const float h) const noexcept {
@@ -891,7 +891,7 @@ namespace pixel {
                 if( this->text.length() > 0 && '\n' == this->text[this->text.length()-1] ) {
                     this->text.clear();
                 }
-                if( 0 != key_code && is_ascii_code(key_code) ) {
+                if( 0 != key_code && jau::is_ascii_code(key_code) ) {
                     if( 0x08 == key_code ) {
                         if( this->text.length() > 0 ) {
                             this->text.pop_back();
