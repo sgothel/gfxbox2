@@ -9,6 +9,7 @@ include_directories(
 )
 
 set (gfxbox2_LIB_SRCS
+  ${PROJECT_SOURCE_DIR}/src/utils.cpp
   ${PROJECT_SOURCE_DIR}/src/pixel.cpp
   ${PROJECT_SOURCE_DIR}/src/sdl_subsys.cpp
   ${PROJECT_SOURCE_DIR}/src/audio.cpp

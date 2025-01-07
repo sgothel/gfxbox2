@@ -23,8 +23,9 @@
  */
 
 #include "pixel/audio.hpp"
-#include "pixel/pixel.hpp"
+#include "pixel/utils.hpp"
 
+#include <atomic>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_timer.h>

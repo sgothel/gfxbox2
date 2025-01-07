@@ -22,9 +22,9 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "pixel/pixel.hpp"
+#include "pixel/version.hpp"
 
 #include <atomic>
-#include <pixel/version.hpp>
 #include <thread>
 
 #include <SDL2/SDL.h>
