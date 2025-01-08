@@ -24,24 +24,22 @@
 #ifndef PIXEL_HPP_
 #define PIXEL_HPP_
 
-#include <atomic>
-#include <cstddef>
-#include <limits>
 #include <memory>
 #include <functional> // NOLINT(unused-includes): Used in other header
 #include <string>
-#include <type_traits>
 #include <vector>
 
 #include <cmath>
 #include <cstdarg>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <cctype>
 
-#include <pixel/unit.hpp>
+#include <pixel/jau_utils.hpp>
 #include <pixel/version.hpp>
+#include <pixel/jau_unit.hpp>
 
 #if defined(__EMSCRIPTEN__)
     #include <emscripten.h>
@@ -64,106 +62,6 @@ namespace pixel::f4 {
  * Basic computer graphics math and utilities helping with the framebuffer and I/O tooling.
  */
 namespace pixel {
-    inline constexpr float epsilon() noexcept {
-        float a = 1.0f;
-        float b;
-        do {
-            b = a;
-            a = a / 2.0f;
-        } while(1.0f + a != 1.0f);
-        return b;
-    }
-
-    /** Returns true of the given float is less than float epsilon. */
-    inline constexpr bool is_zero(const float v) noexcept {
-        return std::abs(v) < std::numeric_limits<float>::epsilon();
-    }
-    /** Returns true of the given double  is less than double epsilon. */
-    inline constexpr bool is_zero(const double v) noexcept {
-        return std::abs(v) < std::numeric_limits<double>::epsilon();
-    }
-
-    /**
-     * Return true if both values are equal, i.e. their absolute delta is less than float epsilon,
-     * false otherwise.
-     */
-    inline constexpr bool equals(const float a, const float b) noexcept {
-        return std::abs(a - b) < std::numeric_limits<float>::epsilon();
-    }
-
-    /**
-     * Return zero if both values are equal, i.e. their absolute delta is less than float epsilon,
-     * -1 if a < b and 1 otherwise.
-     */
-    inline constexpr int compare(const float a, const float b) noexcept {
-        if( std::abs(a - b) < std::numeric_limits<float>::epsilon() ) {
-            return 0;
-        } else if (a < b) {
-            return -1;
-        } else {
-            return 1;
-        }
-    }
-
-    /** Returns the floor float value cast to int. */
-    inline constexpr int floor_to_int(const float v) noexcept {
-        return (int)std::floor(v);
-    }
-    /** Returns the floor float value cast to int. */
-    inline constexpr uint32_t floor_to_uint32(const float v) noexcept {
-        return std::max(0, (int)std::floor(v));
-    }
-    /** Returns the rounded float value cast to int. */
-    inline constexpr int round_to_int(const float v) noexcept {
-        return (int)std::round(v);
-    }
-    /** Returns the rounded float value cast to int. */
-    inline constexpr uint32_t round_to_uint32(const float v) noexcept {
-        return std::max(0, (int)std::round(v));
-    }
-
-    /** Returns the ceil float value cast to int. */
-    inline constexpr int ceil_to_int(const float v) noexcept {
-        return (int)std::ceil(v);
-    }
-    /** Returns the ceil float value cast to int. */
-    inline constexpr uint32_t ceil_to_uint32(const float v) noexcept {
-        return std::max(0, (int)std::ceil(v));
-    }
-    /** Returns the rounded double value cast to int. */
-    inline constexpr int round_to_int(const double v) noexcept {
-        return (int)std::round(v);
-    }
-
-    /** Converts arc-degree to radians */
-    inline constexpr float adeg_to_rad(const float arc_degree) noexcept {
-        return arc_degree * std::numbers::pi_v<float> / 180.0f;
-    }
-
-    /** Converts radians to arc-degree */
-    inline constexpr float rad_to_adeg(const float rad) noexcept {
-        return rad * 180.0f / std::numbers::pi_v<float>;
-    }
-
-    float next_rnd() noexcept;
-
-    inline float next_rnd(float min, float max) noexcept {
-        return next_rnd() * float(max - min) + float(min);
-    }
-    template <typename T,
-              std::enable_if_t< std::is_integral_v<T> && std::is_unsigned_v<T>, bool> = true>
-    T next_rnd(T min, T max) noexcept {
-        return (T)std::round(next_rnd() * float(max - min) + float(min));
-    }
-
-    enum class orientation_t {
-        /** Collinear **/
-        COL,
-        /** Clockwise **/
-        CLW,
-        /** Counter-Clockwise **/
-        CCW
-    };
 
     /** Width of the window, coordinate in window units. */
     extern int win_width;
@@ -184,6 +82,15 @@ namespace pixel {
     typedef std::vector<uint32_t> pixel_buffer_t; // 32-bit pixel
     extern pixel_buffer_t fb_pixels;
     extern int font_height;
+
+    enum class orientation_t {
+        /** Collinear **/
+        COL,
+        /** Clockwise **/
+        CLW,
+        /** Counter-Clockwise **/
+        CCW
+    };
 
     /**
      * Cartesian coordinate system within the framebuffer space in pixels.
@@ -325,19 +232,19 @@ namespace pixel {
             constexpr float height() const noexcept { return m_y2 - m_y1; }
 
             /** Convert cartesian x-axis value to framebuffer pixel value. */
-            int to_fb_dx(const float dx) const noexcept { return round_to_int( dx / m_w_to_fbw ); }
+            int to_fb_dx(const float dx) const noexcept { return jau::round_to_int( dx / m_w_to_fbw ); }
             /** Convert cartesian y-axis value to framebuffer pixel value. */
-            int to_fb_dy(const float dy) const noexcept { return round_to_int( dy / m_h_to_fbh ); }
+            int to_fb_dy(const float dy) const noexcept { return jau::round_to_int( dy / m_h_to_fbh ); }
 
             /** Convert framebuffer x-axis value in pixels to cartesian pixel value. */
-            int from_fb_dx(const int dx) const noexcept { return round_to_int((float)dx * m_w_to_fbw); }
+            int from_fb_dx(const int dx) const noexcept { return jau::round_to_int((float)dx * m_w_to_fbw); }
             /** Convert framebuffer y-axis value in pixels to cartesian pixel value. */
-            int from_fb_dy(const int dy) const noexcept { return round_to_int((float)dy * m_h_to_fbh); }
+            int from_fb_dy(const int dy) const noexcept { return jau::round_to_int((float)dy * m_h_to_fbh); }
 
             /** Convert cartesian x-axis coordinate to framebuffer coordinate in pixels. */
-            int to_fb_x(const float x) const noexcept { return round_to_int( ( x - m_x1 ) / m_w_to_fbw ); }
+            int to_fb_x(const float x) const noexcept { return jau::round_to_int( ( x - m_x1 ) / m_w_to_fbw ); }
             /** Convert cartesian y-axis coordinate in pixels to framebuffer coordinate in pixels. */
-            int to_fb_y(const float y) const noexcept { return fb_height - round_to_int( ( y - m_y1 ) / m_h_to_fbh ); }
+            int to_fb_y(const float y) const noexcept { return fb_height - jau::round_to_int( ( y - m_y1 ) / m_h_to_fbh ); }
 
             /** Convert framebuffer x-axis coordinate in pixels to cartesian coordinate. */
             float from_fb_x(const int x) const noexcept { return (float)x * m_w_to_fbw + m_x1; }
@@ -607,8 +514,8 @@ namespace pixel {
             /// draw using FB coordinates and optional scale, 0/0 is top-left
             void draw_fbcoord(const uint32_t x_pos, const uint32_t y_pos, const float scale_x=1.0f, const float scale_y=1.0f) const noexcept {
                 draw_raw(x_pos + dest_x, y_pos + dest_y,
-                         round_to_int((float)width*dest_sx*scale_x),
-                         round_to_int((float)height*dest_sy*scale_y));
+                         jau::round_to_int((float)width*dest_sx*scale_x),
+                         jau::round_to_int((float)height*dest_sy*scale_y));
             }
             /// draw using cartesian coordinates and dimension, 0/0 is top-left
             void draw(const float x_pos, const float y_pos, const float w, const float h) const noexcept {
@@ -782,7 +689,6 @@ namespace pixel {
 
     texture_ref make_text_texture(const std::string& text) noexcept;
 
-    std::string to_string(const char* format, ...) noexcept;
     texture_ref make_text_texture(const char* format, ...) noexcept;
 
 
@@ -914,10 +820,6 @@ namespace pixel {
         return input_event_type_t::NONE;
     }
 
-    inline bool is_ascii_code(int c) noexcept {
-        return 0 != std::iscntrl(c) || 0 != std::isprint(c);
-    }
-
     class input_event_t {
         private:
             constexpr static const uint64_t p1_mask =
@@ -989,7 +891,7 @@ namespace pixel {
                 if( this->text.length() > 0 && '\n' == this->text[this->text.length()-1] ) {
                     this->text.clear();
                 }
-                if( 0 != key_code && is_ascii_code(key_code) ) {
+                if( 0 != key_code && jau::is_ascii_code(key_code) ) {
                     if( 0x08 == key_code ) {
                         if( this->text.length() > 0 ) {
                             this->text.pop_back();
@@ -1103,113 +1005,6 @@ namespace pixel {
 
     void save_snapshot(const std::string& fname) noexcept;
 
-    //
-    // data packing macros
-    //
-
-    /** packed__: lead in macro, requires __packed lead out as well. Consider using __pack(...). */
-    #ifndef packed__
-        #ifdef _MSC_VER
-            #define packed__ __pragma( pack(push, 1) )
-        #else
-            #define packed__
-        #endif
-    #endif
-
-    /** __packed: lead out macro, requires packed__ lead in as well. Consider using __pack(...). */
-    #ifndef __packed
-        #ifdef _MSC_VER
-            #define __packed __pragma( pack(pop))
-        #else
-            #define __packed __attribute__ ((packed))
-        #endif
-    #endif
-
-    /** __pack(...): Produces MSVC, clang and gcc compatible lead-in and -out macros. */
-    #ifndef __pack
-        #ifdef _MSC_VER
-            #define __pack(...) __pragma( pack(push, 1) ) __VA_ARGS__ __pragma( pack(pop))
-        #else
-            #define __pack(...) __VA_ARGS__ __attribute__ ((packed))
-        #endif
-    #endif
-
-    //
-    // Misc
-    //
-
-    inline constexpr const int64_t NanoPerMilli = 1000000L;
-    inline constexpr const int64_t MilliPerOne = 1000L;
-    inline constexpr const int64_t NanoPerOne = NanoPerMilli*MilliPerOne;
-
-    /** Return current milliseconds, since Unix epoch. */
-    uint64_t getCurrentMilliseconds() noexcept;
-    /** Return current milliseconds, since program launch. */
-    uint64_t getElapsedMillisecond() noexcept;
-    /** Sleep for the givn milliseconds. */
-    void milli_sleep(uint64_t td) noexcept;
-
-    void log_printf(const uint64_t elapsed_ms, const char * format, ...) noexcept;
-    void log_printf(const char * format, ...) noexcept;
-
-    //
-    // Cut from jaulib
-    //
-
-    template <typename T>
-    constexpr ssize_t sign(const T x) noexcept
-    {
-        return (T(0) < x) - (x < T(0));
-    }
-
-    template <typename T>
-    constexpr T invert_sign(const T x) noexcept
-    {
-        return std::numeric_limits<T>::min() == x ? std::numeric_limits<T>::max() : -x;
-    }
-
-    template<typename T>
-    constexpr size_t digits10(const T x, const ssize_t x_sign, const bool sign_is_digit=true) noexcept
-    {
-        if( x_sign == 0 ) {
-            return 1;
-        }
-        if( x_sign < 0 ) {
-            return 1 + static_cast<size_t>( std::log10<T>( invert_sign<T>( x ) ) ) + ( sign_is_digit ? 1 : 0 );
-        } else {
-            return 1 + static_cast<size_t>( std::log10<T>(                 x   ) );
-        }
-    }
-
-    template< class value_type,
-              std::enable_if_t< std::is_integral_v<value_type>,
-                                bool> = true>
-    std::string to_decstring(const value_type& v, const char separator=',', const size_t width=0) noexcept {
-        const ssize_t v_sign = sign<value_type>(v);
-        const size_t digit10_count1 = digits10<value_type>(v, v_sign, true /* sign_is_digit */);
-        const size_t digit10_count2 = v_sign < 0 ? digit10_count1 - 1 : digit10_count1; // less sign
-
-        const size_t comma_count = 0 == separator ? 0 : ( digit10_count1 - 1 ) / 3;
-        const size_t net_chars = digit10_count1 + comma_count;
-        const size_t total_chars = std::max<size_t>(width, net_chars);
-        std::string res(total_chars, ' ');
-
-        value_type n = v;
-        size_t char_iter = 0;
-
-        for(size_t digit10_iter = 0; digit10_iter < digit10_count2 /* && char_iter < total_chars */; digit10_iter++ ) {
-            const int digit = v_sign < 0 ? invert_sign( n % 10 ) : n % 10;
-            n /= 10;
-            if( 0 < digit10_iter && 0 == digit10_iter % 3 ) {
-                res[total_chars-1-(char_iter++)] = separator;
-            }
-            res[total_chars-1-(char_iter++)] = '0' + digit;
-        }
-        if( v_sign < 0 /* && char_iter < total_chars */ ) {
-            res[total_chars-1-(char_iter++)] = '-';
-        }
-        return res;
-    }
 }
 
 #endif /*  PIXEL_HPP_ */

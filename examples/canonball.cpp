@@ -9,7 +9,6 @@
 
 #include <cstdlib>
 #include <memory>
-#include <numeric>
 #include <numbers>
 #include <pixel/pixel4f.hpp>
 #include <pixel/pixel2f.hpp>
@@ -20,12 +19,9 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
-#include <thread>
-
-#include <random>
-#include <iostream>
 #include <vector>
 
+using namespace jau;
 using namespace pixel;
 using namespace pixel::f2;
 
@@ -270,12 +266,12 @@ static bool UpOrDown = true;
 
 void mainloop() {
     static pixel::texture_ref hud_text;
-    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static bool animating = true;
     static float rot_step_default = 45.0f; // [ang-degrees / s]
 
-    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]
+    const uint64_t t1 = animating ? getElapsedMillisecond() : t_last; // [ms]
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
     while(pixel::handle_one_event(event)){
@@ -348,7 +344,7 @@ void mainloop() {
 
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
-        const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
+        const int dx = ( pixel::fb_width - round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
         hud_text->draw_fbcoord(dx, 0);
     }
     pixel::swap_gpu_buffer();
@@ -394,11 +390,11 @@ int main(int argc, char *argv[])
         }
     }
     {
-        pixel::log_printf(0, "Usage %s -1p -width <int> -height <int> "
+        log_printf(0, "Usage %s -1p -width <int> -height <int> "
                                       " -debug_gfx -show_velo\n", argv[0]);
-        pixel::log_printf(0, "- win size %d x %d\n", window_width, window_height);
-        pixel::log_printf(0, "- forced_fps %d\n", pixel::gpu_forced_fps());
-        pixel::log_printf(0, "- debug_gfx %d\n", debug_gfx);
+        log_printf(0, "- win size %d x %d\n", window_width, window_height);
+        log_printf(0, "- forced_fps %d\n", pixel::gpu_forced_fps());
+        log_printf(0, "- debug_gfx %d\n", debug_gfx);
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };

@@ -47,8 +47,8 @@ namespace pixel::i2 {
         void rotate(const float sin, const float cos, const point_t& ctr) {
             const float x0 = (float)(x - ctr.x);
             const float y0 = (float)(y - ctr.y);
-            const int tmp = pixel::round_to_int( x0 * cos - y0 * sin ) + ctr.x;
-                        y = pixel::round_to_int( x0 * sin + y0 * cos ) + ctr.y;
+            const int tmp = jau::round_to_int( x0 * cos - y0 * sin ) + ctr.x;
+                        y = jau::round_to_int( x0 * sin + y0 * cos ) + ctr.y;
             x = tmp;
         }
 
@@ -85,7 +85,7 @@ namespace pixel::i2 {
                 int sy=0;
                 float sx=0.0f;
                 for(; sy != dy; sy+=step_y, sx+=step_x) {
-                    const point_t p { pixel::round_to_int( (float)p0.x + sx ), p0.y + sy };
+                    const point_t p { jau::round_to_int( (float)p0.x + sx ), p0.y + sy };
                     if( !point_action(p) ) {
                         return;
                     }
@@ -96,7 +96,7 @@ namespace pixel::i2 {
                 int sx=0;
                 float sy=0.0f;
                 for(; sx != dx; sx+=step_x, sy+=step_y) {
-                    point_t p { p0.x + sx, pixel::round_to_int( (float)p0.y + sy ) };
+                    point_t p { p0.x + sx, jau::round_to_int( (float)p0.y + sy ) };
                     if( !point_action(p) ) {
                         return;
                     }
@@ -213,7 +213,7 @@ namespace pixel::i2 {
             for(int x=x1; x<=x2; ++x) {
                 const int dx=x-cx;
                 const int dy=y-cy;
-                const int rt=pixel::round_to_int( std::sqrt( (float)(dx*dx + dy*dy) ) );
+                const int rt=jau::round_to_int( std::sqrt( (float)(dx*dx + dy*dy) ) );
                 bool draw;
                 switch( mode ) {
                     case CircleDrawType::OUTLINE:
@@ -285,12 +285,12 @@ namespace pixel::i2 {
         int width() const {
             const int dx = tr.x - tl.x;
             const int dy = tr.y - tl.y;
-            return pixel::round_to_int( std::sqrt( (float)(dx*dx + dy*dy) ) );
+            return jau::round_to_int( std::sqrt( (float)(dx*dx + dy*dy) ) );
         }
         int height() const {
             const int dx = bl.x - tl.x;
             const int dy = bl.y - tl.y;
-            return pixel::round_to_int( std::sqrt( (float)(dx*dx + dy*dy) ) );
+            return jau::round_to_int( std::sqrt( (float)(dx*dx + dy*dy) ) );
         }
 
         void move_dir(const int d) {

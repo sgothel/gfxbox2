@@ -24,13 +24,14 @@
 #include <pixel/pixel2f.hpp>
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
-#include <random>
+
 #include <cstdio>
 #include <cmath>
-#include <iostream>
+
+using namespace jau;
 
 void mainloop() {
-    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static bool animating = true;
 
@@ -51,18 +52,18 @@ void mainloop() {
             animating = false;
         } else {
             if( !animating ) {
-                t_last = pixel::getElapsedMillisecond(); // [ms]
+                t_last = getElapsedMillisecond(); // [ms]
             }
             animating = true;
         }
     }
-    const uint64_t t1 = pixel::getElapsedMillisecond(); // [ms]
+    const uint64_t t1 = getElapsedMillisecond(); // [ms]
     const float dt = (float)( t1 - t_last ) / 1000.0f; // [s]
     t_last = t1;
 
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
     pixel::texture_ref hud_text = pixel::make_text_texture("td %s, fps %2.2f, dt %d ms, %s",
-            pixel::to_decstring(t1, ',', 9).c_str(), pixel::gpu_avg_fps(), (int)(dt*1000), animating?"animating":"paused");
+            to_decstring(t1, ',', 9).c_str(), pixel::gpu_avg_fps(), (int)(dt*1000), animating?"animating":"paused");
 
     // white background
     pixel::clear_pixel_fb(255, 255, 255, 255);
@@ -101,7 +102,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    pixel::log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
+    log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
     {
         float w = pixel::cart_coord.width();
         float h = pixel::cart_coord.height();

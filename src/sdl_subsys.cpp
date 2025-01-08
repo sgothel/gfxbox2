@@ -22,9 +22,9 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "pixel/pixel.hpp"
+#include "pixel/version.hpp"
 
 #include <atomic>
-#include <pixel/version.hpp>
 #include <thread>
 
 #include <SDL2/SDL.h>
@@ -34,6 +34,7 @@
 #include <SDL2/SDL_image.h>
 
 using namespace pixel;
+using namespace jau;
 
 static SDL_Window* sdl_win = nullptr;
 static SDL_Renderer* sdl_rend = nullptr;
@@ -282,20 +283,20 @@ void pixel::swap_gpu_buffer(int fps) noexcept {
         gpu_frame_count = 0;
     }
     if( 0 < fps ) {
-        const int64_t fudge_ns = pixel::NanoPerMilli / 4;
+        const int64_t fudge_ns = jau::NanoPerMilli / 4;
         const uint64_t ms_per_frame = (uint64_t)std::round(1000.0 / fps);
         const uint64_t ms_this_frame =  gpu_swap_t0 - gpu_swap_t1;
-        int64_t td_ns = int64_t( ms_per_frame - ms_this_frame ) * pixel::NanoPerMilli;
+        int64_t td_ns = int64_t( ms_per_frame - ms_this_frame ) * jau::NanoPerMilli;
         if( td_ns > fudge_ns ) {
-            const int64_t td_ns_0 = td_ns%pixel::NanoPerOne;
+            const int64_t td_ns_0 = td_ns%jau::NanoPerOne;
             struct timespec ts;
-            ts.tv_sec = static_cast<decltype(ts.tv_sec)>(td_ns/pixel::NanoPerOne); // signed 32- or 64-bit integer
+            ts.tv_sec = static_cast<decltype(ts.tv_sec)>(td_ns/jau::NanoPerOne); // signed 32- or 64-bit integer
             ts.tv_nsec = td_ns_0 - fudge_ns;
             nanosleep( &ts, nullptr );
             // pixel::log_printf("soft-sync [exp %zd > has %zd]ms, delay %" PRIi64 "ms (%lds, %ldns)\n",
             //         ms_per_frame, ms_this_frame, td_ns/pixel::NanoPerMilli, ts.tv_sec, ts.tv_nsec);
         }
-        gpu_swap_t1 = pixel::getCurrentMilliseconds();
+        gpu_swap_t1 = jau::getCurrentMilliseconds();
     } else {
         gpu_swap_t1 = gpu_swap_t0;
     }

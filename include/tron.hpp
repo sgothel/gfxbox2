@@ -20,6 +20,8 @@
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
 
+using namespace jau;
+
 namespace Tron {
 class Motorrad : public pixel::f2::linestrip_t {
 public:
@@ -41,9 +43,9 @@ public:
         // std::cout << "rot.pre " << toString() << std::endl ;
         angle += angrad;
         if(false){
-            if( pixel::compare(angle, 2*M_PI) >= 0 ) { // p1_angle >= 2*M_PI
+            if( compare(angle, 2*M_PI) >= 0 ) { // p1_angle >= 2*M_PI
                 angle = 0;
-            } else if( pixel::compare(angle, 0) < 0 ) { // p1_angle < 0
+            } else if( compare(angle, 0) < 0 ) { // p1_angle < 0
                 angle = 1.5f * M_PI;
             }
         }

@@ -20,8 +20,8 @@
 #include <pixel/pixel3f.hpp>
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
-#include "pixel/unit.hpp"
 #include <physics.hpp>
+#include <pixel/jau_unit.hpp>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -32,8 +32,9 @@
 
 #include <vector>
 
+using namespace jau;
+using namespace jau::literals;
 using namespace pixel;
-using namespace pixel::literals;
 
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
 static const uint8_t rgba_black[/*4*/] = { 0, 0, 0, 255 };
@@ -191,19 +192,19 @@ std::vector<CBodyRef> cbodies;
 
 std::string to_magnitude_timestr(si_time_t v) {
     if( v >= 1_year ) {
-        return pixel::to_string("%0.2f year", v/1_year);
+        return to_string("%0.2f year", v/1_year);
     } else if( v >= 1_month ) {
-        return pixel::to_string("%0.2f month", v/1_month);
+        return to_string("%0.2f month", v/1_month);
     } else if( v >= 1_week ) {
-        return pixel::to_string("%0.2f week", v/1_week);
+        return to_string("%0.2f week", v/1_week);
     } else if( v >= 1_day ) {
-        return pixel::to_string("%0.2f day", v/1_day);
+        return to_string("%0.2f day", v/1_day);
     } else if( v >= 1_h ) {
-        return pixel::to_string("%0.2f h", v/1_h);
+        return to_string("%0.2f h", v/1_h);
     } else if( v >= 1_min ) {
-        return pixel::to_string("%0.2f min", v/1_min);
+        return to_string("%0.2f min", v/1_min);
     } else {
-        return pixel::to_string("%0.2f s", v);
+        return to_string("%0.2f s", v);
     }
 }
 
@@ -308,7 +309,7 @@ class CBody {
     pixel::f3::vec_t gravity(const pixel::f3::point_t& p) {
         pixel::f3::vec_t v_d = _center - p;
         const float d = v_d.length();
-        if( pixel::is_zero(d) ) {
+        if( is_zero(d) ) {
             return pixel::f3::vec_t();
         } else {
             // v.normalize() -> v / d
@@ -322,7 +323,7 @@ class CBody {
     pixel::f3::vec_t gravity(const CBody& o) {
         pixel::f3::vec_t v_d = _center - o._center;
         const double d = v_d.length();
-        if( pixel::is_zero(d) ) {
+        if( is_zero(d) ) {
             v_d = { 0, 0, 0};
         } else {
             // v.normalize() -> v / d
@@ -398,7 +399,7 @@ class CBody {
     std::string toString() const noexcept {
         fraction_timespec t(_world_time);
         t.tv_nsec = 0;
-        return pixel::to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s]",
+        return to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s]",
             _id_s.c_str(),
             t.to_iso8601_string(true, _time_scale_last > 1_day).c_str(),
             _d_sun/light_minute,
@@ -415,7 +416,7 @@ bool with_oobj = false;
 void mainloop() {
     // scale_all_numbers(0.000001f);
     static pixel::texture_ref hud_text;
-    static uint64_t t_last = pixel::getElapsedMillisecond(); // [ms]
+    static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
     static si_time_t tick_ts = 1_month;
     static bool animating = true;
@@ -441,7 +442,7 @@ void mainloop() {
             animating = false;
         } else {
             if( !animating ) {
-                t_last = pixel::getElapsedMillisecond(); // [ms]
+                t_last = getElapsedMillisecond(); // [ms]
             }
             animating = true;
         }
@@ -542,7 +543,7 @@ void mainloop() {
             // log_printf(0, "XXX event: %s\n", event.to_string().c_str());
         }
     }
-    const uint64_t t1 = animating ? pixel::getElapsedMillisecond() : t_last; // [ms]
+    const uint64_t t1 = animating ? getElapsedMillisecond() : t_last; // [ms]
     const float dt = (float)(t1 - t_last) / 1000.0f; // [s]
     t_last = t1;
     CBody& sel_cbody = *cbodies[number(info_id)];
@@ -569,7 +570,7 @@ void mainloop() {
             }
             if( tick_ts_pre != tick_ts ) {
                 const fraction_timespec a(tick_ts_pre), b(tick_ts);
-                pixel::log_printf(0, "PAUSE -> RT: %s -> %s, %d, tick %s -> %s\n",
+                log_printf(0, "PAUSE -> RT: %s -> %s, %d, tick %s -> %s\n",
                     world_t0.to_iso8601_string(true).c_str(),
                     ref_cbody_t0.to_iso8601_string(true).c_str(),
                     mode,
@@ -618,7 +619,7 @@ void mainloop() {
         ssize_t ds_idx = findSolarData(next_time_min, next_time_max);
         if( 0 > ds_idx ) {
             if( nullptr != selPlanetNextPos ) {
-                pixel::log_printf(0, "NEXT: NULL, [%s - %s]\n",
+                log_printf(0, "NEXT: NULL, [%s - %s]\n",
                     next_time_min.to_iso8601_string(true).c_str(),
                     next_time_max.to_iso8601_string(true).c_str());
                 selPlanetNextPos = nullptr;
@@ -635,7 +636,7 @@ void mainloop() {
             if( ref_cbody_stop && (world_t0_sec < selPlanetNextPos->world_time()) ) {
                 ref_cbody_t0 = selPlanetNextPos->world_time();
             }
-            pixel::log_printf(0, "NEXT: ds_idx %d, %s\n",
+            log_printf(0, "NEXT: ds_idx %d, %s\n",
                 (int)ds_idx, selPlanetNextPos->toString().c_str());
         }
     }
@@ -660,7 +661,7 @@ void mainloop() {
     }
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
-        const int dx = ( pixel::fb_width - pixel::round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
+        const int dx = ( pixel::fb_width - round_to_int((float)hud_text->width*hud_text->dest_sx) ) / 2;
         hud_text->draw_fbcoord(dx, 0);
     }
     pixel::swap_gpu_buffer();
@@ -710,16 +711,16 @@ int main(int argc, char *argv[])
                 oobj_mass = atof(argv[i+1]);
                 ++i;
             } else {
-                pixel::log_printf(0, "ERROR: Unknown argument %s\n", argv[i]);
+                log_printf(0, "ERROR: Unknown argument %s\n", argv[i]);
                 return 1;
             }
         }
     }
     {
-        pixel::log_printf(0, "- win size %d x %d\n", window_width, window_height);
-        pixel::log_printf(0, "- forced_fps %d\n", pixel::gpu_forced_fps());
-        pixel::log_printf(0, "- data_stop %d\n", ref_cbody_stop);
-        pixel::log_printf(0, "- gravity_scale %f\n", gravity_scale);
+        log_printf(0, "- win size %d x %d\n", window_width, window_height);
+        log_printf(0, "- forced_fps %d\n", pixel::gpu_forced_fps());
+        log_printf(0, "- data_stop %d\n", ref_cbody_stop);
+        log_printf(0, "- gravity_scale %f\n", gravity_scale);
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };

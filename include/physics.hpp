@@ -1,19 +1,14 @@
 #define PHYSIKS_HPP_
 
-#include <cinttypes>
 #include <cmath>
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <functional>
-#include <limits>
 #include <memory>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
-#include <iostream>
 #include <cctype>
 
 #include <pixel/pixel4f.hpp>
@@ -121,16 +116,16 @@ namespace physiks {
           m_debug_gfx(debug_gfx),
           m_make_do_reset(make_do_reset),
           velocity_max(start_velocity_max),
-          use_velocity_max( !pixel::is_zero(velocity_max) ),
+          use_velocity_max( !jau::is_zero(velocity_max) ),
           m_rho(rho_default), 
           velocity( vec_t::from_length_angle(velocity_start, start_angle) ), min_velocity(0.1f)
         {
             (void)s;
             rotate(start_angle); // direction of velocity -> this->dir_angle
             if( m_debug_gfx ) {
-                const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-                pixel::log_printf(elapsed_ms, "ball %s-i, %s\n", id.c_str(), toString().c_str());
-                pixel::log_printf(elapsed_ms, "Ball %s-i: v %s, |%f| m/s, %s\n",
+                const uint64_t elapsed_ms = jau::getElapsedMillisecond();
+                jau::log_printf(elapsed_ms, "ball %s-i, %s\n", id.c_str(), toString().c_str());
+                jau::log_printf(elapsed_ms, "Ball %s-i: v %s, |%f| m/s, %s\n",
                         id.c_str(), velocity.toString().c_str(), velocity.length(), box().toString().c_str());
             }
         }
@@ -175,9 +170,9 @@ namespace physiks {
             rotate(start_angle); // direction of velocity -> this->dir_angle
             velocity = vec_t::from_length_angle(velocity_start, this->dir_angle);
             if( m_debug_gfx ) {
-                const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
-                pixel::log_printf(elapsed_ms, "ball %s-i, %s\n", id.c_str(), toString().c_str());
-                pixel::log_printf(elapsed_ms, "Ball %s-i: v %s, |%f| m/s, %s\n",
+                const uint64_t elapsed_ms = jau::getElapsedMillisecond();
+                jau::log_printf(elapsed_ms, "ball %s-i, %s\n", id.c_str(), toString().c_str());
+                jau::log_printf(elapsed_ms, "Ball %s-i: v %s, |%f| m/s, %s\n",
                         id.c_str(), velocity.toString().c_str(), velocity.length(), box().toString().c_str());
             }
         }
@@ -217,7 +212,7 @@ namespace physiks {
                 this->dir_angle = start_angle; // direction of velocity
             }
             velocity = vec_t::from_length_angle(velocity_start, this->dir_angle);
-            pixel::log_printf("Ball %s-res: v %s, |%f| m/s, %s, %s\n",
+            jau::log_printf("Ball %s-res: v %s, |%f| m/s, %s, %s\n",
                     id.c_str(), velocity.toString().c_str(), velocity.length(),
                     toString().c_str(), box().toString().c_str());
         }
@@ -263,7 +258,7 @@ namespace physiks {
                 velocity = vec_t::from_length_angle(velocity.length() + medium_accel * dt, a_move);
             }
 
-            const uint64_t elapsed_ms = pixel::getElapsedMillisecond();
+            const uint64_t elapsed_ms = jau::getElapsedMillisecond();
 
             geom_ref_t coll_obj = nullptr;
             point_t coll_point;
@@ -318,20 +313,20 @@ namespace physiks {
 
                     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
 
-                    pixel::log_printf(elapsed_ms, "\n");
-                    pixel::log_printf(elapsed_ms, "Ball %s-e-a: v %s, |%f| / %f m/s\n",
+                    jau::log_printf(elapsed_ms, "\n");
+                    jau::log_printf(elapsed_ms, "Ball %s-e-a: v %s, |%f| / %f m/s\n",
                             id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max);                            
-                    pixel::log_printf(elapsed_ms, "Ball %s-e-a: ds %s [m/s], move[angle %f, len %f, %s]\n",
+                    jau::log_printf(elapsed_ms, "Ball %s-e-a: ds %s [m/s], move[angle %f, len %f, %s]\n",
                             id.c_str(), ds_m_dir.toString().c_str(),
-                            pixel::rad_to_adeg(a_move), l_move.length(), l_move.toString().c_str());                            
-                    pixel::log_printf(elapsed_ms, "Ball %s-e-a: coll[point %s, normal[%s, angle %f]]]\n",
+                            jau::rad_to_adeg(a_move), l_move.length(), l_move.toString().c_str());                            
+                    jau::log_printf(elapsed_ms, "Ball %s-e-a: coll[point %s, normal[%s, angle %f]]]\n",
                             id.c_str(),
                             coll_point.toString().c_str(), 
-                            coll_normal.toString().c_str(), pixel::rad_to_adeg(coll_normal.angle()));                            
-                    pixel::log_printf(elapsed_ms, "Ball %s-e-a: coll[out[%s, angle %f]]]\n",
+                            coll_normal.toString().c_str(), jau::rad_to_adeg(coll_normal.angle()));                            
+                    jau::log_printf(elapsed_ms, "Ball %s-e-a: coll[out[%s, angle %f]]]\n",
                             id.c_str(),
-                            coll_out.toString().c_str(), pixel::rad_to_adeg(coll_out.angle()));
-                    pixel::log_printf(elapsed_ms, "Ball %s-e-a: %s\n", id.c_str(), coll_obj->toString().c_str());
+                            coll_out.toString().c_str(), jau::rad_to_adeg(coll_out.angle()));
+                    jau::log_printf(elapsed_ms, "Ball %s-e-a: %s\n", id.c_str(), coll_obj->toString().c_str());
                 } else {
                     this->draw(false);
                 }
@@ -380,7 +375,7 @@ namespace physiks {
                     // bool do_reset = velocity_max <= min_velocity;
                     bool do_reset = m_make_do_reset && velocity.length() <= min_velocity;                
                     if( m_debug_gfx ) {
-                        pixel::log_printf(elapsed_ms, "Ball %s-e-b: v %s, |%f| / %f m/s, reset %d, %s, %s\n",
+                        jau::log_printf(elapsed_ms, "Ball %s-e-b: v %s, |%f| / %f m/s, reset %d, %s, %s\n",
                                 id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max,
                                 do_reset, toString().c_str(), box().toString().c_str());
                     }
@@ -394,7 +389,7 @@ namespace physiks {
                 // no collision
                 if( !this->on_screen() ) {
                     if (m_debug_gfx) {
-                        pixel::log_printf(elapsed_ms, "Ball %s-off: reset %d, v %s, |%f| m/s, %s, %s\n",
+                        jau::log_printf(elapsed_ms, "Ball %s-off: reset %d, v %s, |%f| m/s, %s, %s\n",
                                           id.c_str(), m_make_do_reset, velocity.toString().c_str(), 
                                           velocity.length(), toString().c_str(), 
                                           box().toString().c_str());
