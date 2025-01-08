@@ -543,6 +543,21 @@ class alien_group_t : public gobject_t {
         if( m_pause ) {
             return true;
         }
+        if( m_saucer ) {
+            pixel::f2::vec_t dxy = avg_fd * m_saucer_velo;
+            if( (m_alien_velo.x > 0 && m_saucer->pos().x > saucer_rpos.x+1) ||
+                (m_alien_velo.x < 0 && m_saucer->pos().x < saucer_lpos.x-1) ) {
+                // exit
+                m_saucer = nullptr;
+                audio_saucer->stop();
+            } else {
+                if( m_saucer->is_killed() ) {
+                    m_saucer->tick(avg_fd);
+                } else {
+                    m_saucer->step(dxy);
+                }
+            }
+        }
         if( m_killed.size() > 0 ) {
             for(auto it = m_killed.begin(); it != m_killed.end(); ) {
                 if( (*it)->tick(avg_fd) ) {
@@ -563,21 +578,6 @@ class alien_group_t : public gobject_t {
                 // pixel::log_printf("XX saucer: lr %u, velo %s, bl %s\n", lr, m_saucer_velo.toString().c_str(), m_saucer->pos().toString().c_str());
             }
             m_saucer_delay_left = alien_saucer_period;
-        }
-        if( m_saucer ) {
-            pixel::f2::vec_t dxy = avg_fd * m_saucer_velo;
-            if( (m_alien_velo.x > 0 && m_saucer->pos().x > saucer_rpos.x+1) ||
-                (m_alien_velo.x < 0 && m_saucer->pos().x < saucer_lpos.x-1) ) {
-                // exit
-                m_saucer = nullptr;
-                audio_saucer->stop();
-            } else {
-                if( m_saucer->is_killed() ) {
-                    m_saucer->tick(avg_fd);
-                } else {
-                    m_saucer->step(dxy);
-                }
-            }
         }
         m_step_delay_left -= avg_fd;
         if( m_step_delay_left > 0 ) {
