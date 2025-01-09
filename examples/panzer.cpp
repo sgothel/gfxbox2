@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        if( !pixel::init_gfx_subsystem("panzer", window_width, window_height, origin_norm) ) {
+        if( !pixel::init_gfx_subsystem(argv[0], "panzer", window_width, window_height, origin_norm) ) {
             return 1;
         }
     }

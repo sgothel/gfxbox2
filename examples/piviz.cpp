@@ -636,7 +636,7 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        if( !pixel::init_gfx_subsystem("piviz", window_width, window_height, origin_norm, true /* enable_vsync */, use_subsys_primitives) ) {
+        if( !pixel::init_gfx_subsystem(argv[0], "piviz", window_width, window_height, origin_norm, true /* enable_vsync */, use_subsys_primitives) ) {
             return 1;
         }
     }

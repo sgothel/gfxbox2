@@ -1232,7 +1232,7 @@ int main(int argc, char *argv[])
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        if( !pixel::init_gfx_subsystem("spacewars", window_width, window_height, origin_norm, enable_vsync, use_subsys_primitives) ) {
+        if( !pixel::init_gfx_subsystem(argv[0], "spacewars", window_width, window_height, origin_norm, enable_vsync, use_subsys_primitives) ) {
             return 1;
         }
     }

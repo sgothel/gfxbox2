@@ -63,6 +63,10 @@ namespace pixel::f4 {
  */
 namespace pixel {
 
+    std::string lookup_and_register_asset_dir(const char* exe_path, const char* asset_file="fonts/freefont/FreeSansBold.ttf", const char* asset_install_subdir="gfxbox2") noexcept;
+    std::string asset_dir() noexcept;
+    std::string resolve_asset(const std::string &asset_file, bool lookup_direct=false) noexcept;
+
     /** Width of the window, coordinate in window units. */
     extern int win_width;
     /** Height of the window, coordinate in window units. */
@@ -671,7 +675,7 @@ namespace pixel {
 
     bool is_gfx_subsystem_initialized() noexcept;
     /** GFX Toolkit: Initialize a window of given size with a usable framebuffer. */
-    bool init_gfx_subsystem(const char* title, int window_width, int window_height, const float origin_norm[2],
+    bool init_gfx_subsystem(const char* exe_path, const char* title, int window_width, int window_height, const float origin_norm[2],
                             bool enable_vsync=true, bool use_subsys_primitives=true);
     /** GFX Toolkit: Clear the soft-framebuffer. */
     void clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;

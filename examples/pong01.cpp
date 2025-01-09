@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
 
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        if( !pixel::init_gfx_subsystem("pong01", window_width, window_height, origin_norm, enable_vsync, true /* subsys primitives */) ) {
+        if( !pixel::init_gfx_subsystem(argv[0], "pong01", window_width, window_height, origin_norm, enable_vsync, true /* subsys primitives */) ) {
             return 1;
         }
     }

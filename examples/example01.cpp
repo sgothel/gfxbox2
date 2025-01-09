@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        if( !pixel::init_gfx_subsystem("gfxbox example01", window_width, window_height, origin_norm) ) {
+        if( !pixel::init_gfx_subsystem(argv[0], "gfxbox example01", window_width, window_height, origin_norm) ) {
             return 1;
         }
     }

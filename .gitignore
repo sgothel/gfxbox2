@@ -4,6 +4,7 @@ dist*/
 snaps/
 images/
 media/
+media_external/
 /compile_commands.json
 *~
 *.log

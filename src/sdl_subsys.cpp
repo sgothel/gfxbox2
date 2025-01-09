@@ -23,6 +23,7 @@
  */
 #include "pixel/pixel.hpp"
 #include "pixel/version.hpp"
+#include <jau/file_util.hpp>
 
 #include <atomic>
 #include <thread>
@@ -129,13 +130,18 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
             TTF_CloseFont(sdl_font);
             sdl_font = nullptr;
         }
-        const std::string fontfilename = "resources/fonts/freefont/FreeSansBold.ttf";
+        const std::string fontfile = "fonts/freefont/FreeSansBold.ttf";
+        const std::string fontpath = pixel::resolve_asset(fontfile);
+        if( !fontpath.size() ) {
+            fprintf(stderr, "font: No asset path for font-file '%s'\n", fontfile.c_str());
+            return;
+        }
         font_height = std::max(24, fb_height / 35);
-        sdl_font = TTF_OpenFont(fontfilename.c_str(), font_height);
+        sdl_font = TTF_OpenFont(fontpath.c_str(), font_height);
         if( nullptr == sdl_font ) {
-            fprintf(stderr, "font: Null font for '%s': %s\n", fontfilename.c_str(), SDL_GetError());
+            fprintf(stderr, "font: Null font for '%s': %s\n", fontpath.c_str(), SDL_GetError());
         } else {
-            printf("Using font %s, size %d\n", fontfilename.c_str(), font_height);
+            printf("Using font %s, size %d\n", fontpath.c_str(), font_height);
         }
     }
 }
@@ -146,8 +152,11 @@ static std::atomic_bool gfx_subsystem_init = false;
 bool pixel::is_gfx_subsystem_initialized() noexcept {
     return gfx_subsystem_init;
 }
-bool pixel::init_gfx_subsystem(const char* title, int wwidth, int wheight, const float origin_norm[2],
-                               bool enable_vsync, bool use_subsys_primitives) {
+
+bool pixel::init_gfx_subsystem(const char* exe_path, const char* title, int wwidth, int wheight, const float origin_norm[2],
+                        bool enable_vsync, bool use_subsys_primitives) {
+    lookup_and_register_asset_dir(exe_path);
+
     bool exp_init_called = false;
     if( !gfx_subsystem_init_called.compare_exchange_strong(exp_init_called, true) ) {
         return gfx_subsystem_init;
@@ -327,12 +336,17 @@ void pixel::bitmap_t::destroy() noexcept {
     }
 }
 
-pixel::bitmap_t::bitmap_t(const std::string& fname) noexcept
+pixel::bitmap_t::bitmap_t(const std::string& fname0) noexcept
 : m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
 {
-    SDL_Surface* surface = IMG_Load(fname.c_str());
+    const std::string fname1 = pixel::resolve_asset(fname0);
+    if( !fname1.size() ) {
+        log_printf("bitmap_t: Could locate file '%s' in asset dir '%s': %s\n", fname0.c_str(), pixel::asset_dir().c_str());
+        return;
+    }
+    SDL_Surface* surface = IMG_Load(fname1.c_str());
     if( nullptr == surface ) {
-        log_printf("bitmap_t: Error loading %s: %s\n", fname.c_str(), SDL_GetError());
+        log_printf("bitmap_t: Error loading %s: %s\n", fname1.c_str(), SDL_GetError());
         return;
     }
     if( DEBUG_TEX ) {
@@ -465,12 +479,17 @@ pixel::texture_t::texture_t(const bitmap_ref& bmap) noexcept
     m_owner = true;
 }
 
-pixel::texture_t::texture_t(const std::string& fname) noexcept
+pixel::texture_t::texture_t(const std::string& fname0) noexcept
 : m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1)
 {
-    SDL_Texture* tex_ = IMG_LoadTexture(sdl_rend, fname.c_str());
+    const std::string fname1 = pixel::resolve_asset(fname0);
+    if( !fname1.size() ) {
+        log_printf("texture_t: Could locate file '%s' in asset dir '%s': %s\n", fname0.c_str(), pixel::asset_dir().c_str());
+        return;
+    }
+    SDL_Texture* tex_ = IMG_LoadTexture(sdl_rend, fname1.c_str());
     if( nullptr == tex_ ) {
-        log_printf("texture_t: Error loading %s: %s\n", fname.c_str(), SDL_GetError());
+        log_printf("texture_t: Error loading %s: %s\n", fname1.c_str(), SDL_GetError());
     }
     m_handle = reinterpret_cast<void*>(tex_);
     if( nullptr != tex_ ) {

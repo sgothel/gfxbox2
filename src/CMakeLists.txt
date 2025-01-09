@@ -50,4 +50,5 @@ endmacro (gfxbox2_CREATE_INSTALL_PKGCONFIG)
 gfxbox2_create_install_pkgconfig (gfxbox2.pc lib${LIB_SUFFIX}/pkgconfig)
 
 install(TARGETS gfxbox2 LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install(FILES ${PROJECT_SOURCE_DIR}/resources/fonts/freefont/FreeSansBold.ttf DESTINATION ${CMAKE_INSTALL_DATADIR}/gfxbox2/fonts/freefont)
 

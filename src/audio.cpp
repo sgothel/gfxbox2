@@ -22,6 +22,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include "pixel/pixel.hpp"
 #include "pixel/audio.hpp"
 #include "jau/utils.hpp"
 
@@ -90,11 +91,19 @@ void jau::audio::audio_close() {
     }
 }
 
+static Mix_Chunk* Mix_LoadWAV2(const std::string& f) {
+    const std::string g = pixel::resolve_asset(f);
+    if( g.size() > 0 ) {
+        return Mix_LoadWAV(g.c_str());
+    } else {
+        return nullptr;
+    }
+}
 jau::audio::audio_sample_t::audio_sample_t(const std::string &fname, const bool single_play, const int volume)
-: chunk(Mix_LoadWAV(fname.c_str()), Mix_FreeChunk), channel_playing(-1), singly(single_play)
+: chunk(Mix_LoadWAV2(fname.c_str()), Mix_FreeChunk), channel_playing(-1), singly(single_play)
 {
-    if ( nullptr == chunk.get() ) {
-        log_printf("Mix_LoadWAV: Load '%s' Error: %s\n", fname.c_str(), SDL_GetError());
+    if ( !chunk ) {
+        log_printf("Mix_LoadWAV: Load '%s' -> '%s' Error: %s\n", fname.c_str(), pixel::resolve_asset(fname).c_str(), SDL_GetError());
     } else {
         Mix_VolumeChunk(chunk.get(), volume);
     }

@@ -178,14 +178,14 @@ static audio_sample_ref audio_saucer, audio_peng, audio_alienX, audio_baseX;
 static bool load_samples() {
     audio_aliens.clear();
     if( jau::audio::is_audio_subsystem_initialized() ) {
-        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien1.wav", false, MIX_MAX_VOLUME) );
-        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien2.wav", false, MIX_MAX_VOLUME) );
-        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien3.wav", false, MIX_MAX_VOLUME) );
-        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alien4.wav", false, MIX_MAX_VOLUME) );
-        audio_saucer = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alienM.wav", false, MIX_MAX_VOLUME/4);
-        audio_peng = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/peng.wav", false, MIX_MAX_VOLUME/4);
-        audio_alienX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/alienX.wav", false, MIX_MAX_VOLUME/4);
-        audio_baseX = std::make_shared<jau::audio::audio_sample_t>("resources/spaceinv/baseX.wav", false, MIX_MAX_VOLUME);
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("spaceinv/alien1.wav", false, MIX_MAX_VOLUME) );
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("spaceinv/alien2.wav", false, MIX_MAX_VOLUME) );
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("spaceinv/alien3.wav", false, MIX_MAX_VOLUME) );
+        audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("spaceinv/alien4.wav", false, MIX_MAX_VOLUME) );
+        audio_saucer = std::make_shared<jau::audio::audio_sample_t>("spaceinv/alienM.wav", false, MIX_MAX_VOLUME/4);
+        audio_peng = std::make_shared<jau::audio::audio_sample_t>("spaceinv/peng.wav", false, MIX_MAX_VOLUME/4);
+        audio_alienX = std::make_shared<jau::audio::audio_sample_t>("spaceinv/alienX.wav", false, MIX_MAX_VOLUME/4);
+        audio_baseX = std::make_shared<jau::audio::audio_sample_t>("spaceinv/baseX.wav", false, MIX_MAX_VOLUME);
         return true;
     } else {
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>() );
@@ -202,11 +202,11 @@ static bool load_textures() {
         pixel::bitmap_ref empty = std::make_shared<pixel::bitmap_t>(64, 64);
         log_printf(0, "XX empty: %s\n", empty->toString().c_str());
     }
-    bmp_bunk = std::make_shared<pixel::bitmap_t>("resources/spaceinv/spaceinv-bunk.png");
+    bmp_bunk = std::make_shared<pixel::bitmap_t>("spaceinv/spaceinv-bunk.png");
     log_printf(0, "XX bmp bunk: %s\n", bmp_bunk->toString().c_str());
 
     int y_off=0;
-    all_images = std::make_shared<pixel::texture_t>("resources/spaceinv/spaceinv-sprites.png");
+    all_images = std::make_shared<pixel::texture_t>("spaceinv/spaceinv-sprites.png");
     if( !all_images->handle() ) {
         return false;
     }
@@ -1281,7 +1281,7 @@ int main(int argc, char *argv[])
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        if( !pixel::init_gfx_subsystem("Space Invaders", window_width, window_height, origin_norm, true, true /* subsys primitives */) ) {
+        if( !pixel::init_gfx_subsystem(argv[0], "Space Invaders", window_width, window_height, origin_norm, true, true /* subsys primitives */) ) {
             return 1;
         }
     }

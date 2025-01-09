@@ -46,9 +46,30 @@ pixel::cart_coord_t pixel::cart_coord;
 
 uint32_t pixel::draw_color = 0;
 
+static std::string m_asset_dir;
+
 //
 //
 //
+
+std::string pixel::lookup_and_register_asset_dir(const char* exe_path, const char* asset_file, const char* asset_install_subdir) noexcept {
+    m_asset_dir = jau::fs::lookup_asset_dir(exe_path, asset_file, asset_install_subdir);
+    return m_asset_dir;
+}
+std::string pixel::asset_dir() noexcept { return m_asset_dir; }
+
+std::string pixel::resolve_asset(const std::string &asset_file, bool lookup_direct) noexcept {
+    if( lookup_direct && jau::fs::exists(asset_file) ) {
+        return asset_file;
+    }
+    if( m_asset_dir.size() ) {
+        std::string fname1 = m_asset_dir+"/"+asset_file;
+        if( jau::fs::exists(fname1) ) {
+            return fname1;
+        }
+    }
+    return "";
+}
 
 int pixel::gpu_forced_fps() noexcept { return forced_fps; }
 
