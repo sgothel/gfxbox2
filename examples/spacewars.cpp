@@ -33,7 +33,7 @@
 #include <cinttypes>
 
 using namespace jau;
-using namespace jau::literals;
+using namespace jau::float_literals;
 
 static pixel::input_event_t event;
 constexpr static int player_id_1 = 1;

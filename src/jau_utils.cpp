@@ -21,8 +21,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include "pixel/jau_utils.hpp"
-#include "pixel/jau_unit.hpp"
+#include "jau/utils.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -100,7 +99,7 @@ void jau::log_printf(const char * format, ...) noexcept {
 //
 //
 
-using namespace jau::literals;
+using namespace jau::int_literals;
 
 std::string jau::to_stringva(const char* format, va_list args) noexcept {
     size_t nchars;

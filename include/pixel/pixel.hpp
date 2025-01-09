@@ -37,9 +37,9 @@
 #include <cstring>
 #include <cctype>
 
-#include <pixel/jau_utils.hpp>
+#include <jau/file_util.hpp>
+#include <jau/utils.hpp>
 #include <pixel/version.hpp>
-#include <pixel/jau_unit.hpp>
 
 #if defined(__EMSCRIPTEN__)
     #include <emscripten.h>

@@ -21,7 +21,6 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include <pixel/jau_unit.hpp>
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -40,7 +39,7 @@
 #include <vector>
 
 using namespace jau;
-using namespace jau::literals;
+using namespace jau::float_literals;
 
 static pixel::input_event_t event;
 

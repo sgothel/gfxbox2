@@ -23,7 +23,7 @@
  */
 
 #include "pixel/audio.hpp"
-#include "pixel/jau_utils.hpp"
+#include "jau/utils.hpp"
 
 #include <atomic>
 #include <SDL2/SDL.h>

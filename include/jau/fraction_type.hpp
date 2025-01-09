@@ -22,99 +22,15 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef JAU_UNIT_HPP_
-#define JAU_UNIT_HPP_
+#ifndef JAU_FRACTION_TYPE_HPP_
+#define JAU_FRACTION_TYPE_HPP_
 
 #include <cstdint>
 #include <cstring>
 #include <ctime>
-#include <numbers>
 #include <string>
 
 namespace jau {
-
-    /** Time in fractions of seconds. */
-    typedef float si_time_t;
-    /** Length in fractions of meter. */
-    typedef float si_length_t;
-    /** Mass in fractions of kilograms. */
-    typedef float si_mass_t;
-    /** Velocity in fractions of meter/seconds. */
-    typedef float si_velo_t;
-    /** Acceleration in fractions of meter/seconds^2. */
-    typedef float si_accel_t;
-    /** Angle in fraction of radians. */
-    typedef float si_angle_t;
-
-    namespace literals {
-        constexpr si_time_t operator ""_year(unsigned long long int __v)   { return (si_time_t)__v*365.25f*24.0f*3600.0f; }
-        constexpr si_time_t operator ""_month(unsigned long long int __v)   { return (si_time_t)__v*30.0f*24.0f*3600.0f; }
-        constexpr si_time_t operator ""_week(unsigned long long int __v)   { return (si_time_t)__v*7.0f*24.0f*3600.0f; }
-        constexpr si_time_t operator ""_day(unsigned long long int __v)   { return (si_time_t)__v*24.0f*3600.0f; }
-
-        constexpr si_time_t operator ""_h(unsigned long long int __v)   { return (si_time_t)__v*3600.0f; }
-        constexpr si_time_t operator ""_min(unsigned long long int __v)   { return (si_time_t)__v*60.0f; }
-        constexpr si_time_t operator ""_s(unsigned long long int __v)   { return (si_time_t)__v; }
-        constexpr si_time_t operator ""_ms(unsigned long long int __v)   { return (si_time_t)__v/1000.0f; }
-
-        constexpr si_length_t operator ""_km(unsigned long long int __v)   { return (si_length_t)__v*1000.0f; }
-        constexpr si_length_t operator ""_m(unsigned long long int __v)   { return (si_length_t)__v; }
-        constexpr si_length_t operator ""_dm(unsigned long long int __v)   { return (si_length_t)__v/10.0f; }
-        constexpr si_length_t operator ""_cm(unsigned long long int __v)   { return (si_length_t)__v/100.0f; }
-        constexpr si_length_t operator ""_mm(unsigned long long int __v)   { return (si_length_t)__v/1000.0f; }
-
-        constexpr si_mass_t operator ""_t(unsigned long long int __v)   { return (si_mass_t)__v * 1000.0f; }
-        constexpr si_mass_t operator ""_kg(unsigned long long int __v)   { return (si_mass_t)__v; }
-        constexpr si_mass_t operator ""_g(unsigned long long int __v)   { return (si_mass_t)__v/1000.0f; }
-        constexpr si_mass_t operator ""_mg(unsigned long long int __v)   { return (si_mass_t)__v/1000000.0f; }
-
-        constexpr si_velo_t operator ""_km_s(unsigned long long int __v)   { return (si_velo_t)__v * 1000.0f; }
-        constexpr si_velo_t operator ""_m_s(unsigned long long int __v)   { return (si_velo_t)__v; }
-        constexpr si_velo_t operator ""_km_h(unsigned long long int __v)   { return (si_velo_t)__v / 3.6f; }
-        constexpr si_velo_t operator ""_m_h(unsigned long long int __v)   { return (si_velo_t)__v / 3600.0f; }
-
-        constexpr si_accel_t operator ""_km_s2(unsigned long long int __v)   { return (si_accel_t)__v * 1000.0f; }
-        constexpr si_accel_t operator ""_m_s2(unsigned long long int __v)   { return (si_accel_t)__v; }
-        constexpr si_accel_t operator ""_dm_s2(unsigned long long int __v)   { return (si_accel_t)__v / 10.0f; }
-        constexpr si_accel_t operator ""_cm_s2(unsigned long long int __v)   { return (si_accel_t)__v / 100.0f; }
-        constexpr si_accel_t operator ""_mm_s2(unsigned long long int __v)   { return (si_accel_t)__v / 1000.0f; }
-
-        constexpr si_angle_t operator ""_rad(unsigned long long int __v)   { return (si_angle_t)__v; }
-        constexpr si_angle_t operator ""_deg(unsigned long long int __v)   { return (si_angle_t)((long double)__v / 180.0 * std::numbers::pi_v<long double>); }
-
-        constexpr si_angle_t operator ""_rad(long double __v)   { return (si_angle_t)__v; }
-        constexpr si_angle_t operator ""_deg(long double __v)   { return (si_angle_t)(__v / 180.0 * std::numbers::pi_v<long double>); }
-
-        /** Literal for signed int8_t */
-        constexpr int8_t operator ""_i8(unsigned long long int __v)   { return (int8_t)__v; }
-
-        /** Literal for unsigned uint8_t */
-        constexpr uint8_t operator ""_u8(unsigned long long int __v)  { return (uint8_t)__v; }
-
-        /** Literal for signed int16_t */
-        constexpr int16_t operator ""_i16(unsigned long long int __v)   { return (int16_t)__v; }
-
-        /** Literal for unsigned uint16_t */
-        constexpr uint16_t operator ""_u16(unsigned long long int __v)  { return (uint16_t)__v; }
-
-        /** Literal for signed int32_t */
-        constexpr int32_t operator ""_i32(unsigned long long int __v)   { return (int32_t)__v; }
-
-        /** Literal for unsigned uint32_t */
-        constexpr uint32_t operator ""_u32(unsigned long long int __v)  { return (uint32_t)__v; }
-
-        /** Literal for signed int64_t */
-        constexpr int64_t operator ""_i64(unsigned long long int __v)   { return (int64_t)__v; }
-
-        /** Literal for unsigned uint64_t */
-        constexpr uint64_t operator ""_u64(unsigned long long int __v)  { return (uint64_t)__v; }
-
-        /** Literal for signed ssize_t */
-        constexpr ssize_t operator ""_iz(unsigned long long int __v)  { return (ssize_t)__v; }
-
-        /** Literal for unsigned size_t */
-        constexpr size_t operator ""_uz(unsigned long long int __v)  { return (size_t)__v; }
-    }
 
     /**
      * Timespec structure using int64_t for its components
@@ -165,7 +81,7 @@ namespace jau {
         explicit constexpr fraction_timespec(const double seconds) noexcept
         : tv_sec( static_cast<int64_t>(seconds) ),
           tv_nsec( static_cast<int64_t>( (seconds - static_cast<double>(tv_sec)) * 1e+9) ) { }
-          
+
         /**
          * Conversion constructor from broken down values assuming UTC
          * @param year year number, 0 as 0 A.D.
@@ -268,7 +184,7 @@ namespace jau {
          * @param muteTime if true, always mute time
          */
         std::string to_iso8601_string(bool space_separator=false, bool muteTime=false) const noexcept;
-    
+
         int64_t days(){
             return tv_sec / (int64_t)(3600*24);
         }
@@ -351,4 +267,4 @@ namespace jau {
 
 }
 
-#endif /* JAU_UNIT_HPP_ */
+#endif /* JAU_FRACTION_TYPE_HPP_ */

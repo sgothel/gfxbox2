@@ -21,7 +21,6 @@
 #include <pixel/pixel2i.hpp>
 #include "pixel/pixel.hpp"
 #include <physics.hpp>
-#include <pixel/jau_unit.hpp>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -33,7 +32,7 @@
 #include <vector>
 
 using namespace jau;
-using namespace jau::literals;
+using namespace jau::float_literals;
 using namespace pixel;
 
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };

@@ -37,8 +37,10 @@
 #include <cstring>
 #include <cctype>
 
-#include <pixel/jau_unit.hpp>
-#include <pixel/version.hpp>
+#include <jau/int_types.hpp>
+#include <jau/float_si_types.hpp>
+// #include <jau/file_util.hpp>
+#include <jau/fraction_type.hpp>
 
 /**
  * Basic computer graphics math and utilities helping with the framebuffer and I/O tooling.
