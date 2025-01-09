@@ -39,7 +39,7 @@
 
 #include <jau/int_types.hpp>
 #include <jau/float_si_types.hpp>
-// #include <jau/file_util.hpp>
+#include <jau/file_util.hpp>
 #include <jau/fraction_type.hpp>
 
 /**

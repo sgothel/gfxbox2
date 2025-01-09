@@ -10,6 +10,7 @@ include_directories(
 
 set (gfxbox2_LIB_SRCS
   ${PROJECT_SOURCE_DIR}/src/jau_utils.cpp
+  ${PROJECT_SOURCE_DIR}/src/jau_file_util.cpp
   ${PROJECT_SOURCE_DIR}/src/pixel.cpp
   ${PROJECT_SOURCE_DIR}/src/sdl_subsys.cpp
   ${PROJECT_SOURCE_DIR}/src/audio.cpp
