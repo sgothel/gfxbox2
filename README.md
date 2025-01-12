@@ -20,11 +20,11 @@ Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten
   * [Solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html)
   * [Piviz](https://jausoft.com/projects/gfxbox2/piviz.html)
   * [Freefall](https://jausoft.com/projects/gfxbox2/freefall01.html)
+  * [Funcdraw](https://jausoft.com/projects/gfxbox2/funcdraw.html)
 * Our Games
   * [Spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
   * [Canonball](https://jausoft.com/projects/gfxbox2/canonball.html)
   * [Tron](https://jausoft.com/projects/gfxbox2/tron.html)
-  * [Funcdraw](https://jausoft.com/projects/gfxbox2/funcdraw.html)
 * Game Classics / Homages
   * [Pong](https://jausoft.com/projects/gfxbox2/pong01.html)
   * [Space Invaders](https://jausoft.com/projects/gfxbox2/spaceinv01.html)
