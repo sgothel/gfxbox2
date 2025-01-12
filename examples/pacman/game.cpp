@@ -23,6 +23,7 @@
  */
 #include "utils.hpp"
 #include "maze.hpp"
+#include <jau/utils.hpp>
 #include "game.hpp"
 
 #include <limits>
@@ -623,7 +624,8 @@ void mainloop() {
         }
 
         // top line: title
-        draw_text("HIGH SCORE", 255, 255, 255, [&](const pixel::texture_t& /*tex*/, float &x, float&y, float tw, float /*th*/) {
+        std::string top_line_text = jau::to_string("HIGH SCORE (fps %4.2f)", pixel::gpu_avg_fps());
+        draw_text(top_line_text, 255, 255, 255, [&](const pixel::texture_t& /*tex*/, float &x, float&y, float tw, float /*th*/) {
             x = ( global_maze->x_to_px( (float)global_maze->width()) - tw ) / 2.0f;
             y = global_maze->y_to_px(0.0f);
         });
