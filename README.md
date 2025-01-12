@@ -16,17 +16,21 @@ C++20 and better where the [SDL2 library](https://www.libsdl.org/) is supported.
 Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten.org/).
 
 ## Online WebAssembly Examples
-* [solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html)
-* [spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
-* [space invaders](https://jausoft.com/projects/gfxbox2/spaceinv01.html)
-* [freefall](https://jausoft.com/projects/gfxbox2/freefall01.html)
-* [pong](https://jausoft.com/projects/gfxbox2/pong01.html)
-* [canonball](https://jausoft.com/projects/gfxbox2/canonball.html)
-* [tron](https://jausoft.com/projects/gfxbox2/tron.html)
-* [piviz](https://jausoft.com/projects/gfxbox2/piviz.html)
-* [funcdraw](https://jausoft.com/projects/gfxbox2/funcdraw.html)
-* [example01](https://jausoft.com/projects/gfxbox2/example01.html)
-* [sandbox01](https://jausoft.com/projects/gfxbox2/sandbox01.html)
+* Own Creations
+  * [solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html)
+  * [spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
+  * [freefall](https://jausoft.com/projects/gfxbox2/freefall01.html)
+  * [pong](https://jausoft.com/projects/gfxbox2/pong01.html)
+  * [canonball](https://jausoft.com/projects/gfxbox2/canonball.html)
+  * [tron](https://jausoft.com/projects/gfxbox2/tron.html)
+  * [piviz](https://jausoft.com/projects/gfxbox2/piviz.html)
+  * [funcdraw](https://jausoft.com/projects/gfxbox2/funcdraw.html)
+  * [example01](https://jausoft.com/projects/gfxbox2/example01.html)
+  * [sandbox01](https://jausoft.com/projects/gfxbox2/sandbox01.html)
+* Classics / Homages
+  * [space invaders](https://jausoft.com/projects/gfxbox2/spaceinv01.html)
+  * [pacman](https://jausoft.com/projects/gfxbox2/pacman.html)
+    - [readme](examples/pacman/README.md)
 
 ## Building Binaries
 
@@ -35,12 +39,12 @@ Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten
 - C++20 compiler
   - gcc >= 10
   - clang >= 15
-- [SDL2 library](https://www.libsdl.org/) 
+- [SDL2 library](https://www.libsdl.org/)
 - [emscripten >= 3.1.59](https://emscripten.org/) **optional** for WebAssembly (Wasm)
 - [SFML library](https://www.sfml-dev.org/) **optional**
 - Example funcdraw
     - Parser generator
-        - [bison >= 3.2](https://www.gnu.org/software/bison/manual/) 
+        - [bison >= 3.2](https://www.gnu.org/software/bison/manual/)
     - Lexer generator
         - [flex](https://github.com/westes/flex)
 - Optional for `lint` validation
@@ -54,7 +58,7 @@ Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten
 Installing build dependencies on Debian (11 or better):
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 apt install git
-apt install build-essential g++ gcc libc-dev libpthread-stubs0-dev 
+apt install build-essential g++ gcc libc-dev libpthread-stubs0-dev
 apt install clang-15 clang-tidy-15 clangd-15 clang-tools-15 clang-format-15
 apt install cmake cmake-extras extra-cmake-modules pkg-config
 apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev
@@ -107,8 +111,8 @@ Building debug build:
 
 Building with clang and clang-tidy `lint` validation
 ~~~~~~~~~~~~~
--DCMAKE_C_COMPILER=/usr/bin/clang 
--DCMAKE_CXX_COMPILER=/usr/bin/clang++ 
+-DCMAKE_C_COMPILER=/usr/bin/clang
+-DCMAKE_CXX_COMPILER=/usr/bin/clang++
 -DCMAKE_CXX_CLANG_TIDY=/usr/bin/clang-tidy;-p;$rootdir/$build_dir
 ~~~~~~~~~~~~~
 
@@ -117,7 +121,7 @@ Building examples with SFML
 -DUSE_SFML=ON
 ~~~~~~~~~~~~~
 
-To build documentation run: 
+To build documentation run:
 ~~~~~~~~~~~~~
 make doc
 ~~~~~~~~~~~~~
@@ -126,20 +130,20 @@ make doc
 
 ### IDE Integration
 
-#### Eclipse 
-IDE integration configuration files are provided for 
+#### Eclipse
+IDE integration configuration files are provided for
 - [Eclipse](https://download.eclipse.org/eclipse/downloads/) with extensions
   - [CDT](https://github.com/eclipse-cdt/) or [CDT @ eclipse.org](https://projects.eclipse.org/projects/tools.cdt)
   - `CMake Support`, install `C/C++ CMake Build Support` with ID `org.eclipse.cdt.cmake.feature.group`
 
 You can import the project to your workspace via `File . Import...` and `Existing Projects into Workspace` menu item.
 
-For Eclipse one might need to adjust some setting in the `.project` and `.cproject` (CDT) 
+For Eclipse one might need to adjust some setting in the `.project` and `.cproject` (CDT)
 via Eclipse settings UI, but it should just work out of the box.
 
 #### VSCodium or VS Code
 
-IDE integration configuration files are provided for 
+IDE integration configuration files are provided for
 - [VSCodium](https://vscodium.com/) or [VS Code](https://code.visualstudio.com/) with extensions
   - [vscode-clangd](https://github.com/clangd/vscode-clangd)
   - [twxs.cmake](https://github.com/twxs/vs.language.cmake)
