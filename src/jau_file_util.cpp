@@ -168,5 +168,7 @@ std::string jau::fs::lookup_asset_dir(const char* exe_path, const char* asset_fi
     if( exists( assetdir1+"/"+asset_file ) ) {
         return assetdir1;
     }
+    fprintf(stderr, "asset_dir: Not found: dir '%s', file '%s', exe[path '%s', dir '%s'], cwd '%s', adir '%s'\n",
+        assetdir1.c_str(), asset_file, exe_path, exedir.c_str(), cwd.c_str(), adir.c_str());
     return "";
 }

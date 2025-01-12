@@ -71,9 +71,7 @@ void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t&
 int pixel::monitor_fps() noexcept { return monitor_frames_per_sec; }
 
 static void on_window_resized(int wwidth, int wheight) noexcept {
-    if( nullptr == sdl_rend ) {
-        return;
-    }
+    if( !sdl_rend ) { return; }
     const int old_fb_width = fb_width;
     const int old_fb_height = fb_height;
     SDL_GetRendererOutputSize(sdl_rend, &fb_width, &fb_height);
@@ -133,7 +131,7 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
         const std::string fontfile = "fonts/freefont/FreeSansBold.ttf";
         const std::string fontpath = pixel::resolve_asset(fontfile);
         if( !fontpath.size() ) {
-            fprintf(stderr, "font: No asset path for font-file '%s'\n", fontfile.c_str());
+            log_printf("font: No asset path for font-file '%s' in asset dir '%s'\n", fontfile.c_str(), pixel::asset_dir().c_str());
             return;
         }
         font_height = std::max(24, fb_height / 35);
@@ -259,6 +257,7 @@ extern "C" {
 }
 
 void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
+    if( !sdl_rend ) { return; }
     SDL_SetRenderDrawColor(sdl_rend, r, g, b, a);
     SDL_RenderClear(sdl_rend);
 
@@ -273,7 +272,7 @@ void pixel::clear_pixel_fb(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept 
 }
 
 void pixel::swap_pixel_fb(const bool swap_buffer, int fps) noexcept {
-    if( !use_subsys_primitives_val ) {
+    if( sdl_rend && !use_subsys_primitives_val ) {
         SDL_UpdateTexture(fb_texture, nullptr, fb_pixels.data(), (int)fb_pixels_byte_width);
         SDL_RenderCopy(sdl_rend, fb_texture, nullptr, nullptr);
     }
@@ -282,6 +281,7 @@ void pixel::swap_pixel_fb(const bool swap_buffer, int fps) noexcept {
     }
 }
 void pixel::swap_gpu_buffer(int fps) noexcept {
+    if( !sdl_rend ) { return; }
     SDL_RenderPresent(sdl_rend);
     gpu_swap_t0 = getCurrentMilliseconds();
     ++gpu_frame_count;
@@ -341,7 +341,7 @@ pixel::bitmap_t::bitmap_t(const std::string& fname0) noexcept
 {
     const std::string fname1 = pixel::resolve_asset(fname0);
     if( !fname1.size() ) {
-        log_printf("bitmap_t: Could locate file '%s' in asset dir '%s': %s\n", fname0.c_str(), pixel::asset_dir().c_str());
+        log_printf("bitmap_t: Could locate file '%s' in asset dir '%s'\n", fname0.c_str(), pixel::asset_dir().c_str());
         return;
     }
     SDL_Surface* surface = IMG_Load(fname1.c_str());
@@ -400,7 +400,7 @@ pixel::bitmap_t::bitmap_t(const bitmap_t& o, int /*unused*/) noexcept
         return;
     }
     SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(0, (int)o.width, (int)o.height, (int)o.bpp*8, o.format);
-    if( nullptr != surface ) {
+    if( surface ) {
         if( DEBUG_TEX ) {
             log_printf("bitmap_t: Created fmt %s, %d x %d pitch %d\n", format_str(surface->format->format), surface->w, surface->h, surface->pitch);
         }
@@ -436,7 +436,7 @@ void pixel::texture_t::destroy() noexcept {
 }
 
 void pixel::texture_t::draw_raw(const uint32_t fb_x, const uint32_t fb_y, const uint32_t fb_w, const uint32_t fb_h) const noexcept {
-    if( nullptr != m_handle ) {
+    if( sdl_rend && m_handle ) {
         SDL_Texture* tex = reinterpret_cast<SDL_Texture*>(m_handle);
         SDL_Rect src = { .x=(int)x, .y=(int)y, .w=(int)width, .h=(int)height};
         SDL_Rect dest = { .x=(int)fb_x,
@@ -449,9 +449,10 @@ void pixel::texture_t::draw_raw(const uint32_t fb_x, const uint32_t fb_y, const 
 pixel::texture_t::texture_t(const bitmap_ref& bmap) noexcept
 : m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1)
 {
+    if( !sdl_rend ) { return; }
     SDL_Surface * surface = reinterpret_cast<SDL_Surface*>(bmap->handle());
     SDL_Texture* tex_;
-    if( nullptr != surface ) {
+    if( surface ) {
         if( DEBUG_TEX ) {
             log_printf("texture_t: Given surface fmt %s, %d x %d pitch %d\n", format_str(surface->format->format), surface->w, surface->h, surface->pitch);
         }
@@ -482,9 +483,10 @@ pixel::texture_t::texture_t(const bitmap_ref& bmap) noexcept
 pixel::texture_t::texture_t(const std::string& fname0) noexcept
 : m_handle(nullptr), m_owner(false), x(0), y(0), width(0), height(0), bpp(0), format(0), dest_x(0), dest_y(0), dest_sx(1), dest_sy(1)
 {
+    if( !sdl_rend ) { return; }
     const std::string fname1 = pixel::resolve_asset(fname0);
     if( !fname1.size() ) {
-        log_printf("texture_t: Could locate file '%s' in asset dir '%s': %s\n", fname0.c_str(), pixel::asset_dir().c_str());
+        log_printf("texture_t: Could locate file '%s' in asset dir '%s'\n", fname0.c_str(), pixel::asset_dir().c_str());
         return;
     }
     SDL_Texture* tex_ = IMG_LoadTexture(sdl_rend, fname1.c_str());
@@ -492,7 +494,7 @@ pixel::texture_t::texture_t(const std::string& fname0) noexcept
         log_printf("texture_t: Error loading %s: %s\n", fname1.c_str(), SDL_GetError());
     }
     m_handle = reinterpret_cast<void*>(tex_);
-    if( nullptr != tex_ ) {
+    if( tex_ ) {
         Uint32 format_ = 0;
         int w=0, h=0;
         SDL_QueryTexture(tex_, &format_, nullptr, &w, &h);
@@ -568,15 +570,23 @@ pixel::texture_ref pixel::make_text(const std::string& text) noexcept
 //
 
 void pixel::subsys_set_pixel_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
+    if( !sdl_rend ) { return; }
     SDL_SetRenderDrawColor(sdl_rend, r, g, b, a);
 }
 
 void pixel::subsys_draw_pixel(int x, int y) noexcept {
-    SDL_RenderDrawPoint(sdl_rend, x, y);
+    if( sdl_rend && 0 <= x && x <= fb_max_x && 0 <= y && y <= fb_max_y ) {
+        SDL_RenderDrawPoint(sdl_rend, x, y);
+    }
 }
 
 void pixel::subsys_draw_line(int x1, int y1, int x2, int y2) noexcept {
-    SDL_RenderDrawLine(sdl_rend, x1, y1, x2, y2);
+    if( sdl_rend &&
+        0 <= x1 && x1 <= fb_width && 0 <= y1 && y1 <= fb_height &&
+        0 <= x2 && x2 <= fb_width && 0 <= y2 && y2 <= fb_height )
+    {
+       SDL_RenderDrawLine(sdl_rend, x1, y1, x2, y2);
+    }
 }
 
 //

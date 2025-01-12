@@ -103,7 +103,7 @@ jau::audio::audio_sample_t::audio_sample_t(const std::string &fname, const bool 
 : chunk(Mix_LoadWAV2(fname.c_str()), Mix_FreeChunk), channel_playing(-1), singly(single_play)
 {
     if ( !chunk ) {
-        log_printf("Mix_LoadWAV: Load '%s' -> '%s' Error: %s\n", fname.c_str(), pixel::resolve_asset(fname).c_str(), SDL_GetError());
+        log_printf("Mix_LoadWAV: Load '%s' -> '%s' (asset dir '%s'), Error: %s\n", fname.c_str(), pixel::resolve_asset(fname).c_str(), pixel::asset_dir().c_str(), SDL_GetError());
     } else {
         Mix_VolumeChunk(chunk.get(), volume);
     }
