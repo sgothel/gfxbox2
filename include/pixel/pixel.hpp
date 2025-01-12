@@ -691,9 +691,9 @@ namespace pixel {
         return fps > 0 ? 1.0f/fps : 0;
     }
 
-    texture_ref make_text_texture(const std::string& text) noexcept;
+    texture_ref make_text(const std::string& text) noexcept;
 
-    texture_ref make_text_texture(const char* format, ...) noexcept;
+    texture_ref make_text(const char* format, ...) noexcept;
 
 
     texture_ref make_text(const pixel::f2::point_t& tl, const int lineno,

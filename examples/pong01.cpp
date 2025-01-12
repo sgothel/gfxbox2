@@ -228,7 +228,7 @@ void mainloop() {
         }
         hud_s.append( to_string(", fps %2.2f", pixel::gpu_avg_fps()) );
         hud_s.append( to_string(", score %d : %d", l_score, r_score) );
-        hud_text = pixel::make_text_texture(hud_s);
+        hud_text = pixel::make_text(hud_s);
     }
 
     // move ball_1

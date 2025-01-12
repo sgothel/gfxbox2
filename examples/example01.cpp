@@ -126,7 +126,7 @@ void mainloop() {
     bool blob1_hit = false;
 
     pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
-    pixel::texture_ref hud_text = pixel::make_text_texture("fps "+std::to_string(pixel::gpu_avg_fps()));
+    pixel::texture_ref hud_text = pixel::make_text("fps "+std::to_string(pixel::gpu_avg_fps()));
 
     // black background
     pixel::clear_pixel_fb(0, 0, 0, 255);

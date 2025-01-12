@@ -110,7 +110,7 @@ void mainloop() {
     // white background
     pixel::clear_pixel_fb(255, 255, 255, 255);
 
-    pixel::texture_ref hud_text = pixel::make_text_texture("td %s, fps %2.2f, rho %.2f",
+    pixel::texture_ref hud_text = pixel::make_text("td %s, fps %2.2f, rho %.2f",
             to_decstring(t1, ',', 9).c_str(), pixel::gpu_avg_fps(), rho);
 
     for(ball_ref_t &g : ball_list) {

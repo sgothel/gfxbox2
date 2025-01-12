@@ -525,12 +525,12 @@ void pixel::texture_t::update(const bitmap_ref& bmap) noexcept {
 
 static bool _tex_font_warn0_once = true;
 static bool _tex_font_warn1_once = true;
-pixel::texture_ref pixel::make_text_texture(const std::string& text) noexcept
+pixel::texture_ref pixel::make_text(const std::string& text) noexcept
 {
-    if( nullptr == sdl_rend || nullptr == sdl_font ) {
+    if( !sdl_rend || !sdl_font ) {
         if( _tex_font_warn0_once ) {
             fprintf(stderr, "make_text_texture: Null texture for '%s': Uninitialized %s\n", text.c_str(),
-                nullptr == sdl_font ? "font" : "renderer");
+                !sdl_font ? "font" : "renderer");
             _tex_font_warn0_once = false;
         }
         return std::make_shared<texture_t>();

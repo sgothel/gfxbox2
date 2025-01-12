@@ -62,7 +62,7 @@ void mainloop() {
     t_last = t1;
 
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-    pixel::texture_ref hud_text = pixel::make_text_texture("td %s, fps %2.2f, dt %d ms, %s",
+    pixel::texture_ref hud_text = pixel::make_text("td %s, fps %2.2f, dt %d ms, %s",
             to_decstring(t1, ',', 9).c_str(), pixel::gpu_avg_fps(), (int)(dt*1000), animating?"animating":"paused");
 
     // white background
