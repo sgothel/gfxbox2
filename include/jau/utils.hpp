@@ -95,8 +95,13 @@ namespace jau {
     inline constexpr uint32_t floor_to_uint32(const float v) noexcept {
         return std::max(0, (int)std::floor(v));
     }
+
     /** Returns the rounded float value cast to int. */
     inline constexpr int round_to_int(const float v) noexcept {
+        return (int)std::round(v);
+    }
+    /** Returns the rounded double value cast to int. */
+    inline constexpr int round_to_int(const double v) noexcept {
         return (int)std::round(v);
     }
     /** Returns the rounded float value cast to int. */
@@ -112,9 +117,14 @@ namespace jau {
     inline constexpr uint32_t ceil_to_uint32(const float v) noexcept {
         return std::max(0, (int)std::ceil(v));
     }
-    /** Returns the rounded double value cast to int. */
-    inline constexpr int round_to_int(const double v) noexcept {
-        return (int)std::round(v);
+
+    /** Returns the floor float value cast to int. */
+    inline constexpr int trunc_to_int(const float v) noexcept {
+        return (int)std::trunc(v);
+    }
+    /** Returns the floor float value cast to int. */
+    inline constexpr uint32_t trunc_to_uint32(const float v) noexcept {
+        return std::max(uint32_t(0), (uint32_t)std::trunc(v));
     }
 
     /** Converts arc-degree to radians */
