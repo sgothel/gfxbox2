@@ -182,7 +182,7 @@ static bool load_samples() {
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("spaceinv/alien2.wav", false, MIX_MAX_VOLUME) );
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("spaceinv/alien3.wav", false, MIX_MAX_VOLUME) );
         audio_aliens.push_back( std::make_shared<jau::audio::audio_sample_t>("spaceinv/alien4.wav", false, MIX_MAX_VOLUME) );
-        audio_saucer = std::make_shared<jau::audio::audio_sample_t>("spaceinv/alienM.wav", false, MIX_MAX_VOLUME/4);
+        audio_saucer = std::make_shared<jau::audio::audio_sample_t>("spaceinv/alienM.ogg", false, MIX_MAX_VOLUME/4);
         audio_peng = std::make_shared<jau::audio::audio_sample_t>("spaceinv/peng.wav", false, MIX_MAX_VOLUME/4);
         audio_alienX = std::make_shared<jau::audio::audio_sample_t>("spaceinv/alienX.wav", false, MIX_MAX_VOLUME/4);
         audio_baseX = std::make_shared<jau::audio::audio_sample_t>("spaceinv/baseX.wav", false, MIX_MAX_VOLUME);
@@ -1034,7 +1034,7 @@ void peng_from_alien() {
 
 #if defined(__EMSCRIPTEN__)
     static void init_audio() {
-        jau::audio::init_audio_subsystem();
+        jau::audio::init_audio_subsystem(MIX_INIT_OGG, MIX_INIT_OGG);
         load_samples();
     }
     extern "C" {
@@ -1296,7 +1296,7 @@ int main(int argc, char *argv[])
     }
     #if !defined(__EMSCRIPTEN__)
         if( use_audio ) {
-            jau::audio::init_audio_subsystem();
+            jau::audio::init_audio_subsystem(MIX_INIT_OGG, MIX_INIT_OGG);
         }
     #endif
     load_samples();
