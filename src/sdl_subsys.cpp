@@ -318,7 +318,7 @@ float pixel::gpu_avg_fps() noexcept {
 //
 // Bitmap
 //
-static constexpr const bool DEBUG_TEX = true;
+static constexpr const bool DEBUG_TEX = false;
 
 const char* pixel::bitmap_t::format_str(uint32_t fmt) noexcept {
     const char* s = SDL_GetPixelFormatName(fmt);

@@ -115,7 +115,7 @@ void pixel::draw_grid(float raster_sz,
 //
 // Bitmap
 //
-static constexpr const bool DEBUG_TEX = true;
+static constexpr const bool DEBUG_TEX = false;
 
 void pixel::bitmap_t::put(const f2::aabbox_t& box, uint32_t abgr) noexcept {
     if(!m_pixels || 0 == width || 0 == height ) {
