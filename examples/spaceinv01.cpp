@@ -1044,7 +1044,6 @@ void peng_from_alien() {
 
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
-static bool raster = false;
 static int high_score = 1000;
 
 void mainloop() {
@@ -1106,9 +1105,6 @@ void mainloop() {
         {
             p1.handle_event1(dt);
             p1.tick(dt);
-        }
-        if (raster) {
-            pixel::draw_grid(50, 255, 0, 0, 0, 255, 0, 0, 0);
         }
         // alien tick
         alien_group.tick(dt);
