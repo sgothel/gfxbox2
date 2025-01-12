@@ -79,6 +79,15 @@ void pixel::set_gpu_forced_fps(int fps) noexcept { forced_fps=fps; }
 //
 //
 
+void pixel::draw_line(float x1_, float y1_, float x2_, float y2_) noexcept {
+    if( use_subsys_primitives_val ) {
+        subsys_draw_line(cart_coord.to_fb_x( x1_ ), cart_coord.to_fb_y( y1_ ),
+                         cart_coord.to_fb_x( x2_ ), cart_coord.to_fb_y( y2_ ));
+    } else {
+        pixel::f2::lineseg_t::draw({ x1_, y1_ }, { x2_, y1_ });
+    }
+}
+
 void pixel::draw_grid(float raster_sz,
                       uint8_t gr, uint8_t gg, uint8_t gb, uint8_t ga,
                       uint8_t cr, uint8_t cg, uint8_t cb, uint8_t ca){
@@ -93,26 +102,14 @@ void pixel::draw_grid(float raster_sz,
     pixel::set_pixel_color(gr, gg, gb, ga);
     pixel::f2::point_t bl(pixel::cart_coord.min_x(), pixel::cart_coord.min_y());
     for(float y=b; y<pixel::cart_coord.max_y(); y+=raster_sz) {
-        pixel::f2::point_t p0(pixel::cart_coord.min_x(), y);
-        pixel::f2::point_t p1(pixel::cart_coord.max_x(), y);
-        pixel::f2::lineseg_t::draw(p0, p1);
+        pixel::draw_line(pixel::cart_coord.min_x(), y, pixel::cart_coord.max_x(), y);
     }
     for(float x=l; x<pixel::cart_coord.max_x(); x+=raster_sz) {
-        pixel::f2::point_t p0(x, pixel::cart_coord.min_y());
-        pixel::f2::point_t p1(x, pixel::cart_coord.max_y());
-        pixel::f2::lineseg_t::draw(p0, p1);
+        pixel::draw_line(x, pixel::cart_coord.min_y(), x, pixel::cart_coord.max_y());
     }
     pixel::set_pixel_color(cr, cg, cb, ca);
-    {
-        pixel::f2::point_t p0(-raster_sz, 0);
-        pixel::f2::point_t p1(+raster_sz, 0);
-        pixel::f2::lineseg_t::draw(p0, p1);
-    }
-    {
-        pixel::f2::point_t p0(0, -raster_sz);
-        pixel::f2::point_t p1(0, +raster_sz);
-        pixel::f2::lineseg_t::draw(p0, p1);
-    }
+    pixel::draw_line(-raster_sz, 0, +raster_sz, 0);
+    pixel::draw_line(0, -raster_sz, 0, +raster_sz);
 }
 
 //

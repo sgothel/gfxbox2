@@ -589,6 +589,72 @@ void pixel::subsys_draw_line(int x1, int y1, int x2, int y2) noexcept {
     }
 }
 
+void pixel::subsys_draw_box(bool filled, int x, int y, int width, int height) noexcept
+{
+    if( sdl_rend &&
+        0 <= x && x <= fb_width && 0 <= y && y <= fb_height &&
+        0 < width && x+width <= fb_width && 0 < height && y+height <= fb_height )
+    {
+       SDL_Rect bounds = { .x=x, .y=y, .w=width, .h=height };
+       if( filled ) {
+           SDL_RenderFillRect(sdl_rend, &bounds);
+       } else {
+           SDL_RenderDrawRect(sdl_rend, &bounds);
+       }
+    }
+}
+
+void pixel::subsys_draw_line(int thickness, int x1, int y1, int x2, int y2) noexcept
+{
+    if( !sdl_rend || 0 >= thickness ||
+        0 > x1 || x1 > fb_width || 0 > y1 || y1 > fb_height ||
+        0 > x2 || x2 > fb_width || 0 > y2 || y2 > fb_height )
+    {
+        return;
+    }
+    const int x1_i = x1;
+    const int y1_i = y1;
+    const int x2_i = x2;
+    const int y2_i = y2;
+    const int d_extra = thickness - 1;
+    if( 0 == d_extra ) {
+        SDL_RenderDrawLine(sdl_rend, x1_i, y1_i, x2_i, y2_i);
+        return;
+    }
+    const float d_x = float(std::abs( x1_i - x2_i ));
+    const float d_y = float(std::abs( y1_i - y2_i ));
+
+    // Create a polygon of connected dots, aka poly-line
+    const int c_l = -1 * ( d_extra / 2 + d_extra % 2 ); // gets the remainder
+    const int c_r =        d_extra / 2;
+    std::vector<SDL_Point> points;
+    bool first_of_two = true;
+    for(int i=c_l; i<=c_r; ++i) {
+        int ix, iy; // rough and simply thickness delta picking
+        if( d_y > d_x ) {
+            ix = i;
+            iy = 0;
+        } else {
+            ix = 0;
+            iy = i;
+        }
+        if( first_of_two ) {
+            points.push_back( SDL_Point { x1_i+ix, y1_i+iy } );
+            points.push_back( SDL_Point { x2_i+ix, y2_i+iy } );
+            first_of_two = false;
+        } else {
+            points.push_back( SDL_Point { x2_i+ix, y2_i+iy } );
+            points.push_back( SDL_Point { x1_i+ix, y1_i+iy } );
+            first_of_two = true;
+        }
+    }
+    const int err = SDL_RenderDrawLines(sdl_rend, points.data(), int(points.size()));
+    if( false ) {
+        log_printf("Poly-Line thick_p %d, %d lines, d %.4f/%.4f, err %d, %s\n", thickness, points.size()/2, d_x, d_y, err, SDL_GetError());
+    }
+}
+
+
 //
 // Events
 //

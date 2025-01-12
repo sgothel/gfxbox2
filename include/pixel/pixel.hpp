@@ -346,7 +346,10 @@ namespace pixel {
     }
     void subsys_set_pixel_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept;
     void subsys_draw_pixel(int x, int y) noexcept;
+
     void subsys_draw_line(int x1, int y1, int x2, int y2) noexcept;
+    void subsys_draw_line(int thickness, int x1, int y1, int x2, int y2) noexcept;
+    void subsys_draw_box(bool filled, int x, int y, int width, int height) noexcept;
 
     //
     // Pixel color
@@ -366,12 +369,10 @@ namespace pixel {
      * In case the coordinates are out of bounds, the pixel is discarded, i.e. not set.
      */
     inline void set_pixel_fbcoord(int x, int y) noexcept {
-        if( 0 <= x && x <= fb_max_x && 0 <= y && y <= fb_max_y ) {
-            if( use_subsys_primitives_val ) {
-                subsys_draw_pixel(x, y);
-            } else {
-                fb_pixels[ y * fb_width + x ] = draw_color;
-            }
+        if( use_subsys_primitives_val ) {
+            subsys_draw_pixel(x, y);
+        } else if( 0 <= x && x <= fb_max_x && 0 <= y && y <= fb_max_y ) {
+            fb_pixels[ y * fb_width + x ] = draw_color;
         }
     }
 
@@ -381,9 +382,7 @@ namespace pixel {
      * In case the coordinates are out of bounds, the pixel is discarded, i.e. not set.
      */
     inline void set_pixel(int x_, int y_) noexcept {
-        const int x = cart_coord.to_fb_x( (float)x_ );
-        const int y = cart_coord.to_fb_y( (float)y_ );
-        set_pixel_fbcoord(x, y);
+        set_pixel_fbcoord(cart_coord.to_fb_x( (float)x_ ), cart_coord.to_fb_y( (float)y_ ));
     }
 
     /**
@@ -392,10 +391,38 @@ namespace pixel {
      * In case the coordinates are out of bounds, the pixel is discarded, i.e. not set.
      */
     inline void set_pixel(float x_, float y_) noexcept {
-        const int x = cart_coord.to_fb_x( x_ );
-        const int y = cart_coord.to_fb_y( y_ );
-        if( 0 <= x && x <= fb_max_x && 0 <= y && y <= fb_max_y ) {
-            fb_pixels[ y * fb_width + x ] = draw_color;
+        set_pixel_fbcoord(cart_coord.to_fb_x( x_ ), cart_coord.to_fb_y( y_ ));
+    }
+
+    /**
+     * Draw a line using the given draw_color and given cartesian coordinates.
+     *
+     * In case the coordinates are out of bounds, the pixel is discarded, i.e. not set.
+     */
+    void draw_line(float x1_, float y1_, float x2_, float y2_) noexcept;
+
+    /**
+     * Draw a line using the given draw_color and given cartesian coordinates.
+     *
+     * In case the coordinates are out of bounds, the pixel is discarded, i.e. not set.
+     */
+    inline void draw_line(float thickness_, float x1_, float y1_, float x2_, float y2_) noexcept {
+        if( use_subsys_primitives_val ) {
+            subsys_draw_line(cart_coord.to_fb_dx(thickness_),
+                             cart_coord.to_fb_x( x1_ ), cart_coord.to_fb_y( y1_ ),
+                             cart_coord.to_fb_x( x2_ ), cart_coord.to_fb_y( y2_ ));
+        }
+    }
+    /**
+     * Draw a box using the given draw_color and given cartesian top-left coordinates and dimension.
+     *
+     * In case the coordinates are out of bounds, the pixel is discarded, i.e. not set.
+     */
+    inline void draw_box(bool filled, float x1_, float y1_, float width_, float height_) noexcept {
+        if( use_subsys_primitives_val ) {
+            subsys_draw_box(filled,
+                            cart_coord.to_fb_x( x1_ ), cart_coord.to_fb_y( y1_ ),
+                            cart_coord.to_fb_dx( width_ ), cart_coord.to_fb_dy( height_ ));
         }
     }
 
