@@ -20,12 +20,12 @@ animation speed synchronization,
 the interesting part might be the ghost's state machine and their movements.
 
 Potential code sections of interest
-- Selecting a new direction [ghost_t::set_next_dir()](../tree/examples/pacman/ghost.cpp#n276)
-- Selecting the target [ghost_t::set_next_target()](../tree/examples/pacman/ghost.cpp#n142)
-- Pellet counter to leave home [ghost_t::pellet_...()](../tree/examples/pacman/ghost.cpp#n936)
-- Level Specification [game_level_spec_t](../tree/examples/pacman/game.cpp#n103)
-- Keyframe interval for animation [keyframei_t](../tree/examples/pacman/pacman/utils.hpp#n72)
-- Random number engine [random_engine_t](../tree/examples/pacman/pacman/utils.hpp#n339)
+- Selecting a new direction [ghost_t::set_next_dir()](../../../tree/examples/pacman/ghost.cpp#n276)
+- Selecting the target [ghost_t::set_next_target()](../../../tree/examples/pacman/ghost.cpp#n142)
+- Pellet counter to leave home [ghost_t::pellet_...()](../../../tree/examples/pacman/ghost.cpp#n936)
+- Level Specification [game_level_spec_t](../../../tree/examples/pacman/game.cpp#n103)
+- Keyframe interval for animation [keyframei_t](../../../tree/examples/pacman/utils.hpp#n72)
+- Random number engine [random_engine_t](../../../tree/examples/pacman/utils.hpp#n339)
 
 ### Coverage
 
@@ -128,7 +128,7 @@ bin/pacman [-2p] [-audio] [-pixqual <int>] [-no_vsync] [-fps <int>] [-speed <int
 The basename for the resulting `bmp` files is passed after the `-record` option tag
 and may contain folder names.
 
-The resulting bmp files may be converted to video using [scripts/bmps_to_mp4.sh](../tree/scripts/bmps_to_mp4.sh).
+The resulting bmp files may be converted to video using [scripts/bmps_to_mp4.sh](../../../tree/scripts/bmps_to_mp4.sh).
 
 We assume we are in the project folder having `bin/pacman` build and created a `video` folder.
 
@@ -161,7 +161,7 @@ with same seeding sequence to preserver the periodic attrbutes at least.
 This implementation uses the monitor's frames per second number
 to approximate the sub-tile step-width for the desired tiles per frame pace.
 
-This is achieved via Keyframe interval for animation, see [keyframei_t](../tree/examples/pacman/utils.hpp#n72).
+This is achieved via Keyframe interval for animation, see [keyframei_t](../../../tree/examples/pacman/utils.hpp#n72).
 
 Below we added measurements from pacman via commandline argument `-show_fps`
 running along the bottom longest line from collision to collision.

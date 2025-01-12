@@ -16,21 +16,22 @@ C++20 and better where the [SDL2 library](https://www.libsdl.org/) is supported.
 Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten.org/).
 
 ## Online WebAssembly Examples
-* Own Creations
-  * [solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html)
-  * [spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
-  * [freefall](https://jausoft.com/projects/gfxbox2/freefall01.html)
-  * [pong](https://jausoft.com/projects/gfxbox2/pong01.html)
-  * [canonball](https://jausoft.com/projects/gfxbox2/canonball.html)
-  * [tron](https://jausoft.com/projects/gfxbox2/tron.html)
-  * [piviz](https://jausoft.com/projects/gfxbox2/piviz.html)
-  * [funcdraw](https://jausoft.com/projects/gfxbox2/funcdraw.html)
-  * [example01](https://jausoft.com/projects/gfxbox2/example01.html)
-  * [sandbox01](https://jausoft.com/projects/gfxbox2/sandbox01.html)
-* Classics / Homages
-  * [space invaders](https://jausoft.com/projects/gfxbox2/spaceinv01.html)
-  * [pacman](https://jausoft.com/projects/gfxbox2/pacman.html)
-    - [readme](examples/pacman/README.md)
+* Educational / Science
+  * [Solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html)
+  * [Piviz](https://jausoft.com/projects/gfxbox2/piviz.html)
+  * [Freefall](https://jausoft.com/projects/gfxbox2/freefall01.html)
+* Our Games
+  * [Spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
+  * [Canonball](https://jausoft.com/projects/gfxbox2/canonball.html)
+  * [Tron](https://jausoft.com/projects/gfxbox2/tron.html)
+  * [Funcdraw](https://jausoft.com/projects/gfxbox2/funcdraw.html)
+* Game Classics / Homages
+  * [Pong](https://jausoft.com/projects/gfxbox2/pong01.html)
+  * [Space Invaders](https://jausoft.com/projects/gfxbox2/spaceinv01.html)
+  * [Pacman](https://jausoft.com/projects/gfxbox2/pacman.html) - ([readme](examples/pacman/README.md))
+* Boilerplates / Tests
+  * [Example01](https://jausoft.com/projects/gfxbox2/example01.html)
+  * [Sandbox01](https://jausoft.com/projects/gfxbox2/sandbox01.html)
 
 ## Building Binaries
 
