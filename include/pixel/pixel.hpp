@@ -567,9 +567,9 @@ namespace pixel {
             uint32_t bpp;
             /** texture format */
             uint32_t format;
-            /** dest texture pos-x */
+            /** dest texture pos-x in FB coordinates */
             uint32_t dest_x;
-            /** dest texture pos-y */
+            /** dest texture pos-y in FB coordinates */
             uint32_t dest_y;
             /** dest texture scale-x */
             float dest_sx;
@@ -579,6 +579,11 @@ namespace pixel {
             texture_t(void* handle_, const uint32_t x_, const uint32_t y_, const uint32_t width_, const uint32_t height_, const uint32_t bpp_, const uint32_t format_, const bool owner=true) noexcept
             : m_handle(handle_), m_owner(nullptr!=handle_ && owner),
               x(x_), y(y_), width(width_), height(height_), bpp(bpp_), format(format_),
+              dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
+
+            texture_t(const texture_t& parent, const uint32_t x_, const uint32_t y_, const uint32_t width_, const uint32_t height_) noexcept
+            : m_handle(parent.m_handle), m_owner(false),
+              x(x_), y(y_), width(width_), height(height_), bpp(parent.bpp), format(parent.format),
               dest_x(0), dest_y(0), dest_sx(1), dest_sy(1) {}
 
             /** Create a shared proxy clone w/o ownership, use createShared() */
@@ -614,24 +619,26 @@ namespace pixel {
             /** update texture */
             void update(const bitmap_ref& bmap) noexcept;
 
-            /// draw using FB coordinates and dimension, 0/0 is top-left
+            /// draw using top-left FB coordinates and dimension, 0/0 is top-left
             void draw_raw(const uint32_t fb_x, const uint32_t fb_y, const uint32_t fb_w, const uint32_t fb_h) const noexcept;
-            /// draw using FB coordinates and optional scale, 0/0 is top-left
+            /// draw using top-left FB coordinates and optional scale, 0/0 is top-left
             void draw_fbcoord(const uint32_t x_pos, const uint32_t y_pos, const float scale_x=1.0f, const float scale_y=1.0f) const noexcept {
                 draw_raw(x_pos + dest_x, y_pos + dest_y,
                          jau::round_to_int((float)width*dest_sx*scale_x),
                          jau::round_to_int((float)height*dest_sy*scale_y));
             }
-            /// draw using cartesian coordinates and dimension, 0/0 is top-left
+            /// draw using top-left cartesian coordinates and dimension
             void draw(const float x_pos, const float y_pos, const float w, const float h) const noexcept {
-                draw_raw(pixel::cart_coord.to_fb_x( x_pos ), pixel::cart_coord.to_fb_y( y_pos ),
-                         pixel::cart_coord.to_fb_dy(w), pixel::cart_coord.to_fb_dy(h));
+                draw_raw(pixel::cart_coord.to_fb_x( x_pos ) + dest_x, pixel::cart_coord.to_fb_y( y_pos ) + dest_y,
+                         pixel::cart_coord.to_fb_dy(w*dest_sx),
+                         pixel::cart_coord.to_fb_dy(h*dest_sy));
             }
 
-            /// draw using cartesian coordinates with scaled texture-source-dimension to FB, 0/0 is top-left
+            /// draw using top-left cartesian coordinates, converting texture-dimension to FB values
             void draw(const float x_pos, const float y_pos) const noexcept {
-                draw_raw(pixel::cart_coord.to_fb_x( x_pos ), pixel::cart_coord.to_fb_y( y_pos ),
-                         pixel::cart_coord.to_fb_dy(float(width)), pixel::cart_coord.to_fb_dy(float(height)));
+                draw_raw(pixel::cart_coord.to_fb_x( x_pos ) + dest_x, pixel::cart_coord.to_fb_y( y_pos ) + dest_y,
+                         pixel::cart_coord.to_fb_dy(float(width)*dest_sx),
+                         pixel::cart_coord.to_fb_dy(float(height)*dest_sy));
             }
 
             std::string toString() const noexcept {
@@ -643,8 +650,8 @@ namespace pixel {
     typedef std::shared_ptr<texture_t> texture_ref;
 
     struct tex_sub_coord_t {
-        uint32_t x;
-        uint32_t y;
+        int x;
+        int y;
     };
 
     /**
@@ -733,14 +740,14 @@ namespace pixel {
             void tick(const float dt) noexcept;
             void next() noexcept;
 
-            /// draw using cartesian coordinates and dimension, 0/0 is top-left
+            /// draw using top-left cartesian coordinates and dimension
             void draw(const float x_pos, const float y_pos, const float w, const float h) const noexcept {
                 texture_ref tex = texture();
                 if( nullptr != tex ) {
                     tex->draw(x_pos, y_pos, w, h);
                 }
             }
-            /// draw using cartesian coordinates with scaled texture-source-dimension to FB, 0/0 is top-left
+            /// draw using top-left cartesian coordinates, converting texture-dimension to FB values
             void draw(const float x_pos, const float y_pos) const noexcept {
                 texture_ref tex = texture();
                 if( nullptr != tex ) {
@@ -769,7 +776,7 @@ namespace pixel {
 
     /** Returns expected fps, either gpu_forced_fps() if set, otherwise monitor_fps(). */
     inline int expected_fps() noexcept { int v=gpu_forced_fps(); return v>0?v:monitor_fps(); }
-    /** Returns the measured gpu frame duration in [s] */
+    /** Returns the expected frame duration in [s], i.e. 1/expected_fps() */
     inline float expected_framedur() noexcept {
         return 1.0f/float(expected_fps());
     }
@@ -786,7 +793,7 @@ namespace pixel {
     void swap_gpu_buffer(int fps=gpu_forced_fps()) noexcept;
     /** Returns the measured gpu fps each 5s, starting with monitor_fps() */
     float gpu_avg_fps() noexcept;
-    /** Returns the measured gpu frame duration in [s] each 5s, starting with 1/monitor_fps() */
+    /** Returns the measured gpu frame duration in [s] each 5s, starting with 1/gpu_avg_fps() */
     inline float gpu_avg_framedur() noexcept {
         const float fps = gpu_avg_fps();
         return fps > 0 ? 1.0f/fps : 0;

@@ -176,22 +176,19 @@ size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const std::str
             }
         }
     }
-    const size_t nc = storage.size() - size_start;
-    if( nc > 0 ) {
-        storage[storage.size()-1]->set_owner(true); // last one claims ownership
-    }
     return storage.size() - size_start;
 }
 
 size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const texture_ref& parent,
-                               uint32_t x_off, uint32_t y_off, uint32_t w, uint32_t h, const std::vector<tex_sub_coord_t>& tex_positions) noexcept
+                               uint32_t x_off, uint32_t y_off, uint32_t w, uint32_t h,
+                               const std::vector<tex_sub_coord_t>& tex_positions) noexcept
 {
     const size_t size_start = storage.size();
 
     for(tex_sub_coord_t p : tex_positions) {
         const uint32_t x = x_off+p.x;
         const uint32_t y = y_off+p.y;
-        if( x+w <= parent->width && y+h <= parent->height ) {
+        if( 0 <= p.x && 0 <= p.x && x+w <= parent->width && y+h <= parent->height ) {
             storage.push_back( std::make_shared<texture_t>(parent->handle(), x, y, w, h, parent->bpp, parent->format, false /* owner*/) );
         } else {
             storage.push_back( std::make_shared<texture_t>() );
