@@ -264,6 +264,12 @@ static rect_ref_t sf;
 static bool make_sf = false;
 static bool UpOrDown = true;
 
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool v) noexcept {
+        debug_gfx = v;
+    }
+}
+
 void mainloop() {
     static pixel::texture_ref hud_text;
     static uint64_t t_last = getElapsedMillisecond(); // [ms]

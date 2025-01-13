@@ -39,15 +39,9 @@ const float earth_accel = 9.81f; // [m/s*s]
 static float rho = rho_default;
 static bool debug_gfx = false;
 
-extern "C" {
-    EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool v) noexcept { debug_gfx = v; }
-    EMSCRIPTEN_KEEPALIVE void set_rho(float v) noexcept { rho = v; }
-}
-
 /**
  * A bouncing ball w/ initial velocity in given direction plus gravity exposure (falling)
  */
-
 static const float ball_height = 0.05f; // [m] .. diameter
 static const float ball_radius = ball_height/2.0f; // [m]
 static const float small_gap = ball_radius;
@@ -58,6 +52,16 @@ static std::string record_bmpseq_basename;
 typedef std::shared_ptr<physiks::ball_t> ball_ref_t;
 typedef std::vector<ball_ref_t> ball_list_t;
 static ball_list_t ball_list;
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool v) noexcept {
+        debug_gfx = v;
+        for(ball_ref_t &g : ball_list) {
+            g->set_debug_gfx(v);
+        }
+    }
+    EMSCRIPTEN_KEEPALIVE void set_rho(float v) noexcept { rho = v; }
+}
 
 void mainloop() {
     static uint64_t frame_count_total = 0;

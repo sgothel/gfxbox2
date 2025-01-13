@@ -18,7 +18,7 @@
 
 namespace physiks {
     using namespace pixel::f2;
-    
+
     constexpr static const float earth_accel = 9.81f; // [m/s^2]
     constexpr static const float rho_default = 0.75f;
 
@@ -53,7 +53,7 @@ namespace physiks {
          *
          *
          */
-         
+
         // constexpr static const float max_velocity = 5.6f; // m/s
         // constexpr static const float diff_bounce = 0.075f;
         // constexpr static const float pad_accel = 1.0f+diff_bounce; // factor
@@ -69,6 +69,7 @@ namespace physiks {
         bool has_gravity;
         float start_velocity_max; // [m/s], derived from drop_height
         bool m_debug_gfx;
+        pixel::f4::vec_t m_debug_ball_color { 0, 0, 0, 1 };
         bool m_make_do_reset;
 
         float velocity_max; // [m/s], derived from drop_height
@@ -80,18 +81,18 @@ namespace physiks {
 
       private:
         std::vector<rect_ref_t> player_pads;
-        
+
       public:
         /** Actually private, a secret to render public ctor also private. */
         class secret_t {
           public:
-            int lala;            
-                        
+            int lala;
+
           private:
             friend ball_t;
-            secret_t(int lili) : lala(lili) {}  
+            secret_t(int lili) : lala(lili) {}
         };
-        
+
         /**
          * Actually a private ctor, use ball_t::create()
          * @param id_
@@ -117,7 +118,7 @@ namespace physiks {
           m_make_do_reset(make_do_reset),
           velocity_max(start_velocity_max),
           use_velocity_max( !jau::is_zero(velocity_max) ),
-          m_rho(rho_default), 
+          m_rho(rho_default),
           velocity( vec_t::from_length_angle(velocity_start, start_angle) ), min_velocity(0.1f)
         {
             (void)s;
@@ -147,7 +148,7 @@ namespace physiks {
             return std::make_shared<ball_t>(secret_t(42), id_, center_, r_m, velocity_, v_angle_rad,
                                             gravity, drop_height, debug_gfx, make_do_reset);
         }
-        
+
         /** Actually a private ctor, use ball_t::create() */
         ball_t(secret_t s, std::string id_, const point_t& center_, const float r_m,
                const float velocity_, const float v_angle_rad,
@@ -187,7 +188,7 @@ namespace physiks {
          * @param drop_height total height this ball will fall in [m]
          * @param debug_gfx
          */
-        static ball_ref_t create(std::string id_, const point_t& center_, 
+        static ball_ref_t create(std::string id_, const point_t& center_,
                const float r_m, const float velocity_, const float v_angle_rad,
                const float velocity_max_,
                const bool debug_gfx, std::vector<rect_ref_t> playerpads) {
@@ -195,12 +196,16 @@ namespace physiks {
                                             velocity_max_, debug_gfx, playerpads);
         }
 
+        void set_debug_gfx(bool v) noexcept { m_debug_gfx = v; }
+        void set_debug_gfx(bool v, const pixel::f4::vec_t& ball_color) noexcept { m_debug_gfx = v; m_debug_ball_color=ball_color; }
+        bool debug_gfx() const noexcept { return m_debug_gfx; }
+
         float get_roh() { return m_rho; }
 
         void set_roh(const float &v) { m_rho = v; }
 
         ball_t & operator=(const ball_t &o) = default;
-        
+
         void reset(bool force_start_pos=false){
             velocity_max = start_velocity_max;
             if( !force_start_pos && velocity_start > 0.0f && this->on_screen() ) {
@@ -251,7 +256,7 @@ namespace physiks {
                 // l_move.p0 -= l_move_diff;
                 l_move.p1 += l_move_diff;
             }
-            this->move( ds_m_dir ); 
+            this->move( ds_m_dir );
 
             // medium_deaccel after move
             if( ds_m_dir.length_sq() > 0 && !has_gravity) {
@@ -277,13 +282,13 @@ namespace physiks {
                 }
             }
             if( m_debug_gfx ) {
-                pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+                pixel::set_pixel_color(m_debug_ball_color);
                 if(!has_gravity){
                     this->draw(false);
                 }
                 l_move.draw();
                 if( nullptr != coll_obj ) {
-                    pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+                    pixel::set_pixel_color(m_debug_ball_color);
                     if(!has_gravity){
                         this->draw(false);
                     }
@@ -311,18 +316,17 @@ namespace physiks {
                     lineseg_t l_new_center(coll_point, new_center);
                     l_new_center.draw();
 
-                    pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-
+                    pixel::set_pixel_color(m_debug_ball_color);
                     jau::log_printf(elapsed_ms, "\n");
                     jau::log_printf(elapsed_ms, "Ball %s-e-a: v %s, |%f| / %f m/s\n",
-                            id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max);                            
+                            id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max);
                     jau::log_printf(elapsed_ms, "Ball %s-e-a: ds %s [m/s], move[angle %f, len %f, %s]\n",
                             id.c_str(), ds_m_dir.toString().c_str(),
-                            jau::rad_to_adeg(a_move), l_move.length(), l_move.toString().c_str());                            
+                            jau::rad_to_adeg(a_move), l_move.length(), l_move.toString().c_str());
                     jau::log_printf(elapsed_ms, "Ball %s-e-a: coll[point %s, normal[%s, angle %f]]]\n",
                             id.c_str(),
-                            coll_point.toString().c_str(), 
-                            coll_normal.toString().c_str(), jau::rad_to_adeg(coll_normal.angle()));                            
+                            coll_point.toString().c_str(),
+                            coll_normal.toString().c_str(), jau::rad_to_adeg(coll_normal.angle()));
                     jau::log_printf(elapsed_ms, "Ball %s-e-a: coll[out[%s, angle %f]]]\n",
                             id.c_str(),
                             coll_out.toString().c_str(), jau::rad_to_adeg(coll_out.angle()));
@@ -373,7 +377,7 @@ namespace physiks {
                 if( has_gravity  ) {
                     // const bool do_reset = velocity.norm() <= min_velocity;
                     // bool do_reset = velocity_max <= min_velocity;
-                    bool do_reset = m_make_do_reset && velocity.length() <= min_velocity;                
+                    bool do_reset = m_make_do_reset && velocity.length() <= min_velocity;
                     if( m_debug_gfx ) {
                         jau::log_printf(elapsed_ms, "Ball %s-e-b: v %s, |%f| / %f m/s, reset %d, %s, %s\n",
                                 id.c_str(), velocity.toString().c_str(), velocity.length(), velocity_max,
@@ -390,8 +394,8 @@ namespace physiks {
                 if( !this->on_screen() ) {
                     if (m_debug_gfx) {
                         jau::log_printf(elapsed_ms, "Ball %s-off: reset %d, v %s, |%f| m/s, %s, %s\n",
-                                          id.c_str(), m_make_do_reset, velocity.toString().c_str(), 
-                                          velocity.length(), toString().c_str(), 
+                                          id.c_str(), m_make_do_reset, velocity.toString().c_str(),
+                                          velocity.length(), toString().c_str(),
                                           box().toString().c_str());
                     }
                     if( m_make_do_reset ) {
@@ -406,7 +410,7 @@ namespace physiks {
             }
         }
 
-        void draw(const bool filled) const noexcept {        
+        void draw(const bool filled) const noexcept {
             disk_t::draw(filled);
         }
     };
