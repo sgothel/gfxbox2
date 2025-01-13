@@ -47,7 +47,5 @@ configure_file (${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/version.cpp.in
 find_path (SYSTEM_USR_DIR "stdlib.h")
 include_directories (${SYSTEM_USR_DIR})
 
-# set (USE_SFML ON)
-
 add_subdirectory (src)
 add_subdirectory (examples)
