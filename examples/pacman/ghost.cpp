@@ -124,8 +124,8 @@ void ghost_t::destroy() noexcept {
     atex_phantom.clear();
 }
 
-bool ghost_t::set_speed(const float pct) noexcept {
-    if( std::abs( current_speed_pct - pct ) <= std::numeric_limits<float>::epsilon() ) {
+bool ghost_t::set_speed(const float pct, const bool force) noexcept {
+    if( !force && std::abs( current_speed_pct - pct ) <= std::numeric_limits<float>::epsilon() ) {
         return false;
     }
     const float old = current_speed_pct;
@@ -621,6 +621,7 @@ void ghost_t::global_draw() noexcept {
 }
 
 bool ghost_t::set_mode_speed() noexcept {
+    bool force = false;
     switch( mode_ ) {
         case mode_t::PACMAN_DIED:
             break;
@@ -629,6 +630,7 @@ bool ghost_t::set_mode_speed() noexcept {
         case mode_t::LEVEL_SETUP:
             break;
         case mode_t::START:
+            force = true;
             [[fallthrough]];
         case mode_t::HOME:
             [[fallthrough]];
@@ -640,19 +642,19 @@ bool ghost_t::set_mode_speed() noexcept {
             if( ghost_t::personality_t::BLINKY == id_ ) {
                 const int pellets_left = global_maze->count(tile_t::PELLET);
                 if( pellets_left <= game_level_spec().elroy2_dots_left ) { // elroy2_dots < elroy1_dots
-                    return set_speed(game_level_spec().elroy2_speed);
+                    return set_speed(game_level_spec().elroy2_speed, force);
                 } else if( pellets_left <= game_level_spec().elroy1_dots_left ) {
-                    return set_speed(game_level_spec().elroy1_speed);
+                    return set_speed(game_level_spec().elroy1_speed, force);
                 }
             }
-            return set_speed(game_level_spec().ghost_speed);
+            return set_speed(game_level_spec().ghost_speed, force);
             break;
         }
         case mode_t::SCARED:
-            return set_speed(game_level_spec().ghost_fright_speed);
+            return set_speed(game_level_spec().ghost_fright_speed, force);
             break;
         case mode_t::PHANTOM:
-            return set_speed(2.00f);
+            return set_speed(2.00f, force);
             break;
         default:
             break;

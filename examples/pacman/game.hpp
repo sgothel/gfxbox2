@@ -313,7 +313,7 @@ class ghost_t {
         constexpr const acoord_t& target() const noexcept { return target_; }
 
         /** Return true if speed changed, otherwise false */
-        bool set_speed(const float pct) noexcept;
+        bool set_speed(const float pct, const bool force=false) noexcept;
 
         /** For global SCATTER, CHASE or SCARED mode switch, etc. */
         static void set_global_mode(const mode_t m, const int mode_ms=-1) noexcept;
@@ -445,7 +445,7 @@ class pacman_t {
         void reset_score() noexcept { score_ = 0; }
         void set_mode(const mode_t m, const int mode_ms=-1) noexcept;
         void stop_audio_loops() noexcept;
-        void set_speed(const float pct) noexcept;
+        void set_speed(const float pct, const bool force=false) noexcept;
         const keyframei_t& get_keyframei() const noexcept { return keyframei_; }
 
         void set_invincible(const bool v) noexcept { invincible = v; }

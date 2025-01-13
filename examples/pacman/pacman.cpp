@@ -147,7 +147,7 @@ void pacman_t::set_mode(const mode_t m, const int mode_ms) noexcept {
             pos_ = global_maze->pacman_start_pos();
             pos_.set_aligned_dir( direction_t::LEFT, keyframei_ );
             set_dir( direction_t::LEFT );
-            set_speed(game_level_spec().pacman_speed);
+            set_speed(game_level_spec().pacman_speed, true);
             break;
         case mode_t::NORMAL:
             set_speed(game_level_spec().pacman_speed);
@@ -177,8 +177,8 @@ void pacman_t::stop_audio_loops() noexcept {
     audio_samples[ ::number( audio_clip_t::MUNCH ) ]->stop();
 }
 
-void pacman_t::set_speed(const float pct) noexcept {
-    if( std::abs( current_speed_pct - pct ) <= std::numeric_limits<float>::epsilon() ) {
+void pacman_t::set_speed(const float pct, const bool force) noexcept {
+    if( !force && std::abs( current_speed_pct - pct ) <= std::numeric_limits<float>::epsilon() ) {
         return;
     }
     const float old = current_speed_pct;

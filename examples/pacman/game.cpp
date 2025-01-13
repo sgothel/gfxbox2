@@ -335,6 +335,7 @@ static void set_game_mode(const game_mode_t m, const int caller) noexcept {
 static bool show_targets = false;
 static pixel::input_event_t event;
 static std::string record_bmpseq_basename;
+static uint64_t t_start = 0; // [ms]
 
 static bool load_samples() {
     audio_samples.clear();
@@ -367,16 +368,34 @@ static void shutdown() {
     pacman_maze_tex = nullptr;
 }
 
+static void reset_all() {
+    t_start = jau::getElapsedMillisecond();
+    current_level = start_level - 1;
+    pacman->reset_score();
+    set_game_mode(game_mode_t::NEXT_LEVEL, 15);
+}
+
 #if defined(__EMSCRIPTEN__)
     static void init_audio() {
         jau::audio::init_audio_subsystem(MIX_INIT_OGG, MIX_INIT_OGG);
         load_samples();
     }
     extern "C" {
-        EMSCRIPTEN_KEEPALIVE void start_audio() noexcept { init_audio(); }
         EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool v) noexcept { enable_debug_gfx = v; }
         EMSCRIPTEN_KEEPALIVE void set_showtarget(bool v) noexcept { show_targets = v; }
         EMSCRIPTEN_KEEPALIVE void set_human_blinky(bool v) noexcept { blinky->set_manual_control(v); }
+        EMSCRIPTEN_KEEPALIVE void set_invincible(bool v) noexcept { pacman->set_invincible(v); }
+        EMSCRIPTEN_KEEPALIVE void set_bugfix_mode(bool v) noexcept { original_pacman_behavior = !v; }
+        EMSCRIPTEN_KEEPALIVE void set_decision_on_spot(bool v) noexcept { decision_one_field_ahead = !v; }
+        EMSCRIPTEN_KEEPALIVE void set_manhatten_distance(bool v) noexcept { manhatten_distance_enabled = v; }
+        EMSCRIPTEN_KEEPALIVE void set_level(int v) noexcept {
+            start_level = v;
+            current_level = start_level - 1;
+            set_game_mode(game_mode_t::NEXT_LEVEL, 15);
+        }
+        EMSCRIPTEN_KEEPALIVE void reset_game() noexcept { reset_all(); }
+        EMSCRIPTEN_KEEPALIVE void start_audio() noexcept { init_audio(); reset_game(); }
+        EMSCRIPTEN_KEEPALIVE void set_game_fps(int v) noexcept { pixel::set_gpu_forced_fps(v); reset_game(); }
     }
 #endif
 
@@ -391,6 +410,10 @@ void mainloop() {
     direction_t pacman_dir = pacman->direction();
     direction_t blinky_dir = direction_t::LEFT;
 
+    if( 0 == frame_count_total ) {
+        t_start = jau::getElapsedMillisecond();
+    }
+
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -404,9 +427,7 @@ void mainloop() {
             pixel::cart_coord.set_fitting(0.0f, 0.0f, (float)global_maze->px_width(), (float)global_maze->px_height());
             // pixel::cart_coord.set_fitting(0.0f, (float)global_maze->px_height(), (float)global_maze->px_width(), 0.0f);
         } else if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
-            current_level = start_level - 1;
-            pacman->reset_score();
-            set_game_mode(game_mode_t::NEXT_LEVEL, 15);
+            reset_all();
         } else if( event.released_and_clr(pixel::input_event_type_t::F12) ) {
             do_snapshot = true;
         } else if( event.released_and_clr(pixel::input_event_type_t::F9) ) {
@@ -624,14 +645,16 @@ void mainloop() {
         }
 
         // top line: title
-        std::string top_line_text = jau::to_string("HIGH SCORE (fps %4.2f)", pixel::gpu_avg_fps());
-        draw_text(top_line_text, 255, 255, 255, [&](const pixel::texture_t& /*tex*/, float &x, float&y, float tw, float /*th*/) {
+        std::string first_line_text = jau::to_string("%s s, fps %4.2f/%d)",
+            jau::to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), pixel::expected_fps());
+        draw_text(first_line_text, 255, 255, 255, [&](const pixel::texture_t& /*tex*/, float &x, float&y, float tw, float /*th*/) {
             x = ( global_maze->x_to_px( (float)global_maze->width()) - tw ) / 2.0f;
             y = global_maze->y_to_px(0.0f);
         });
 
         // 2nd line - center: score
-        draw_text(std::to_string( pacman->score() ), 255, 255, 255, [&](const pixel::texture_t& /*tex*/, float &x, float&y, float tw, float /*th*/) {
+        std::string second_line_text = jau::to_string("score %" PRIu64, pacman->score());
+        draw_text(second_line_text, 255, 255, 255, [&](const pixel::texture_t& /*tex*/, float &x, float&y, float tw, float /*th*/) {
             x = ( global_maze->x_to_px( (float)global_maze->width()) - tw ) / 2.0f;
             y = global_maze->y_to_px(1.0f);
         });

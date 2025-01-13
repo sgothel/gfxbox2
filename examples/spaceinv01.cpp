@@ -804,7 +804,7 @@ class peng_t : public gobject_t {
 };
 std::vector<peng_t> pengs;
 
-void reset_items() {
+static void reset_items() {
     extra_sprites.clear();
     bunks.clear();
     bunks.emplace_back(0, bunk1_bl);
@@ -1016,7 +1016,7 @@ class player_t : public gobject_t {
             }
         }
 };
-void peng_from_alien() {
+static void peng_from_alien() {
     const alien_ref& alien = alien_group.get_random();
     if( nullptr == alien ) {
         return;
@@ -1032,34 +1032,54 @@ void peng_from_alien() {
     alt = (alt + 1)%2;
 }
 
+static pixel::f2::point_t tl_text;
+static std::string record_bmpseq_basename;
+static int high_score = 1000;
+static uint64_t t_start = 0; // [ms]
+static std::shared_ptr<player_t> player;
+static bool game_over = false;
+static si_time_t level_time = 0;
+
+static void reset_all() {
+    t_start = jau::getElapsedMillisecond();
+    reset_items();
+    if( player ) {
+        player->reset();
+    } else {
+        player = std::make_shared<player_t>();
+    }
+    game_over = false;
+    level_time = 0;
+    level = 1;
+}
+
 #if defined(__EMSCRIPTEN__)
     static void init_audio() {
         jau::audio::init_audio_subsystem(MIX_INIT_OGG, MIX_INIT_OGG);
         load_samples();
     }
     extern "C" {
-        EMSCRIPTEN_KEEPALIVE void start_audio() noexcept { init_audio(); }
+        EMSCRIPTEN_KEEPALIVE void reset_game() noexcept { reset_all(); }
+        EMSCRIPTEN_KEEPALIVE void start_audio() noexcept { init_audio(); reset_game(); }
+        EMSCRIPTEN_KEEPALIVE void set_game_fps(int v) noexcept { pixel::set_gpu_forced_fps(v); reset_game(); }
     }
 #endif
 
-static pixel::f2::point_t tl_text;
-static std::string record_bmpseq_basename;
-static int high_score = 1000;
-
 void mainloop() {
-    static player_t p1;
     static uint64_t frame_count_total = 0;
     static uint64_t snap_count = 0;
     static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static const int text_height = 24;
     static bool animating = true;
-    static bool game_over = false;
     constexpr static float min_peng_time = 300_ms;
     constexpr static float max_peng_time = 2_s;
     static float peng_time = next_rnd(min_peng_time, max_peng_time);
-    static const pixel::f2::aabbox_t p1_base_box = p1.base()->box();
-    static si_time_t level_time = 0;
     bool do_snapshot = false;
+
+    if( 0 == frame_count_total ) {
+        t_start = jau::getElapsedMillisecond();
+        player = std::make_shared<player_t>();
+    }
 
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -1072,11 +1092,7 @@ void mainloop() {
         } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             pixel::cart_coord.set_height(-screen_height/2.0f, screen_height/2.0f);
         } else if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
-            reset_items();
-            p1.reset();
-            game_over = false;
-            level_time = 0;
-            level = 1;
+            reset_all();
         } else if( event.released_and_clr(pixel::input_event_type_t::F12) ) {
             do_snapshot = true;
         } else if( event.released_and_clr(pixel::input_event_type_t::F9) ) {
@@ -1093,7 +1109,7 @@ void mainloop() {
 
         // Pass events to all animated objects
         if( animating ) {
-            p1.handle_event0();
+            player->handle_event0();
         }
     }
     const uint64_t t1 = animating ? getElapsedMillisecond() : t_last; // [ms]
@@ -1103,8 +1119,8 @@ void mainloop() {
 
     if(animating) {
         {
-            p1.handle_event1(dt);
-            p1.tick(dt);
+            player->handle_event1(dt);
+            player->tick(dt);
         }
         // alien tick
         alien_group.tick(dt);
@@ -1116,12 +1132,12 @@ void mainloop() {
                 ++it;
             } else {
                 if(p.m_owner == base_id){
-                    p1.peng_completed(p);
+                    player->peng_completed(p);
                 }
                 it = pengs.erase(it);
             }
         }
-        if( !p1.is_killed() ) {
+        if( !player->is_killed() ) {
             peng_time -= dt;
             if(peng_time <= 0){
                 peng_from_alien();
@@ -1155,7 +1171,7 @@ void mainloop() {
         }
     }
 
-    p1.draw();
+    player->draw();
     for(auto & bunk : bunks) {
         bunk.draw();
     }
@@ -1173,12 +1189,13 @@ void mainloop() {
         r1.draw(false);
 
         const float abstand_zsl = 5;
-        for(int i = 0; i < p1.lives()-1; ++i){
+        for(int i = 0; i < player->lives()-1; ++i){
             const float w = screen_width - 2;
             const float h = screen_height - 2;
+            const pixel::f2::aabbox_t box = player->base()->box();
             pixel::f2::rect_t r2( {-w/2.0f, +h/2.0f }, w, h);
             base_t l = { { r2.m_bl.x + abstand_zsl*(float)(i + 1) +
-                           p1_base_box.width()*(float)i + p1_base_box.width()/2,
+                           box.width()*(float)i + box.width()/2,
                            r2.m_bl.y + abstand_zsl}};
             l.draw();
         }
@@ -1190,7 +1207,7 @@ void mainloop() {
 
     if(alien_group.active_count() == 0){
         reset_items();
-        p1.next_level();
+        player->next_level();
         ++level;
         level_time = 0;
     }
@@ -1198,16 +1215,16 @@ void mainloop() {
 
     float fps = pixel::gpu_avg_fps();
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
-    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, score %4d, high score %d, level %d",
-                    to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
-                    fps, p1.score(), high_score, level);
-    if( alien_group.box().bl.y < -62-bunks[0].box().height() || p1.lives() <= 0) {
+    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f/%d, score %4d, high score %d, level %d",
+                    to_decstring((t1-t_start)/1000, ',', 5).c_str(),
+                    fps, pixel::expected_fps(), player->score(), high_score, level);
+    if( alien_group.box().bl.y < -62-bunks[0].box().height() || player->lives() <= 0) {
         game_over = true;
         animating = false;
     }
 
-    if(p1.score() > high_score){
-        high_score = p1.score();
+    if(player->score() > high_score){
+        high_score = player->score();
     }
 
     pixel::swap_pixel_fb(false);
