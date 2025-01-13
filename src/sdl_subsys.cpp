@@ -570,31 +570,26 @@ pixel::texture_ref pixel::make_text(const std::string& text) noexcept
 //
 
 void pixel::subsys_set_pixel_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
-    if( !sdl_rend ) { return; }
-    SDL_SetRenderDrawColor(sdl_rend, r, g, b, a);
+    if( sdl_rend ) {
+        SDL_SetRenderDrawColor(sdl_rend, r, g, b, a);
+    }
 }
 
 void pixel::subsys_draw_pixel(int x, int y) noexcept {
-    if( sdl_rend && 0 <= x && x <= fb_max_x && 0 <= y && y <= fb_max_y ) {
+    if( sdl_rend ) {
         SDL_RenderDrawPoint(sdl_rend, x, y);
     }
 }
 
 void pixel::subsys_draw_line(int x1, int y1, int x2, int y2) noexcept {
-    if( sdl_rend &&
-        0 <= x1 && x1 <= fb_width && 0 <= y1 && y1 <= fb_height &&
-        0 <= x2 && x2 <= fb_width && 0 <= y2 && y2 <= fb_height )
-    {
+    if( sdl_rend ) {
        SDL_RenderDrawLine(sdl_rend, x1, y1, x2, y2);
     }
 }
 
 void pixel::subsys_draw_box(bool filled, int x, int y, int width, int height) noexcept
 {
-    if( sdl_rend &&
-        0 <= x && x <= fb_width && 0 <= y && y <= fb_height &&
-        0 < width && x+width <= fb_width && 0 < height && y+height <= fb_height )
-    {
+    if( sdl_rend ) {
        SDL_Rect bounds = { .x=x, .y=y, .w=width, .h=height };
        if( filled ) {
            SDL_RenderFillRect(sdl_rend, &bounds);
@@ -606,10 +601,7 @@ void pixel::subsys_draw_box(bool filled, int x, int y, int width, int height) no
 
 void pixel::subsys_draw_line(int thickness, int x1, int y1, int x2, int y2) noexcept
 {
-    if( !sdl_rend || 0 >= thickness ||
-        0 > x1 || x1 > fb_width || 0 > y1 || y1 > fb_height ||
-        0 > x2 || x2 > fb_width || 0 > y2 || y2 > fb_height )
-    {
+    if( !sdl_rend || 0 >= thickness ) {
         return;
     }
     const int x1_i = x1;

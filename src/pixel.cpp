@@ -356,11 +356,8 @@ void pixel::f2::lineseg_t::draw(const point_t& p0, const point_t& p1) noexcept {
     if constexpr ( false ) {
         for_all_points(p0, p1, [](const point_t& p) -> bool { p.draw(); return true; });
     } else if( use_subsys_primitives_val ) {
-        const int p0_x = cart_coord.to_fb_x( p0.x );
-        const int p0_y = cart_coord.to_fb_y( p0.y );
-        const int p1_x = cart_coord.to_fb_x( p1.x );
-        const int p1_y = cart_coord.to_fb_y( p1.y );
-        subsys_draw_line(p0_x, p0_y, p1_x, p1_y);
+        subsys_draw_line(cart_coord.to_fb_x( p0.x ), cart_coord.to_fb_y( p0.y ),
+                         cart_coord.to_fb_x( p1.x ), cart_coord.to_fb_y( p1.y ));
     } else {
         const int p0_x = cart_coord.to_fb_x( p0.x );
         const int p0_y = fb_height - cart_coord.to_fb_y( p0.y );
