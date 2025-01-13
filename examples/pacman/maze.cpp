@@ -261,7 +261,7 @@ void acoord_t::incr_fwd(const direction_t dir, const keyframei_t& keyframei, con
     }
 }
 
-bool acoord_t::step_impl(direction_t dir, const bool test_only, const keyframei_t& keyframei, const collisiontest_simple_t& ct0, const collisiontest_t& ct1) noexcept {
+bool acoord_t::step_impl(direction_t dir, const bool test_only, const keyframei_t& keyframei, const collisiontest_simple_t& ct0) noexcept {
     const float epsilon = std::numeric_limits<float>::epsilon();
     const float step_width = keyframei.fields_per_frame();
     const float half_step = step_width / 2.0f;
@@ -416,9 +416,6 @@ bool acoord_t::step_impl(direction_t dir, const bool test_only, const keyframei_
     bool collision;
     if( nullptr != ct0 ) {
         collision = ct0(fwd_tile);
-    } else if( nullptr != ct1 ) {
-        collision = ct1(dir, new_x_pos_f, new_y_pos_f, new_pos_is_center,
-                             fwd_x_pos_i, fwd_y_pos_i, fwd_tile);
     } else {
         collision = false;
     }

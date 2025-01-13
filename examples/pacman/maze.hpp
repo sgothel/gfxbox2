@@ -71,7 +71,6 @@ std::string to_string(tile_t tile) noexcept;
 class acoord_t {
     public:
         typedef std::function<bool(tile_t)> collisiontest_simple_t;
-        typedef std::function<bool(direction_t d, float x_pos_f, float y_pos_f, bool center, int x_pos, int y_pos, tile_t)> collisiontest_t;
 
         struct stats_t {
             int fields_walked_i;
@@ -103,7 +102,7 @@ class acoord_t {
 
         stats_t stats_;
 
-        bool step_impl(direction_t dir, const bool test_only, const keyframei_t& keyframei, const collisiontest_simple_t& ct0, const collisiontest_t& ct1) noexcept;
+        bool step_impl(direction_t dir, const bool test_only, const keyframei_t& keyframei, const collisiontest_simple_t& ct0) noexcept;
 
     public:
         /** Empty w/ position -1 / -1 */
@@ -231,7 +230,7 @@ class acoord_t {
 
         /** Returns Manhatten distance */
         int distance_manhatten_i(const acoord_t& other) const noexcept {
-            return distance_manhatten(other.x_pos_i, other.y_pos_i);
+            return (int) distance_manhatten(float(other.x_pos_i), float(other.y_pos_i));
         }
 
         void incr_fwd(const direction_t dir, const keyframei_t& keyframei, const int tile_count) noexcept;
@@ -245,10 +244,6 @@ class acoord_t {
             incr_fwd(rot_right(last_dir_), keyframei, tile_count);
         }
 
-        void step(direction_t dir, const keyframei_t& keyframe) noexcept {
-            step_impl(dir, false, keyframe, nullptr, nullptr);
-        }
-
         /**
          *
          * @param maze
@@ -258,20 +253,12 @@ class acoord_t {
          * @param ct
          * @return true if successful, otherwise false for collision
          */
-        bool step(direction_t dir, const keyframei_t& keyframei, collisiontest_simple_t ct) noexcept {
-            return step_impl(dir, false, keyframei, std::move(ct), nullptr);
+        bool step(direction_t dir, const keyframei_t& keyframei, const collisiontest_simple_t& ct) noexcept {
+            return step_impl(dir, false, keyframei, ct);
         }
 
-        bool step(direction_t dir, const keyframei_t& keyframei, collisiontest_t ct) noexcept {
-            return step_impl(dir, false, keyframei, nullptr, std::move(ct));
-        }
-
-        bool test(direction_t dir, const keyframei_t& keyframei, collisiontest_simple_t ct) noexcept {
-            return step_impl(dir, true, keyframei, std::move(ct), nullptr);
-        }
-
-        bool test(direction_t dir, const keyframei_t& keyframei, collisiontest_t ct) noexcept {
-            return step_impl(dir, true, keyframei, nullptr, std::move(ct));
+        bool test(direction_t dir, const keyframei_t& keyframei, const collisiontest_simple_t& ct) noexcept {
+            return step_impl(dir, true, keyframei, ct);
         }
 
         bool is_center(const keyframei_t& keyframei) const noexcept {
