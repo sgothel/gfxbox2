@@ -25,6 +25,7 @@
 
 #include <limits>
 #include <pixel/pixel.hpp>
+#include <pixel/pixel2f.hpp>
 #include <random>
 
 #include <cstdio>
@@ -178,11 +179,10 @@ void ghost_t::set_next_target() noexcept {
                     acoord_t p = pacman->position();
                     acoord_t b = ghost( ghost_t::personality_t::BLINKY )->position();
                     p.incr_fwd(keyframei_, 2);
-                    float p_[] = { p.x_f(), p.y_f() };
-                    float b_[] = { b.x_f(), b.y_f() };
-                    float bp_[] = { (p_[0] - b_[0])*2, (p_[1] - b_[1])*2 }; // vec_bp * 2
-                    p.set_pos( keyframei_.center_value( bp_[0] + b_[0] ),
-                               keyframei_.center_value( bp_[1] + b_[1] ) ); // add back to blinky
+                    pixel::f2::point_t p_ { p.x_f(), p.y_f() };
+                    pixel::f2::point_t b_ { b.x_f(), b.y_f() };
+                    b_ += 2 * ( p_ - b_ );
+                    p.set_pos( keyframei_.center_value( b_.x ), keyframei_.center_value( b_.y ) );
                     target_ = p;
                     break;
                 }
