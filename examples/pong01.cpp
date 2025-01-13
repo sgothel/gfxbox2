@@ -44,12 +44,6 @@ const float max_velocity = 5.6f; // m/s
 
 bool debug_gfx = false;
 
-extern "C" {
-    EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool v) noexcept { debug_gfx = v; }
-}
-
-std::vector<pixel::f2::rect_ref_t> player_pads;
-
 /**
  * A bouncing ball w/ initial velocity in given direction plus gravity exposure (falling)
  */
@@ -58,7 +52,7 @@ static const float ball_height = 0.05f; // [m] .. diameter
 static const float ball_radius = ball_height/2.0f; // [m]
 static const float pad_height = 0.25f * 1.2f; // [m]
 static const float pad_thickness = 0.07f; // [m]
-
+static const pixel::f4::vec_t ball_color(1, 1, 1, 1);
 static bool big_pads = false;
 static bool one_player = true;
 static std::string record_bmpseq_basename;
@@ -66,29 +60,47 @@ static pixel::f2::rect_ref_t pad_l, pad_r;
 static std::shared_ptr<physiks::ball_t> ball;
 static pixel::f2::dashed_lineseg_t divider;
 
+std::vector<pixel::f2::rect_ref_t> player_pads;
+
 void reset_playfield() {
     const pixel::f2::point_t tl = { pixel::cart_coord.min_x()+4.0f*pad_thickness, pixel::cart_coord.max_y()-pad_thickness };
     const pixel::f2::point_t br = { pixel::cart_coord.max_x()-4.0f*pad_thickness, pixel::cart_coord.min_y()+pad_thickness };
 
-    if( one_player || big_pads) {
-        pad_l = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, pixel::cart_coord.max_y()-2.0f*pad_thickness),
+    pad_l = nullptr;
+    pad_r = nullptr;
+    player_pads.clear();
+    pixel::f2::geom_list_t& list = pixel::f2::gobjects();
+    list.clear();
+    list.push_back(ball);
+
+    if( one_player ) {
+        pixel::f2::rect_ref_t l =
+                std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, pixel::cart_coord.max_y()-2.0f*pad_thickness),
                                                     pad_thickness, pixel::cart_coord.height() - 4*pad_thickness);
+        list.push_back(l);
+    } else if( big_pads ) {
+        pad_l = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, 0.0f+pad_height),
+                                                    pad_thickness, 2*pad_height);
+        list.push_back(pad_l);
     } else {
         pad_l = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(tl.x, 0.0f+pad_height/2.0f),
                                                     pad_thickness, pad_height);
+        list.push_back(pad_l);
     }
-    player_pads.push_back(pad_l);
 
     if( big_pads ){
-        pad_r = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(br.x, pixel::cart_coord.max_y()-2.0f*pad_thickness),
-                                                    pad_thickness, pixel::cart_coord.height() - 4*pad_thickness);
+        pad_r = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(br.x, 0.0f+pad_height),
+                                                    pad_thickness, 2*pad_height);
     } else {
         pad_r = std::make_shared<pixel::f2::rect_t>(pixel::f2::vec_t(br.x, 0.0f+pad_height/2.0f),
                                                     pad_thickness, pad_height);
     }
+    list.push_back(pad_r);
+
     player_pads.push_back(pad_r);
 
-    if(!one_player){
+    if(pad_l){
+        player_pads.push_back(pad_l);
         pixel::f2::point_t p0 = {tl.x + (pixel::cart_coord.width()-7.0f*pad_thickness) / 2,
                                        tl.y - pad_thickness};
         pixel::f2::point_t p1 = {p0.x, p0.y - pixel::cart_coord.height() + 4*pad_thickness};
@@ -99,11 +111,6 @@ void reset_playfield() {
         if( debug_gfx ) {
             log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
         }
-        pixel::f2::geom_list_t& list = pixel::f2::gobjects();
-        list.clear();
-        list.push_back(ball);
-        list.push_back(pad_r);
-        list.push_back(pad_l);
         {
             // top horizontal bounds
             pixel::f2::geom_ref_t r = std::make_shared<pixel::f2::rect_t>(tl, pixel::cart_coord.width()-7.0f*pad_thickness, pad_thickness);
@@ -125,7 +132,14 @@ void reset_playfield() {
 }
 
 extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool v) noexcept {
+        debug_gfx = v;
+        if( ball ) {
+            ball->set_debug_gfx(v, ball_color);
+        }
+    }
     EMSCRIPTEN_KEEPALIVE void set_two_player(bool v) noexcept { one_player = !v; reset_playfield(); }
+    EMSCRIPTEN_KEEPALIVE void set_big_pads(bool v) noexcept { big_pads = v; reset_playfield(); }
 }
 
 void mainloop() {
@@ -186,7 +200,7 @@ void mainloop() {
                 pad_r->rotate(adeg_to_rad(-pad_rot_step*dt));
             }
         }
-        if( !one_player && event.has_any_p2() ) {
+        if( pad_l && event.has_any_p2() ) {
             if( event.pressed(pixel::input_event_type_t::P2_UP) ) {
                 pad_l->move(pad_step_up);
                 if( !pad_l->on_screen() ) {
@@ -223,8 +237,10 @@ void mainloop() {
     {
         std::string hud_s = to_string("td %s, %5.2f m/s",
                 to_decstring(t1, ',', 9).c_str(), ball->velocity.length());
-        if( one_player ) {
-            hud_s.append( to_string(", angle %6.2f deg", rad_to_adeg(pad_l->dir_angle)) );
+        if( pad_l ) {
+            hud_s.append( to_string(", angle[l: %6.2f, r: %6.2f] deg", rad_to_adeg(pad_l->dir_angle), rad_to_adeg(pad_r->dir_angle)) );
+        } else {
+            hud_s.append( to_string(", angle %6.2f deg", rad_to_adeg(pad_r->dir_angle)) );
         }
         hud_s.append( to_string(", fps %2.2f", pixel::gpu_avg_fps()) );
         hud_s.append( to_string(", score %d : %d", l_score, r_score) );
@@ -241,7 +257,7 @@ void mainloop() {
         }
         ball->reset(true);
     }
-    pixel::set_pixel_color(255 /* r */, 255 /* g */, 255 /* b */, 255 /* a */);
+    pixel::set_pixel_color(ball_color);
     {
         pixel::f2::geom_list_t& list = pixel::f2::gobjects();
         if( debug_gfx ) {
@@ -257,7 +273,7 @@ void mainloop() {
         }
     }
 
-    if(!one_player){
+    if(pad_l){
         divider.draw();
     }
 
@@ -336,6 +352,7 @@ int main(int argc, char *argv[])
     ball = physiks::ball_t::create("one", pixel::f2::point_t(0.0f, 0.0f), ball_radius,
                                     4.0f /* [m/s] */, adeg_to_rad(0),
                                     max_velocity, false, player_pads);
+    ball->set_debug_gfx(debug_gfx, ball_color);
 
     reset_playfield();
 
