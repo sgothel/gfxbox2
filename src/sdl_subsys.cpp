@@ -46,6 +46,7 @@ static size_t fb_pixels_byte_width = 0;
 static SDL_Texture * fb_texture = nullptr;
 static TTF_Font* sdl_font = nullptr;
 static int monitor_frames_per_sec=60;
+static int gpu_forced_fps_ = -1;
 static float gpu_fps = 0.0f;
 static int gpu_frame_count = 0;
 static uint64_t gpu_fps_t0 = 0;
@@ -68,7 +69,18 @@ void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t&
     b = ( ui32 & 0x000000ffU );
 }
 
+static void reset_gpu_fps(float fps) {
+    gpu_fps = fps;
+    gpu_fps_t0 = getCurrentMilliseconds();
+    gpu_swap_t0 = gpu_fps_t0;
+    gpu_swap_t1 = gpu_fps_t0;
+}
+
 int pixel::monitor_fps() noexcept { return monitor_frames_per_sec; }
+
+int pixel::gpu_forced_fps() noexcept { return gpu_forced_fps_; }
+
+void pixel::set_gpu_forced_fps(int fps) noexcept { gpu_forced_fps_=fps; reset_gpu_fps(float(fps)); }
 
 static void on_window_resized(int wwidth, int wheight) noexcept {
     if( !sdl_rend ) { return; }
@@ -221,10 +233,7 @@ bool pixel::init_gfx_subsystem(const char* exe_path, const char* title, int wwid
 
     on_window_resized(wwidth, wheight);
 
-    gpu_fps = float(monitor_frames_per_sec);
-    gpu_fps_t0 = getCurrentMilliseconds();
-    gpu_swap_t0 = gpu_fps_t0;
-    gpu_swap_t1 = gpu_fps_t0;
+    reset_gpu_fps(float(monitor_frames_per_sec));
 
     return true;
 }
