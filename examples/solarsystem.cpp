@@ -669,7 +669,6 @@ void mainloop() {
 int main(int argc, char *argv[])
 {
     int window_width = 1920, window_height = 1000;
-    pixel::set_gpu_forced_fps(30);
     #if defined(__EMSCRIPTEN__)
         window_width = 1024, window_height = 576; // 16:9
     #endif

@@ -1166,7 +1166,6 @@ int main(int argc, char *argv[])
     #endif
     player_count = 2;
     {
-        bool fps_set = false;
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-1p", argv[i]) ) {
                 player_count = 1;
@@ -1182,7 +1181,6 @@ int main(int argc, char *argv[])
                 record_bmpseq_basename = argv[i+1];
                 ++i;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
-                fps_set = true;
                 pixel::set_gpu_forced_fps(atoi(argv[i+1]));
                 ++i;
             } else if( 0 == strcmp("-no_vsync", argv[i]) ) {
@@ -1206,9 +1204,6 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-soft_prim", argv[i]) ) {
                 use_subsys_primitives = false;
             }
-        }
-        if( !fps_set && !use_subsys_primitives ) {
-            pixel::set_gpu_forced_fps(30);
         }
     }
     {
