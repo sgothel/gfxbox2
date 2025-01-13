@@ -254,9 +254,40 @@
           }
       }
       function maximizeCanvas(scale) {
+        const mode_width_threshold = 1.10;
+        const scale_width = 1;
+        const scale_height = 0.70;
+        const game_width = 16;
+        const game_height = 9;
+        const box_width = game_width;
+        var dpr = window.devicePixelRatio || 1;
         var ecr = document.getElementById('canvas_border').getBoundingClientRect();
-        var h = ecr.width*scale*9/16; // ecr.height is not maxed-out
-        wasm_set_window_size(ecr.width*scale, Math.min(h, window.innerHeight));
+        var w0 = Math.floor(ecr.width);
+        var h0 = Math.floor(window.innerHeight);
+        var w_to_r = w0/h0;
+        var mode, scale, w, h, h2;
+        if( w_to_r < mode_width_threshold ) {
+            // windows-width-based
+            mode='width';
+            scale = scale_width;
+            w = Math.floor(scale*w0);
+            h = Math.floor(w*game_height/game_width); // ecr.height is not maxed-out
+            h2 = Math.min(h, scale*window.innerHeight);
+        } else {
+            // window-height-based
+            mode='height';
+            scale = scale_height;
+            w = Math.floor(scale*h0*box_width/game_height);
+            h = Math.floor(w*game_height/game_width); // ecr.height is not maxed-out
+            h2 = Math.min(h, window.innerHeight);
+        }
+        var msg = 'Layout ' + game_width + ' x ' + game_height + ' -> ' + box_width + ' x ' + game_height + '\r\n';
+        msg += 'Window ' + window.innerWidth + ' x ' + window.innerHeight + ', dpr ' + dpr + '\r\n';
+        msg += 'Used   ' + w0 + ' x ' + h0 + ', ratio ' + w_to_r + ', mode ' + mode + ', scale ' + scale + '\r\n';
+        msg += 'Canvas ' + Math.floor(ecr.width) + ' x ' + Math.floor(ecr.height) + '\r\n';
+        msg += 'Resize ' + w + ' x ' + h + ', h2 '+h2 + '\r\n';
+        document.getElementById("output").value += msg;
+        wasm_set_window_size(w, h2);
       }
     </script>
     <script async type="text/javascript" src="spacewars.js"></script>

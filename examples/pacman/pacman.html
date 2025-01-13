@@ -17,6 +17,7 @@
         border-spacing: 1em;
       }
       th, td {
+        vertical-align:top;
         text-align: left;
         padding: 0.25em;
       }
@@ -64,9 +65,11 @@
         width: 300px;
       }
 
+      #canvas_control {
+      }
       #controls {
         display: inline-block;
-        float: right;
+        float: left;
         vertical-align: top;
         margin-top: 30px;
         margin-right: 20px;
@@ -93,27 +96,44 @@
   <body>
     <a href="https://jausoft.com"><img src="/images/jaugsweklogo-hp-220x80.png" alt="Jausoft" style="background-color: #555555"/></a>
     <span style="padding:1em; font-size:2em;"><span class="acap">P</span>acman</span>... a <a href="https://jausoft.com/cgit/cs_class/gfxbox2.git/about/">gfxbox2 example</a>.
-    <div>Press <input type="button" value="Start Audio" onclick="start_audio()"></span> to enable audio!</div>
 
     <div class="spinner" id='spinner'></div>
     <div class="emscripten" id="status">Downloading...</div>
 
-<span id='controls'>
-  <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
-  <!--span><input type="button" value="Pause" onclick="pause_app()"></span>
-  <span><input type="button" value="Resume" onclick="resume_app()"></span -->
-  <span><input type="checkbox" id="DebugGfx" onclick="setDebugGfx(this.checked)">dbg-gfx</span>
-  <span><input type="checkbox" id="ShowTarget" onclick="setShowTarget(this.checked)">show-target</span>
-  <span><input type="checkbox" id="HumanBlinky" onclick="setHumanBlinky(this.checked)">human-blinky</span>
-  <span><input type="number" id="SetFPS" min="0" max="60" step="10" value="0" style="width: 3em;" onchange="setForcedFPS(this.value)"/>fps</span>
-</span>
-
     <div class="emscripten">
       <progress value="0" max="100" id="progress" hidden=1></progress>
     </div>
-
-    <div class="emscripten_border" id="canvas_border">
-      <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+    <div id='canvas_control''>
+        <table style="width:100%">
+            <tr>
+                <th style="width:80%"></th>
+                <th style="width:20%"></th>
+            </tr>
+            <tr>
+                <td>
+                    <div class="emscripten_border" id="canvas_border">
+                      <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex=-1></canvas>
+                    </div>
+                </td>
+                <td>
+                    <span id='controls'>
+                      <div><input type="button" value="Start Audio" onclick="startAudio()"></div>
+                      <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
+                      <!--span><input type="button" value="Pause" onclick="pause_app()"></span>
+                      <span><input type="button" value="Resume" onclick="resume_app()"></span -->
+                      <div><input type="button" value="Reset" onclick="resetGame()"></div>
+                      <div><input type="checkbox" id="DebugGfx" value="false" onclick="setDebugGfx(this.checked)">dbg-gfx</div>
+                      <div><input type="checkbox" id="ShowTarget" value="false" onclick="setShowTarget(this.checked)">targets</div>
+                      <div><input type="checkbox" id="BugFixMode" value="false" onclick="setBugFixMode(this.checked)">bugfix</div>
+                      <div><input type="checkbox" id="Manhatten" value="false" onclick="setManhatten(this.checked)">manhatten</div>
+                      <div><input type="checkbox" id="HumanBlinky" value="false" onclick="setHumanBlinky(this.checked)">do-blinky</div>
+                      <div><input type="checkbox" id="Invincible" value="false" onclick="setInvincible(this.checked)">invincible</div>
+                      <div><input type="number" id="SetLevel" min="1" max="21" step="1" value="1" style="width: 3em;" onchange="setLevel(this.value)"/>level</div>
+                      <div><input type="number" id="SetFPS" min="0" max="60" step="10" value="0" style="width: 3em;" onchange="setForcedFPS(this.value)"/>fps</div>
+                    </span>
+                </td>
+            </tr>
+        </table>
     </div>
     <textarea id="output" rows="8"></textarea>
 
@@ -153,19 +173,29 @@
       var statusElement = document.getElementById('status');
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
-      var wasm_start_audio, wasm_set_human_blinky;
-      var wasm_set_debug_gfx, wasm_set_showtarget, wasm_set_forced_fps, wasm_set_window_size;
+      var wasm_set_game_fps, wasm_set_window_size;
+      var wasm_set_debug_gfx, wasm_set_showtarget, wasm_set_human_blinky;
+      var wasm_set_invincible, wasm_set_bugfix_mode;
+      var wasm_set_decision_on_spot, wasm_set_manhatten_distance;
+      var wasm_set_level, wasm_reset_game, wasm_start_audio;
 
       var Module = {
         onRuntimeInitialized: function() {
           var wasm_start, wasm_pause, wasm_resume, wasm_cancel;
-            wasm_start_audio = Module.cwrap('start_audio', 'null')
-            wasm_set_human_blinky = Module.cwrap('set_human_blinky', 'null', ['boolean'])
+            wasm_set_game_fps = Module.cwrap('set_game_fps', 'null', ['number'])
+            wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
+
             wasm_set_debug_gfx = Module.cwrap('set_debug_gfx', 'null', ['boolean'])
             wasm_set_showtarget = Module.cwrap('set_showtarget', 'null', ['boolean'])
-            wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
-            wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
-            maximizeCanvas(0.50);
+            wasm_set_human_blinky = Module.cwrap('set_human_blinky', 'null', ['boolean'])
+            wasm_set_invincible = Module.cwrap('set_invincible', 'null', ['boolean'])
+            wasm_set_bugfix_mode = Module.cwrap('set_set_bugfix_mode', 'null', ['boolean'])
+            wasm_set_decision_on_spot = Module.cwrap('set_decision_on_spot', 'null', ['boolean'])
+            wasm_set_manhatten_distance = Module.cwrap('set_manhatten_distance', 'null', ['boolean'])
+            wasm_set_level = Module.cwrap('set_level', 'null', ['number'])
+            wasm_reset_game = Module.cwrap('reset_game', 'null')
+            wasm_start_audio = Module.cwrap('start_audio', 'null')
+            maximizeCanvas();
         },
         preRun: [],
         postRun: [],
@@ -228,14 +258,34 @@
         };
       };
 
-      function start_audio() {
+      function startAudio() {
           if( null != wasm_start_audio ) {
               wasm_start_audio();
+          }
+      }
+      function resetGame() {
+          if( null != wasm_reset_game ) {
+              wasm_reset_game();
           }
       }
       function setHumanBlinky(v) {
           if( null != wasm_set_human_blinky ) {
               wasm_set_human_blinky(v);
+          }
+      }
+      function setInvincible(v) {
+          if( null != wasm_set_invincible ) {
+              wasm_set_invincible(v);
+          }
+      }
+      function setBugfixMode(v) {
+          if( null != wasm_set_bugfix_mode ) {
+              wasm_set_bugfix_mode(v);
+          }
+      }
+      function setManhatten(v) {
+          if( null != wasm_set_manhatten_distance ) {
+              wasm_set_manhatten_distance(v);
           }
       }
       function setDebugGfx(v) {
@@ -249,14 +299,50 @@
           }
       }
       function setForcedFPS(v) {
-          if( null != wasm_set_forced_fps ) {
-              wasm_set_forced_fps(v);
+          if( null != wasm_set_game_fps ) {
+              wasm_set_game_fps(v);
           }
       }
-      function maximizeCanvas(scale) {
-        var ecr = document.getElementById('canvas_border').getBoundingClientRect();
-        var h = ecr.width*scale*256/224; // ecr.height is not maxed-out
-        wasm_set_window_size(ecr.width*scale, Math.min(h, window.innerHeight));
+      function setLevel(v) {
+          if( null != wasm_set_level ) {
+              wasm_set_level(v);
+          }
+      }
+      function maximizeCanvas() { // fixed window-height-based
+        const mode_width_threshold = 0; // mode-width disabled
+        const scale_width = 1;
+        const scale_height = 0.55;
+        const game_width = 244;
+        const game_height = 288;
+        const box_width = 300;
+        var dpr = window.devicePixelRatio || 1;
+        var ecr = document.getElementById('canvas_control').getBoundingClientRect();
+        var w0 = Math.floor(ecr.width);
+        var h0 = Math.floor(window.innerHeight);
+        var w_to_r = w0/h0;
+        var mode, scale, w, h, h2;
+        if( w_to_r < mode_width_threshold ) {
+            // windows-width-based
+            mode='width';
+            scale = scale_width;
+            w = Math.floor(scale*w0);
+            h = Math.floor(w*game_height/game_width); // ecr.height is not maxed-out
+            h2 = Math.min(h, scale*window.innerHeight);
+        } else {
+            // window-height-based
+            mode='height';
+            scale = scale_height;
+            w = Math.floor(scale*h0*box_width/game_height);
+            h = Math.floor(w*game_height/game_width); // ecr.height is not maxed-out
+            h2 = Math.min(h, window.innerHeight);
+        }
+        var msg = 'Layout ' + game_width + ' x ' + game_height + ' -> ' + box_width + ' x ' + game_height + '\r\n';
+        msg += 'Window ' + window.innerWidth + ' x ' + window.innerHeight + ', dpr ' + dpr + '\r\n';
+        msg += 'Used   ' + w0 + ' x ' + h0 + ', ratio ' + w_to_r + ', mode ' + mode + ', scale ' + scale + '\r\n';
+        msg += 'Canvas ' + Math.floor(ecr.width) + ' x ' + Math.floor(ecr.height) + '\r\n';
+        msg += 'Resize ' + w + ' x ' + h + ', h2 '+h2 + '\r\n';
+        document.getElementById("output").value += msg;
+        wasm_set_window_size(w, h2);
       }
     </script>
     <script async type="text/javascript" src="pacman.js"></script>
