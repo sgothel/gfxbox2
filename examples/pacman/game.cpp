@@ -617,7 +617,7 @@ void mainloop() {
                             ghost_t::rgb_color[ ghost_t::number( ghost->id() ) ][0],
                             ghost_t::rgb_color[ ghost_t::number( ghost->id() ) ][1],
                             ghost_t::rgb_color[ ghost_t::number( ghost->id() ) ][2], 255);
-                    pixel::draw_line(global_maze->x_to_px(p1.x_f()), global_maze->y_to_px(p1.y_f()),
+                    pixel::draw_line(1.0f, global_maze->x_to_px(p1.x_f()), global_maze->y_to_px(p1.y_f()),
                                      global_maze->x_to_px(p2.x_f()), global_maze->y_to_px(p2.y_f()));
                 }
             }
