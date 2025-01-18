@@ -590,21 +590,32 @@ void mainloop() {
             ref_cbody_t0.clear();
             const fraction_timespec t_diff_s = sel_cbody.world_time() - selPlanetNextPos->world_time();
             const f3::point_t p_has = sel_cbody.position();
+            const f2::point_t p_has2 { p_has.x, p_has.y }; 
             const f3::point_t p_exp = selPlanetNextPos->position();
+            const f2::point_t p_exp2 { p_exp.x, p_exp.y };
             const f3::point_t v_err = ( p_has - p_exp ); // [m]
-            const float l_err = v_err.length(); // [m]
+            const f2::point_t v_err2 = ( p_has2 - p_exp2 ); // [m]
+            const float l_err  = v_err.length(); // [m]
+            const float l_err2 = v_err2.length(); // [m]
             const float diam = sel_cbody.radius() * 2.0f;
             const float circum = sel_cbody.sun_dist() * 2.0f * std::numbers::pi_v<float>;
             printf("Data Approx:\n  - simulated %s\n  - ref-data  %s\n"
                                  "  - dt %.2f [h], %s\n"
-                                 "  - dist %.2f km, %.2f ls\n"
-                                 "  - dist %.2f diam, %.2f%% orbit (%.0f km)\n",
+                                 "  - diam %.2f km\n"
+                                 "  - 3d dist %.2f km, %.2f ls\n"
+                                 "  - 3d dist %.2f diam, %.2f%% orbit (%.0f km)\n"
+                                 "  - 2d dist %.2f km, %.2f ls\n"
+                                 "  - 2d dist %.2f diam, %.2f%% orbit (%.0f km)\n",
                 sel_cbody.toString().c_str(),
                 selPlanetNextPos->toString().c_str(),
                 (float)t_diff_s.tv_sec/1_h, t_diff_s.to_iso8601_string(true).c_str(),
+                diam/1000.0f,
                 l_err/1000.0f, l_err/light_second,
                 l_err/diam,
-                (l_err/circum)*100.0f, circum/1000.0f);
+                (l_err/circum)*100.0f, circum/1000.0f,
+                l_err2/1000.0f, l_err2/light_second, 
+                l_err2/diam,
+                (l_err2/circum)*100.0f, circum/1000.0f);
         }
     }
     const fraction_timespec world_t0_sec = sel_cbody.world_time();
