@@ -243,6 +243,18 @@ namespace pixel::f3 {
         return r;
     }
 
+    constexpr vec_t operator/(const vec_t& lhs, const float s ) noexcept {
+        vec_t r(lhs);
+        r /= s;
+        return r;
+    }
+
+    constexpr vec_t operator/(const float s, const vec_t& rhs) noexcept {
+        vec_t r(rhs);
+        r /= s;
+        return r;
+    }
+
     /**
      * Simple compound denoting a ray.
      * <p>
