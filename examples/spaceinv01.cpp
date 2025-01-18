@@ -802,6 +802,7 @@ class peng_t : public gobject_t {
     }
 
     constexpr int alien_hit_value() const { return m_alien_hit_value; }
+    
 };
 std::vector<peng_t> pengs;
 
@@ -877,7 +878,7 @@ class base_t : public gobject_t {
 
         constexpr bool is_killed() const noexcept { return m_killed; }
 
-        void peng() noexcept {
+        bool peng() noexcept {
             if(peng_inventory > 0){
                 // adjust start posision to geometric base model
                 constexpr float x_adjust = 0.5f;
@@ -886,7 +887,9 @@ class base_t : public gobject_t {
                 pengs.emplace_back(bl, v_p, base_id, pixel::animtex_t("peng", peng_t::anim_period, tex_peng));
                 --peng_inventory;
                 audio_peng->play();
+                return true;
             }
+            return false;
         }
 
         void move(const pixel::f2::point_t& d) noexcept {
@@ -919,6 +922,7 @@ class player_t : public gobject_t {
         constexpr static int start_live = 3;
         float m_respawn_timer;
         int m_score;
+        int shoot_number;
 
         void base_dtor() noexcept {
             --m_lives;
@@ -941,7 +945,7 @@ class player_t : public gobject_t {
     public:
         player_t() noexcept
         : m_lives(start_live),
-          m_base(nullptr), m_respawn_timer(0), m_score(0)
+          m_base(nullptr), m_respawn_timer(0), m_score(0), shoot_number(0)
         { respawn_base(); }
 
         /// Returns bottom-left position
@@ -1005,7 +1009,9 @@ class player_t : public gobject_t {
             const float avg_fd = pixel::gpu_avg_framedur();
             if( event.has_any_p2() ) {
                 if( event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
-                    m_base->peng();
+                    if(m_base->peng()){
+                        ++shoot_number;
+                    }
                 }
             }
             if( event.has_any_p1() ) {
