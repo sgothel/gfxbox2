@@ -34,6 +34,8 @@
 using namespace jau;
 using namespace jau::float_literals;
 using namespace pixel;
+static bool formel_one = false;
+static bool with_oobj = false;
 
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
 static const uint8_t rgba_black[/*4*/] = { 0, 0, 0, 255 };
@@ -138,7 +140,7 @@ class CBodyConst {
   public:
     si_length_t radius; // [m]
     si_length_t d_sun; // [m]
-    si_accel_t g_s; // [m/s^2]
+    si_accel_t g_surface; // [m/s^2]
     si_velo_t v; // [m/s]
     f4::vec_t color;
     std::string name;
@@ -229,7 +231,7 @@ class CBody {
     float _radius; // [m]
     double _mass; // [kg]
     f3::vec_t _velo; // [m/s]
-    float _GM; // GM = g * r^2 = [m^3 / s^2]
+    float g_center; // GM = g * r^2 = [m^3 / s^2]
     f3::point_t _center;
     std::string _id_s;
     fraction_timespec _world_time;
@@ -248,7 +250,7 @@ class CBody {
     CBody(cbodyid_t id_, size_t dataset_idx=0)
     : _id(id_) {
         f3::point_t center;
-        float g_0;
+        float g_surface;
         {
             CBodyConst cbc = CBodyConstants[number(_id)];
             size_t id_idx = number(_id);
@@ -259,10 +261,10 @@ class CBody {
                 const SolarData& solar_data = solarDataSet.set[dataset_idx];
                 _world_time.tv_sec = solar_data.time_u; // [s]
                 const CBodyData& planet = solar_data.planets[id_idx - 1];
-                center.x = static_cast<float>(planet.position[0]*1000.0);
+                center.x = static_cast<float>(planet.position[0]*1000.0); // "*1000" = km -> m
                 center.y = static_cast<float>(planet.position[1]*1000.0);
                 center.z = static_cast<float>(planet.position[2]*1000.0);
-                _velo.x = static_cast<float>(planet.velocity[0]*1000.0);
+                _velo.x = static_cast<float>(planet.velocity[0]*1000.0); // "*1000" = km/s -> m/s
                 _velo.y = static_cast<float>(planet.velocity[1]*1000.0);
                 _velo.z = static_cast<float>(planet.velocity[2]*1000.0);
             } else {
@@ -276,14 +278,14 @@ class CBody {
             }
             _d_sun = center.length();
             _radius = cbc.radius;
-            g_0 = cbc.g_s;
+            g_surface = cbc.g_surface;
             _color = cbc.color;
             _id_s = cbc.name;
             _orbit_world_time_last = _world_time;
             _center = center;
             _mass = cbc.mass;
         }
-        _GM = g_0 * _radius * _radius; // m^3 / s^2
+        g_center = g_surface * _radius * _radius; // m^3 / s^2
         _scale = default_scale[number(_id)];
     }
 
@@ -305,31 +307,29 @@ class CBody {
 
     // Returns gravity [m/s^2] acceleration from given center `p` towards this body
     // @param p center of attracted object towards this body
-    pixel::f3::vec_t gravity(const pixel::f3::point_t& p) {
+    pixel::f3::vec_t gravity1(const pixel::f3::point_t& p) {
         pixel::f3::vec_t v_d = _center - p;
         const float d = v_d.length();
-        if( is_zero(d) ) {
-            return pixel::f3::vec_t();
-        } else {
-            // v.normalize() -> v / d
-            // return v.normalize() * ( _GM / ( d * d ) );
-            return ( v_d /= d ) *= ( _GM / ( d * d ) ); // same as above but reusing vector 'v'
+        pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
+        if( !is_zero(d) ) {
+            // normalize: v_d / d
+            v_g = ( v_d / d ) * ( g_center / ( d * d ) );
         }
+        return v_g;
     }
 
     // Returns gravity [m/s^2] acceleration from given body `o` towards this body
     // @param o attracted body towards this body
-    pixel::f3::vec_t gravity(const CBody& o) {
+    pixel::f3::vec_t gravity2(const CBody& o) {
         pixel::f3::vec_t v_d = _center - o._center;
         const double d = v_d.length();
-        if( is_zero(d) ) {
-            v_d = { 0, 0, 0};
-        } else {
-            // v.normalize() -> v / d
+        pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
+        if( !is_zero(d) ) {
+            // normal-vector: v_d / d (einheitsvektor, richtung)
             const double F = M_G * (_mass * o._mass) / ( d * d );
-            ( v_d /= (float)d ) *= (float)( F / o._mass); // same as above but reusing vector 'v'
+            v_g = ( v_d / (float)d ) * (float)( F / o._mass);
         }
-        return v_d;
+        return v_g;
     }
 
     void sub_tick(const float dt, const fraction_timespec& wts) {
@@ -339,9 +339,9 @@ class CBody {
         for( size_t i = 0; i < cbodies.size(); ++i ) {
             const CBodyRef& cb = cbodies[i];
             if( this != cb.get() ) {
-                const f3::vec_t g = cb->gravity(_center);
-                // const f3::vec_t g = cb->gravity(*this);
-                if( 0 != i++ ) {
+                const f3::vec_t g = formel_one ? 
+                    cb->gravity1(_center) : cb->gravity2(*this);
+                if( 0 != i ) {
                     _velo += g * dt * gravity_scale;
                 } else {
                     _velo += g * dt;
@@ -349,7 +349,7 @@ class CBody {
             }
         }
         _center += _velo * dt;
-
+        
         const si_time_t orbit_th = color_inverse ? 0 : 1_day;
         if( (float)(wts - _orbit_world_time_last).tv_sec > orbit_th ) {
             _orbit_points.emplace_back(_center.x, _center.y);
@@ -410,7 +410,6 @@ static cbodyid_t info_id = cbodyid_t::earth;
 std::vector<f2::point_t> pl;
 std::vector<f2::point_t> ipl;
 bool tick_ts_down = false;
-bool with_oobj = false;
 
 void mainloop() {
     // scale_all_numbers(0.000001f);
@@ -520,6 +519,10 @@ void mainloop() {
                 if (event.released_and_clr(input_event_type_t::P3_ACTION1)) {
                     show_cbody_velo = !show_cbody_velo;
                 }
+            } else if( event.released_and_clr(input_event_type_t::F1) ) {
+                formel_one = true;
+            } else if( event.released_and_clr(input_event_type_t::F2) ) {
+                formel_one = false;
             }
             if( event.released_and_clr(input_event_type_t::ANY_KEY) ) {
                 if( event.last_key_code == ' ') {
@@ -606,12 +609,12 @@ void mainloop() {
     }
     const fraction_timespec world_t0_sec = sel_cbody.world_time();
     hud_text = pixel::make_text(tl_text, 0, animating ? vec4_text_color0 : vec4_text_color1, text_height,
-                    "%s -> %s, time[x %s, td %us], gscale %0.2f, fps %0.1f",
+                    "%s -> %s, time[x %s, td %us], gscale %0.2f, formel %s, fps %0.1f",
                     sel_cbody.toString().c_str(),
                     cbodies[number(max_planet_id)]->ids().c_str(),
                     to_magnitude_timestr(tick_ts).c_str(),
                     static_cast<unsigned>(t1/1000),
-                    global_scale(), gpu_avg_fps());
+                    global_scale(), formel_one ? "one" : "two", gpu_avg_fps());
     {
         fraction_timespec next_time_min = world_t0_sec-fraction_timespec(1_month);
         fraction_timespec next_time_max = world_t0_sec+fraction_timespec(1_year);
@@ -708,6 +711,8 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-oobj_mass", argv[i]) && i+1<argc) {
                 oobj_mass = atof(argv[i+1]);
                 ++i;
+            } else if( 0 == strcmp("-formel1", argv[i])) {
+                formel_one = true;
             } else {
                 log_printf(0, "ERROR: Unknown argument %s\n", argv[i]);
                 return 1;
