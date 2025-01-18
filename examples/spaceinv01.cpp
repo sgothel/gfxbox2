@@ -494,6 +494,7 @@ class alien_group_t : public gobject_t {
             }
             bl.y -=  2.0f * cell_height;
         }
+        m_saucer = nullptr;
         m_step_delay_left = m_sec_step_delay * float(active_count());
         m_saucer_delay_left = alien_saucer_period;
     }
