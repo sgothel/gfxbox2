@@ -333,7 +333,7 @@ class CBody {
     }
 
     void sub_tick(const float dt, const fraction_timespec& wts) {
-        if( _id == cbodyid_t::sun ) {
+        if( _id == cbodyid_t::sun && gravity_scale <= 1 && !with_oobj) {
             return;
         }
         for( size_t i = 0; i < cbodies.size(); ++i ) {
