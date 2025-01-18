@@ -149,7 +149,7 @@ static constexpr float light_second = 299792458.0f;
 static constexpr float light_minute = 60 * light_second;
 si_accel_t oobj_gravity = 2479_m_s2 * 100;
 si_velo_t oobj_velo = 108000_km_h;
-double oobj_mass = 5.97e+24; // [kg]
+double oobj_mass = 198840e+24; // [kg]
 static cbodyid_t max_planet_id = cbodyid_t::mars;
 
 static constexpr double M_G = 6.6743015e-11; // [N⋅m2⋅kg−2]
@@ -176,7 +176,7 @@ CBodyConst CBodyConstants[] {
   { 1151_km, 7300000000_km, 58_cm_s2, 17064_km_h,
    {0.7f, 0.5f, 0.7f, 0.5f}, "Pluto", 0.0130e+24}
   , { 6211400_m, 227900000_km, oobj_gravity, -oobj_velo,
-  {1, 1, 1, 1}, "oobj", oobj_mass}
+  {0.5, 0.5, 0.5, 0.5}, "oobj", oobj_mass}
 };
 
 static float space_height; // [m]
