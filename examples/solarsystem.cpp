@@ -36,7 +36,8 @@
 using namespace jau;
 using namespace jau::float_literals;
 using namespace pixel;
-static bool formel_one = false;
+
+static bool formel_one = true;
 static bool with_oobj = false;
 
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
@@ -142,6 +143,7 @@ class CBodyConst {
   public:
     si_length_f32 radius; // [m]
     si_length_f32 d_sun; // [m]
+    double GM; // [m^3/s^2]
     si_accel_f32 g_surface; // [m/s^2]
     si_velo_f32 v; // [m/s]
     f4::vec_t color;
@@ -158,29 +160,30 @@ static cbodyid_t max_planet_id = cbodyid_t::mars;
 
 static constexpr double M_G = 6.6743015e-11; // [N⋅m2⋅kg−2]
 
+// Source: [Horizon JPL](https://ssd.jpl.nasa.gov/horizons/manual.html)
 CBodyConst CBodyConstants[] {
-  { 695700_km, 0_km, 274199_mm_s2, 0,
-   {1, 1, 0, 1}, "Sun", 1988400e+24},
-  { 2440_km, 58000000_km, 3700_mm_s2, 172800_km_h,
-   {0.5f, 0.5f, 0.5f, 0.5f}, "Mercury", 330e+24},
-  { 6051800_m, 108000000_km, 887_cm_s2, 126072_km_h,
-   {1, 0.5f, 0, 1}, "Venus", 4.87e+24},
-  { 6371_km, 149600000_km, 9820_mm_s2, 108000_km_h,
-   {0, 0, 1, 1}, "Earth", 5.97e+24},
-  { 3389500_m, 227900000_km, 369_cm_s2, 86652_km_h,
-   {1, 0, 0, 1}, "Mars", 642e+24},
-  { 69911_km, 778000000_km, 2479_cm_s2, 47160_km_h,
-   {0.7f, 0.5f, 0.5f, 0.5f}, "Jupiter", 1898e+24},
-  { 69911_km, 1486000000_km, 1044_cm_s2, 34884_km_h,
-   {0.7f, 0.7f, 0.5f, 0.5f}, "Saturn", 568e+24},
-  { 25362_km, 2900000000_km, 887_cm_s2, 24516_km_h,
-   {0, 0, 1, 1}, "Uranus", 86.8e+24},
-  { 24622_km, 45000000000_km, 1115_cm_s2, 20000_km_h,
-   {0, 0, 1, 1}, "Neptun", 102e+24},
-  { 1151_km, 7300000000_km, 58_cm_s2, 17064_km_h,
-   {0.7f, 0.5f, 0.7f, 0.5f}, "Pluto", 0.0130e+24}
-  , { 6211400_m, 227900000_km, oobj_gravity, -oobj_velo,
-  {0.5, 0.5, 0.5, 0.5}, "oobj", oobj_mass}
+  {695700_km,           0_km,   132712000000_km3_s2, 274199_mm_s2, 0,
+   {1, 1, 0, 1},                  "Sun", 1988400e+24},
+  {  2440_km,    58000000_km,        22031869_m3_s2,  3701_mm_s2, 172800_km_h,
+   {0.5f, 0.5f, 0.5f, 0.5f},  "Mercury",     330e+24},
+  {  6052_km,   108000000_km,      3248858592_m3_s2,  8870_mm_s2, 126072_km_h,
+   {1, 0.5f, 0, 1},            "Venus",     4.87e+24},
+  {  6378_km,   149600000_km,       398600435_m3_s2,  9820_mm_s2, 108000_km_h,
+   {0, 0, 1, 1},               "Earth",     5.97e+24},
+  {  3396_km,   227900000_km,        42828375_m3_s2,  3710_mm_s2,  86652_km_h,
+   {1, 0, 0, 1},                "Mars",      642e+24},
+  { 71492_km,   778000000_km,        42828375_m3_s2, 24790_mm_s2,  47160_km_h,
+   {0.7f, 0.5f, 0.5f, 0.5f}, "Jupiter",     1898e+24},
+  { 60268_km,  1486000000_km,    126686531900_m3_s2, 10440_mm_s2,  34884_km_h,
+   {0.7f, 0.7f, 0.5f, 0.5f},  "Saturn",      568e+24},
+  { 25559_km,  2900000000_km,     37931206234_m3_s2,  8870_mm_s2,  24516_km_h,
+   {0, 0, 1, 1},             "Uranus",      86.8e+24},
+  { 24766_km, 45000000000_km,      5793951256_m3_s2, 11150_mm_s2,  20000_km_h,
+   {0, 0, 1, 1},             "Neptun",       102e+24},
+  {  1188_km,  7300000000_km,      6835099970_m3_s2,   611_mm_s2,  17064_km_h,
+   {0.7f, 0.5f, 0.7f, 0.5f},  "Pluto",    0.0130e+24},
+  {  6211_km,   227900000_km,          869326_m3_s2, oobj_gravity, -oobj_velo,
+  {0.5, 0.5, 0.5, 0.5},        "oobj",     oobj_mass}
 };
 
 static float space_height; // [m]
@@ -233,6 +236,7 @@ class CBody {
     float _radius; // [m]
     si_mass_f64 _mass; // [kg]
     f3::vec_t _velo; // [m/s]
+    double GM; // [m^3/s^2]
     float g_center; // GM = g * r^2 = [m^3 / s^2]
     f3::point_t _center;
     std::string _id_s;
@@ -278,6 +282,7 @@ class CBody {
                 _velo = {velo2.x, velo2.y, 0};
                 // _velo = {cbc.v, 0, 0};
             }
+            GM = cbc.GM;
             _d_sun = center.length();
             _radius = cbc.radius;
             g_surface = cbc.g_surface;
@@ -305,17 +310,33 @@ class CBody {
         return ( CBodyConstants[number(_id)].d_sun + CBodyConstants[number(_id)].radius ) * 1.075f;
     }
 
-    f3::point_t position() const noexcept { return _center; }
+    const f3::point_t& position() const noexcept { return _center; }
+    const f3::point_t& velo() const noexcept { return _velo; }
 
-    // Returns gravity [m/s^2] acceleration from given center `p` towards this body
+    // Returns gravity [m/s^2] acceleration from given body `o` towards this body
     // @param p center of attracted object towards this body
-    pixel::f3::vec_t gravity1(const pixel::f3::point_t& p) {
-        pixel::f3::vec_t v_d = _center - p;
+    pixel::f3::vec_t gravity1a(const CBody& o) {
+        pixel::f3::vec_t v_d = _center - o._center;
         const float d = v_d.length();
         pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
         if( !is_zero(d) ) {
             // normalize: v_d / d
             v_g = ( v_d / d ) * ( g_center / ( d * d ) );
+        }
+        return v_g;
+    }
+
+    // Returns gravity [m/s^2] acceleration from given body `o` towards this body
+    // @param o attracted body towards this body
+    pixel::f3::vec_t gravity1b(const CBody& o) {
+        pixel::f3::vec_t v_d = _center - o._center;
+        const float d = v_d.length();
+        pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
+        if( !is_zero(d) ) {
+            // normal-vector: v_d / d (einheitsvektor, richtung)
+            // const double F_ = GM * o._mass / ( d * d );
+            // v_g = ( v_d / d ) * ( F_ / o._mass);
+            v_g = ( v_d / d ) * (float)( GM / ( d * d ) );
         }
         return v_g;
     }
@@ -341,8 +362,8 @@ class CBody {
         for( size_t i = 0; i < cbodies.size(); ++i ) {
             const CBodyRef& cb = cbodies[i];
             if( this != cb.get() ) {
-                const f3::vec_t g = formel_one ? 
-                    cb->gravity1(_center) : cb->gravity2(*this);
+                const f3::vec_t g = formel_one ?
+                    cb->gravity1a(*this) : cb->gravity2(*this);
                 if( 0 != i ) {
                     _velo += g * dt * gravity_scale;
                 } else {
@@ -383,13 +404,13 @@ class CBody {
                 p.draw();
             }
         }
-        f2::vec_t v = {_velo.x, _velo.y};
         f2::point_t c = {_center.x, _center.y};
         set_pixel_color(_color);
         f2::disk_t body = f2::disk_t(c, _radius * _scale * global_scale());
         body.draw(filled);
         if( show_cbody_velo ) {
             set_pixel_color(rgba_dbg_velo);
+            f2::vec_t v = {_velo.x, _velo.y};
             f2::lineseg_t::draw(c, c +v*_time_scale_last);
         }
     }
@@ -591,33 +612,55 @@ void mainloop() {
             event.set_paused(true);
             ref_cbody_t0.clear();
             const fraction_timespec t_diff_s = sel_cbody.world_time() - selPlanetNextPos->world_time();
+
             const f3::point_t p_has = sel_cbody.position();
-            const f2::point_t p_has2 { p_has.x, p_has.y }; 
             const f3::point_t p_exp = selPlanetNextPos->position();
-            const f2::point_t p_exp2 { p_exp.x, p_exp.y };
-            const f3::point_t v_err = ( p_has - p_exp ); // [m]
-            const f2::point_t v_err2 = ( p_has2 - p_exp2 ); // [m]
-            const float l_err  = v_err.length(); // [m]
-            const float l_err2 = v_err2.length(); // [m]
-            const float diam = sel_cbody.radius() * 2.0f;
-            const float circum = sel_cbody.sun_dist() * 2.0f * std::numbers::pi_v<float>;
+            const f3::point_t v_perr = ( p_has - p_exp ); // [m]
+            const double      l_perr = v_perr.length(); // [m]
+            const double       diam = sel_cbody.radius() * 2.0;
+            const double     circum = sel_cbody.sun_dist() * 2.0 * std::numbers::pi_v<double>;
+            const f3::point_t v_has = sel_cbody.velo();
+            const f3::point_t v_exp = selPlanetNextPos->velo();
+            const f3::point_t v_verr = ( v_has - v_exp ); // [m]
+            const double      l_verr = v_verr.length(); // [m]
+
+            const f2::point_t p_has2 { (float)p_has.x, (float)p_has.y };
+            const f2::point_t p_exp2 { (float)p_exp.x, (float)p_exp.y };
+            const f2::point_t v_perr2 = ( p_has2 - p_exp2 ); // [m]
+            const float       l_perr2 = v_perr2.length(); // [m]
+
             printf("Data Approx:\n  - simulated %s\n  - ref-data  %s\n"
                                  "  - dt %.2f [h], %s\n"
+                                 "  - 3d pos exp %s [km]\n"
+                                 "  - 3d pos has %s [km]\n"
+                                 "  - 3d pos err %s [km]\n"
+                                 "  - 2d pos exp %s [km]\n"
+                                 "  - 2d pos has %s [km]\n"
+                                 "  - 2d pos err %s [km]\n"
+                                 "  - vel exp %s [km]\n"
+                                 "  - vel has %s [km]\n"
+                                 "  - vel err %s [km]\n"
                                  "  - diam %.2f km\n"
                                  "  - 3d dist %.2f km, %.2f ls\n"
                                  "  - 3d dist %.2f diam, %.2f%% orbit (%.0f km)\n"
                                  "  - 2d dist %.2f km, %.2f ls\n"
-                                 "  - 2d dist %.2f diam, %.2f%% orbit (%.0f km)\n",
+                                 "  - 2d dist %.2f diam, %.2f%% orbit (%.0f km)\n"
+                                 "  - 3d dvel %.2f km/s\n",
                 sel_cbody.toString().c_str(),
                 selPlanetNextPos->toString().c_str(),
                 (float)t_diff_s.tv_sec/1_h, t_diff_s.to_iso8601_string(true).c_str(),
-                diam/1000.0f,
-                l_err/1000.0f, l_err/light_second,
-                l_err/diam,
-                (l_err/circum)*100.0f, circum/1000.0f,
-                l_err2/1000.0f, l_err2/light_second, 
-                l_err2/diam,
-                (l_err2/circum)*100.0f, circum/1000.0f);
+                (p_exp/1000.0).toString().c_str(), (p_has/1000.0).toString().c_str(), (v_perr/1000.0).toString().c_str(),
+                (p_exp2/1000.0).toString().c_str(), (p_has2/1000.0).toString().c_str(), (v_perr2/1000.0).toString().c_str(),
+                (v_exp/1000.0).toString().c_str(), (v_has/1000.0).toString().c_str(), (v_verr/1000.0).toString().c_str(),
+                diam/1000.0,
+                l_perr/1000.0, l_perr/light_second,
+                l_perr/diam,
+                (l_perr/circum)*100.0, circum/1000.0,
+                l_perr2/1000.0f, l_perr2/light_second,
+                l_perr2/diam,
+                (l_perr2/circum)*100.0f, circum/1000.0f,
+                l_verr/1000.0);
+            printf("\n");
         }
     }
     const fraction_timespec world_t0_sec = sel_cbody.world_time();
@@ -726,6 +769,8 @@ int main(int argc, char *argv[])
                 ++i;
             } else if( 0 == strcmp("-formel1", argv[i])) {
                 formel_one = true;
+            } else if( 0 == strcmp("-formel2", argv[i])) {
+                formel_one = false;
             } else {
                 log_printf(0, "ERROR: Unknown argument %s\n", argv[i]);
                 return 1;
