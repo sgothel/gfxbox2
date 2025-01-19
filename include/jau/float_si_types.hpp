@@ -42,15 +42,27 @@ namespace jau {
     typedef float si_velo_f32;
     /** Acceleration in fractions of meter/seconds^2. */
     typedef float si_accel_f32;
+    /** Standard gravitational parameter in fractions of meter^3/seconds^2. */
+    typedef float si_gravityparam_f32;
     /** Angle in fraction of radians. */
     typedef float si_angle_f32;
 
+    /** Time in fractions of seconds. */
+    typedef double si_time_f64;
+    /** Length in fractions of meter. */
+    typedef double si_length_f64;
     /** Mass in fractions of kilograms. */
     typedef double si_mass_f64;
+    /** Velocity in fractions of meter/seconds. */
+    typedef double si_velo_f64;
     /** Acceleration in fractions of meter/seconds^2. */
     typedef double si_accel_f64;
+    /** Standard gravitational parameter in fractions of meter^3/seconds^2. */
+    typedef double si_gravityparam_f64;
+    /** Angle in fraction of radians. */
+    typedef double si_angle_f64;
 
-    namespace float_literals {
+    namespace si_f32_literals {
         constexpr si_time_f32 operator ""_year(unsigned long long int __v)   { return (si_time_f32)__v*365.25f*24.0f*3600.0f; }
         constexpr si_time_f32 operator ""_month(unsigned long long int __v)   { return (si_time_f32)__v*30.0f*24.0f*3600.0f; }
         constexpr si_time_f32 operator ""_week(unsigned long long int __v)   { return (si_time_f32)__v*7.0f*24.0f*3600.0f; }
@@ -83,8 +95,8 @@ namespace jau {
         constexpr si_accel_f32 operator ""_cm_s2(unsigned long long int __v)   { return (si_accel_f32)__v / 100.0f; }
         constexpr si_accel_f32 operator ""_mm_s2(unsigned long long int __v)   { return (si_accel_f32)__v / 1000.0f; }
 
-        constexpr si_accel_f32 operator ""_km3_s2(unsigned long long int __v)   { return (si_accel_f32)__v * 1000000000.0f; }
-        constexpr si_accel_f32 operator ""_m3_s2(unsigned long long int __v)   { return (si_accel_f32)__v; }
+        constexpr si_gravityparam_f32 operator ""_km3_s2(unsigned long long int __v)   { return (si_gravityparam_f32)__v * 1000000000.0f; }
+        constexpr si_gravityparam_f32 operator ""_m3_s2(unsigned long long int __v)   { return (si_gravityparam_f32)__v; }
 
         constexpr si_angle_f32 operator ""_rad(unsigned long long int __v)   { return (si_angle_f32)__v; }
         constexpr si_angle_f32 operator ""_deg(unsigned long long int __v)   { return (si_angle_f32)((long double)__v / 180.0 * std::numbers::pi_v<long double>); }
@@ -92,6 +104,48 @@ namespace jau {
         constexpr si_angle_f32 operator ""_rad(long double __v)   { return (si_angle_f32)__v; }
         constexpr si_angle_f32 operator ""_deg(long double __v)   { return (si_angle_f32)(__v / 180.0 * std::numbers::pi_v<long double>); }
 
+    }
+    namespace si_f64_literals {
+        constexpr si_time_f64 operator ""_year(unsigned long long int __v)   { return (si_time_f64)__v*365.25*24.0*3600.0; }
+        constexpr si_time_f64 operator ""_month(unsigned long long int __v)   { return (si_time_f64)__v*30.0*24.0*3600.0; }
+        constexpr si_time_f64 operator ""_week(unsigned long long int __v)   { return (si_time_f64)__v*7.0*24.0*3600.0; }
+        constexpr si_time_f64 operator ""_day(unsigned long long int __v)   { return (si_time_f64)__v*24.0*3600.0; }
+
+        constexpr si_time_f64 operator ""_h(unsigned long long int __v)   { return (si_time_f64)__v*3600.0; }
+        constexpr si_time_f64 operator ""_min(unsigned long long int __v)   { return (si_time_f64)__v*60.0; }
+        constexpr si_time_f64 operator ""_s(unsigned long long int __v)   { return (si_time_f64)__v; }
+        constexpr si_time_f64 operator ""_ms(unsigned long long int __v)   { return (si_time_f64)__v/1000.0; }
+
+        constexpr si_length_f64 operator ""_km(unsigned long long int __v)   { return (si_length_f64)__v*1000.0; }
+        constexpr si_length_f64 operator ""_m(unsigned long long int __v)   { return (si_length_f64)__v; }
+        constexpr si_length_f64 operator ""_dm(unsigned long long int __v)   { return (si_length_f64)__v/10.0; }
+        constexpr si_length_f64 operator ""_cm(unsigned long long int __v)   { return (si_length_f64)__v/100.0; }
+        constexpr si_length_f64 operator ""_mm(unsigned long long int __v)   { return (si_length_f64)__v/1000.0; }
+
+        constexpr si_mass_f64 operator ""_t(unsigned long long int __v)   { return (si_mass_f64)__v * 1000.0; }
+        constexpr si_mass_f64 operator ""_kg(unsigned long long int __v)   { return (si_mass_f64)__v; }
+        constexpr si_mass_f64 operator ""_g(unsigned long long int __v)   { return (si_mass_f64)__v/1000.0; }
+        constexpr si_mass_f64 operator ""_mg(unsigned long long int __v)   { return (si_mass_f64)__v/1000000.0; }
+
+        constexpr si_velo_f64 operator ""_km_s(unsigned long long int __v)   { return (si_velo_f64)__v * 1000.0; }
+        constexpr si_velo_f64 operator ""_m_s(unsigned long long int __v)   { return (si_velo_f64)__v; }
+        constexpr si_velo_f64 operator ""_km_h(unsigned long long int __v)   { return (si_velo_f64)__v / 3.6; }
+        constexpr si_velo_f64 operator ""_m_h(unsigned long long int __v)   { return (si_velo_f64)__v / 3600.0; }
+
+        constexpr si_accel_f64 operator ""_km_s2(unsigned long long int __v)   { return (si_accel_f64)__v * 1000.0; }
+        constexpr si_accel_f64 operator ""_m_s2(unsigned long long int __v)   { return (si_accel_f64)__v; }
+        constexpr si_accel_f64 operator ""_dm_s2(unsigned long long int __v)   { return (si_accel_f64)__v / 10.0; }
+        constexpr si_accel_f64 operator ""_cm_s2(unsigned long long int __v)   { return (si_accel_f64)__v / 100.0; }
+        constexpr si_accel_f64 operator ""_mm_s2(unsigned long long int __v)   { return (si_accel_f64)__v / 1000.0; }
+
+        constexpr si_gravityparam_f64 operator ""_km3_s2(unsigned long long int __v)   { return (si_gravityparam_f64)__v * 1000000000.0f; }
+        constexpr si_gravityparam_f64 operator ""_m3_s2(unsigned long long int __v)   { return (si_gravityparam_f64)__v; }
+
+        constexpr si_angle_f64 operator ""_rad(unsigned long long int __v)   { return (si_angle_f64)__v; }
+        constexpr si_angle_f64 operator ""_deg(unsigned long long int __v)   { return (si_angle_f64)((long double)__v / 180.0 * std::numbers::pi_v<long double>); }
+
+        constexpr si_angle_f64 operator ""_rad(long double __v)   { return (si_angle_f64)__v; }
+        constexpr si_angle_f64 operator ""_deg(long double __v)   { return (si_angle_f64)(__v / 180.0 * std::numbers::pi_v<long double>); }
     }
 }
 

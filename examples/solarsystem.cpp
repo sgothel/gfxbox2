@@ -34,7 +34,7 @@
 #include <vector>
 
 using namespace jau;
-using namespace jau::float_literals;
+using namespace jau::si_f32_literals;
 using namespace pixel;
 
 static int gravity_formula = 0;
@@ -158,7 +158,8 @@ si_velo_f32 oobj_velo = 108000_km_h;
 double oobj_mass = 198840e+24; // [kg]
 static cbodyid_t max_planet_id = cbodyid_t::mars;
 
-static constexpr double M_G = 6.6743015e-11; // [N⋅m2⋅kg−2]
+// Gravitational constant
+static constexpr double M_G = 6.6743015e-11; // [N⋅m2⋅kg−2] -> []
 
 // Source: [Horizon JPL](https://ssd.jpl.nasa.gov/horizons/manual.html)
 CBodyConst CBodyConstants[] {

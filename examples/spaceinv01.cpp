@@ -39,7 +39,7 @@
 #include <vector>
 
 using namespace jau;
-using namespace jau::float_literals;
+using namespace jau::si_f32_literals;
 
 static pixel::input_event_t event;
 
