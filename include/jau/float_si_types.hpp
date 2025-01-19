@@ -33,56 +33,64 @@
 namespace jau {
 
     /** Time in fractions of seconds. */
-    typedef float si_time_t;
+    typedef float si_time_f32;
     /** Length in fractions of meter. */
-    typedef float si_length_t;
+    typedef float si_length_f32;
     /** Mass in fractions of kilograms. */
-    typedef float si_mass_t;
+    typedef float si_mass_f32;
     /** Velocity in fractions of meter/seconds. */
-    typedef float si_velo_t;
+    typedef float si_velo_f32;
     /** Acceleration in fractions of meter/seconds^2. */
-    typedef float si_accel_t;
+    typedef float si_accel_f32;
     /** Angle in fraction of radians. */
-    typedef float si_angle_t;
+    typedef float si_angle_f32;
+
+    /** Mass in fractions of kilograms. */
+    typedef double si_mass_f64;
+    /** Acceleration in fractions of meter/seconds^2. */
+    typedef double si_accel_f64;
 
     namespace float_literals {
-        constexpr si_time_t operator ""_year(unsigned long long int __v)   { return (si_time_t)__v*365.25f*24.0f*3600.0f; }
-        constexpr si_time_t operator ""_month(unsigned long long int __v)   { return (si_time_t)__v*30.0f*24.0f*3600.0f; }
-        constexpr si_time_t operator ""_week(unsigned long long int __v)   { return (si_time_t)__v*7.0f*24.0f*3600.0f; }
-        constexpr si_time_t operator ""_day(unsigned long long int __v)   { return (si_time_t)__v*24.0f*3600.0f; }
+        constexpr si_time_f32 operator ""_year(unsigned long long int __v)   { return (si_time_f32)__v*365.25f*24.0f*3600.0f; }
+        constexpr si_time_f32 operator ""_month(unsigned long long int __v)   { return (si_time_f32)__v*30.0f*24.0f*3600.0f; }
+        constexpr si_time_f32 operator ""_week(unsigned long long int __v)   { return (si_time_f32)__v*7.0f*24.0f*3600.0f; }
+        constexpr si_time_f32 operator ""_day(unsigned long long int __v)   { return (si_time_f32)__v*24.0f*3600.0f; }
 
-        constexpr si_time_t operator ""_h(unsigned long long int __v)   { return (si_time_t)__v*3600.0f; }
-        constexpr si_time_t operator ""_min(unsigned long long int __v)   { return (si_time_t)__v*60.0f; }
-        constexpr si_time_t operator ""_s(unsigned long long int __v)   { return (si_time_t)__v; }
-        constexpr si_time_t operator ""_ms(unsigned long long int __v)   { return (si_time_t)__v/1000.0f; }
+        constexpr si_time_f32 operator ""_h(unsigned long long int __v)   { return (si_time_f32)__v*3600.0f; }
+        constexpr si_time_f32 operator ""_min(unsigned long long int __v)   { return (si_time_f32)__v*60.0f; }
+        constexpr si_time_f32 operator ""_s(unsigned long long int __v)   { return (si_time_f32)__v; }
+        constexpr si_time_f32 operator ""_ms(unsigned long long int __v)   { return (si_time_f32)__v/1000.0f; }
 
-        constexpr si_length_t operator ""_km(unsigned long long int __v)   { return (si_length_t)__v*1000.0f; }
-        constexpr si_length_t operator ""_m(unsigned long long int __v)   { return (si_length_t)__v; }
-        constexpr si_length_t operator ""_dm(unsigned long long int __v)   { return (si_length_t)__v/10.0f; }
-        constexpr si_length_t operator ""_cm(unsigned long long int __v)   { return (si_length_t)__v/100.0f; }
-        constexpr si_length_t operator ""_mm(unsigned long long int __v)   { return (si_length_t)__v/1000.0f; }
+        constexpr si_length_f32 operator ""_km(unsigned long long int __v)   { return (si_length_f32)__v*1000.0f; }
+        constexpr si_length_f32 operator ""_m(unsigned long long int __v)   { return (si_length_f32)__v; }
+        constexpr si_length_f32 operator ""_dm(unsigned long long int __v)   { return (si_length_f32)__v/10.0f; }
+        constexpr si_length_f32 operator ""_cm(unsigned long long int __v)   { return (si_length_f32)__v/100.0f; }
+        constexpr si_length_f32 operator ""_mm(unsigned long long int __v)   { return (si_length_f32)__v/1000.0f; }
 
-        constexpr si_mass_t operator ""_t(unsigned long long int __v)   { return (si_mass_t)__v * 1000.0f; }
-        constexpr si_mass_t operator ""_kg(unsigned long long int __v)   { return (si_mass_t)__v; }
-        constexpr si_mass_t operator ""_g(unsigned long long int __v)   { return (si_mass_t)__v/1000.0f; }
-        constexpr si_mass_t operator ""_mg(unsigned long long int __v)   { return (si_mass_t)__v/1000000.0f; }
+        constexpr si_mass_f32 operator ""_t(unsigned long long int __v)   { return (si_mass_f32)__v * 1000.0f; }
+        constexpr si_mass_f32 operator ""_kg(unsigned long long int __v)   { return (si_mass_f32)__v; }
+        constexpr si_mass_f32 operator ""_g(unsigned long long int __v)   { return (si_mass_f32)__v/1000.0f; }
+        constexpr si_mass_f32 operator ""_mg(unsigned long long int __v)   { return (si_mass_f32)__v/1000000.0f; }
 
-        constexpr si_velo_t operator ""_km_s(unsigned long long int __v)   { return (si_velo_t)__v * 1000.0f; }
-        constexpr si_velo_t operator ""_m_s(unsigned long long int __v)   { return (si_velo_t)__v; }
-        constexpr si_velo_t operator ""_km_h(unsigned long long int __v)   { return (si_velo_t)__v / 3.6f; }
-        constexpr si_velo_t operator ""_m_h(unsigned long long int __v)   { return (si_velo_t)__v / 3600.0f; }
+        constexpr si_velo_f32 operator ""_km_s(unsigned long long int __v)   { return (si_velo_f32)__v * 1000.0f; }
+        constexpr si_velo_f32 operator ""_m_s(unsigned long long int __v)   { return (si_velo_f32)__v; }
+        constexpr si_velo_f32 operator ""_km_h(unsigned long long int __v)   { return (si_velo_f32)__v / 3.6f; }
+        constexpr si_velo_f32 operator ""_m_h(unsigned long long int __v)   { return (si_velo_f32)__v / 3600.0f; }
 
-        constexpr si_accel_t operator ""_km_s2(unsigned long long int __v)   { return (si_accel_t)__v * 1000.0f; }
-        constexpr si_accel_t operator ""_m_s2(unsigned long long int __v)   { return (si_accel_t)__v; }
-        constexpr si_accel_t operator ""_dm_s2(unsigned long long int __v)   { return (si_accel_t)__v / 10.0f; }
-        constexpr si_accel_t operator ""_cm_s2(unsigned long long int __v)   { return (si_accel_t)__v / 100.0f; }
-        constexpr si_accel_t operator ""_mm_s2(unsigned long long int __v)   { return (si_accel_t)__v / 1000.0f; }
+        constexpr si_accel_f32 operator ""_km_s2(unsigned long long int __v)   { return (si_accel_f32)__v * 1000.0f; }
+        constexpr si_accel_f32 operator ""_m_s2(unsigned long long int __v)   { return (si_accel_f32)__v; }
+        constexpr si_accel_f32 operator ""_dm_s2(unsigned long long int __v)   { return (si_accel_f32)__v / 10.0f; }
+        constexpr si_accel_f32 operator ""_cm_s2(unsigned long long int __v)   { return (si_accel_f32)__v / 100.0f; }
+        constexpr si_accel_f32 operator ""_mm_s2(unsigned long long int __v)   { return (si_accel_f32)__v / 1000.0f; }
 
-        constexpr si_angle_t operator ""_rad(unsigned long long int __v)   { return (si_angle_t)__v; }
-        constexpr si_angle_t operator ""_deg(unsigned long long int __v)   { return (si_angle_t)((long double)__v / 180.0 * std::numbers::pi_v<long double>); }
+        constexpr si_accel_f32 operator ""_km3_s2(unsigned long long int __v)   { return (si_accel_f32)__v * 1000000000.0f; }
+        constexpr si_accel_f32 operator ""_m3_s2(unsigned long long int __v)   { return (si_accel_f32)__v; }
 
-        constexpr si_angle_t operator ""_rad(long double __v)   { return (si_angle_t)__v; }
-        constexpr si_angle_t operator ""_deg(long double __v)   { return (si_angle_t)(__v / 180.0 * std::numbers::pi_v<long double>); }
+        constexpr si_angle_f32 operator ""_rad(unsigned long long int __v)   { return (si_angle_f32)__v; }
+        constexpr si_angle_f32 operator ""_deg(unsigned long long int __v)   { return (si_angle_f32)((long double)__v / 180.0 * std::numbers::pi_v<long double>); }
+
+        constexpr si_angle_f32 operator ""_rad(long double __v)   { return (si_angle_f32)__v; }
+        constexpr si_angle_f32 operator ""_deg(long double __v)   { return (si_angle_f32)(__v / 180.0 * std::numbers::pi_v<long double>); }
 
     }
 }

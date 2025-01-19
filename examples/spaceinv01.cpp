@@ -802,7 +802,7 @@ class peng_t : public gobject_t {
     }
 
     constexpr int alien_hit_value() const { return m_alien_hit_value; }
-    
+
 };
 std::vector<peng_t> pengs;
 
@@ -1045,7 +1045,7 @@ static int high_score = 1000;
 static uint64_t t_start = 0; // [ms]
 static std::shared_ptr<player_t> player;
 static bool game_over = false;
-static si_time_t level_time = 0;
+static si_time_f32 level_time = 0;
 
 static void reset_all() {
     t_start = jau::getElapsedMillisecond();

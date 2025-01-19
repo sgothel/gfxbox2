@@ -15,11 +15,13 @@
 #include <memory>
 #include <numbers>
 #include <numbers>
-#include <pixel/pixel4f.hpp>
+#include <pixel/pixel2i.hpp>
 #include <pixel/pixel2f.hpp>
 #include <pixel/pixel3f.hpp>
-#include <pixel/pixel2i.hpp>
+#include <pixel/pixel4f.hpp>
+// #include <pixel/pixel3d.hpp>
 #include "pixel/pixel.hpp"
+#include <jau/float_si_types.hpp>
 #include <physics.hpp>
 
 #include <SDL2/SDL.h>
@@ -138,19 +140,19 @@ float normal_scale[] {
 
 class CBodyConst {
   public:
-    si_length_t radius; // [m]
-    si_length_t d_sun; // [m]
-    si_accel_t g_surface; // [m/s^2]
-    si_velo_t v; // [m/s]
+    si_length_f32 radius; // [m]
+    si_length_f32 d_sun; // [m]
+    si_accel_f32 g_surface; // [m/s^2]
+    si_velo_f32 v; // [m/s]
     f4::vec_t color;
     std::string name;
-    double mass; // [kg]
+    si_mass_f64 mass; // [kg]
 };
 
 static constexpr float light_second = 299792458.0f;
 static constexpr float light_minute = 60 * light_second;
-si_accel_t oobj_gravity = 2479_m_s2 * 100;
-si_velo_t oobj_velo = 108000_km_h;
+si_accel_f32 oobj_gravity = 2479_m_s2 * 100;
+si_velo_f32 oobj_velo = 108000_km_h;
 double oobj_mass = 198840e+24; // [kg]
 static cbodyid_t max_planet_id = cbodyid_t::mars;
 
@@ -191,7 +193,7 @@ class CBody;
 typedef std::shared_ptr<CBody> CBodyRef;
 std::vector<CBodyRef> cbodies;
 
-std::string to_magnitude_timestr(si_time_t v) {
+std::string to_magnitude_timestr(si_time_f32 v) {
     if( v >= 1_year ) {
         return to_string("%0.2f year", v/1_year);
     } else if( v >= 1_month ) {
@@ -229,14 +231,14 @@ class CBody {
     float _scale;
     float _d_sun; // [m]
     float _radius; // [m]
-    double _mass; // [kg]
+    si_mass_f64 _mass; // [kg]
     f3::vec_t _velo; // [m/s]
     float g_center; // GM = g * r^2 = [m^3 / s^2]
     f3::point_t _center;
     std::string _id_s;
     fraction_timespec _world_time;
     fraction_timespec _orbit_world_time_last;
-    si_time_t _time_scale_last = 1_day;
+    si_time_f32 _time_scale_last = 1_day;
     std::vector<f2::point_t> _orbit_points;
 
   public:
@@ -322,12 +324,12 @@ class CBody {
     // @param o attracted body towards this body
     pixel::f3::vec_t gravity2(const CBody& o) {
         pixel::f3::vec_t v_d = _center - o._center;
-        const double d = v_d.length();
+        const float d = v_d.length();
         pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
         if( !is_zero(d) ) {
             // normal-vector: v_d / d (einheitsvektor, richtung)
             const double F = M_G * (_mass * o._mass) / ( d * d );
-            v_g = ( v_d / (float)d ) * (float)( F / o._mass);
+            v_g = ( v_d / d ) * (float)( F / o._mass );
         }
         return v_g;
     }
@@ -349,17 +351,17 @@ class CBody {
             }
         }
         _center += _velo * dt;
-        
-        const si_time_t orbit_th = color_inverse ? 0 : 1_day;
+
+        const si_time_f32 orbit_th = color_inverse ? 0 : 1_day;
         if( (float)(wts - _orbit_world_time_last).tv_sec > orbit_th ) {
             _orbit_points.emplace_back(_center.x, _center.y);
             _orbit_world_time_last = wts;
         }
     }
 
-    static constexpr si_time_t max_time_step = 1_day;
+    static constexpr si_time_f32 max_time_step = 1_day;
 
-    void tick(const float dt, const si_time_t time_scale) {
+    void tick(const float dt, const si_time_f32 time_scale) {
         const float dt_world = dt * time_scale; // world [s]
         _time_scale_last = time_scale;
 
@@ -416,7 +418,7 @@ void mainloop() {
     static pixel::texture_ref hud_text;
     static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static pixel::input_event_t event;
-    static si_time_t tick_ts = 1_month;
+    static si_time_f32 tick_ts = 1_month;
     static bool animating = true;
     static CBodyRef selPlanetNextPos = nullptr;
     static ssize_t selPlanetNextPosDataSetIdx = -1;
