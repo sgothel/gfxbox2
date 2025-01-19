@@ -144,22 +144,22 @@ class CBodyConst {
     std::string name;
     si_length_f32 radius; // [m]
     si_length_f32 d_sun; // [m]
-    double GM; // [m^3/s^2]
+    si_gravityparam_f64 GM; // [m^3/s^2]
     si_accel_f32 g_surface; // [m/s^2]
     si_velo_f32 v; // [m/s]
     f4::vec_t color;
     si_mass_f64 mass; // [kg]
 };
 
-static constexpr float light_second = 299792458.0f;
-static constexpr float light_minute = 60 * light_second;
+static constexpr si_time_f32 light_second = 299792458.0f;
+static constexpr si_time_f32 light_minute = 60 * light_second;
 si_accel_f32 oobj_gravity = 2479_m_s2 * 100;
 si_velo_f32 oobj_velo = 108000_km_h;
-double oobj_mass = 198840e+24; // [kg]
+si_mass_f64 oobj_mass = 198840e+24; // [kg]
 static cbodyid_t max_planet_id = cbodyid_t::mars;
 
 // Gravitational constant
-static constexpr double M_G = 6.6743015e-11; // [N⋅m2⋅kg−2] -> []
+static constexpr double M_G = 6.6743015e-11; // [N⋅m2⋅kg−2]
 
 // Source: [Horizon JPL](https://ssd.jpl.nasa.gov/horizons/manual.html)
 CBodyConst CBodyConstants[] {
@@ -187,7 +187,7 @@ CBodyConst CBodyConstants[] {
   {0.5, 0.5, 0.5, 0.5}, oobj_mass}
 };
 
-static float space_height; // [m]
+static si_length_f32 space_height; // [m]
 
 static float _global_scale = 20;
 static void global_scale(float s) noexcept { _global_scale = std::max(1.0f, _global_scale * s); }
@@ -233,12 +233,12 @@ class CBody {
     cbodyid_t _id;
     f4::vec_t _color;
     float _scale;
-    float _d_sun; // [m]
-    float _radius; // [m]
+    si_time_f32 _d_sun; // [m]
+    si_time_f32 _radius; // [m]
     si_mass_f64 _mass; // [kg]
     f3::vec_t _velo; // [m/s]
-    double GM; // [m^3/s^2]
-    float g_center; // GM = g * r^2 = [m^3 / s^2]
+    si_gravityparam_f64 GM_0; // [m^3/s^2]
+    si_gravityparam_f64 GM_1; // GM = g * r^2 = [m^3 / s^2] (calculated)
     f3::point_t _center;
     std::string _id_s;
     fraction_timespec _world_time;
@@ -283,7 +283,7 @@ class CBody {
                 _velo = {velo2.x, velo2.y, 0};
                 // _velo = {cbc.v, 0, 0};
             }
-            GM = cbc.GM;
+            GM_0 = cbc.GM;
             _d_sun = center.length();
             _radius = cbc.radius;
             g_surface = cbc.g_surface;
@@ -293,7 +293,7 @@ class CBody {
             _center = center;
             _mass = cbc.mass;
         }
-        g_center = g_surface * _radius * _radius; // m^3 / s^2
+        GM_1 = (double)g_surface * (double)_radius * (double)_radius; // m^3 / s^2
         _scale = default_scale[number(_id)];
     }
 
@@ -318,11 +318,11 @@ class CBody {
     // @param p center of attracted object towards this body
     pixel::f3::vec_t gravity0(const CBody& o) {
         pixel::f3::vec_t v_d = _center - o._center;
-        const float d = v_d.length();
+        const double d = v_d.length();
         pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
         if( !is_zero(d) ) {
             // normalize: v_d / d
-            v_g = ( v_d / d ) * ( g_center / ( d * d ) );
+            v_g = ( v_d / (float)d ) * (float)( GM_1 / ( d * d ) );
         }
         return v_g;
     }
@@ -331,13 +331,13 @@ class CBody {
     // @param o attracted body towards this body
     pixel::f3::vec_t gravity1(const CBody& o) {
         pixel::f3::vec_t v_d = _center - o._center;
-        const float d = v_d.length();
+        const double d = v_d.length();
         pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
         if( !is_zero(d) ) {
             // normal-vector: v_d / d (einheitsvektor, richtung)
             // const double F_ = GM * o._mass / ( d * d );
             // v_g = ( v_d / d ) * ( F_ / o._mass);
-            v_g = ( v_d / d ) * (float)( GM / ( d * d ) );
+            v_g = ( v_d / (float)d ) * (float)( GM_0 / ( d * d ) );
         }
         return v_g;
     }
@@ -346,12 +346,12 @@ class CBody {
     // @param o attracted body towards this body
     pixel::f3::vec_t gravity2(const CBody& o) {
         pixel::f3::vec_t v_d = _center - o._center;
-        const float d = v_d.length();
+        const double d = v_d.length();
         pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
         if( !is_zero(d) ) {
             // normal-vector: v_d / d (einheitsvektor, richtung)
             const double F = M_G * (_mass * o._mass) / ( d * d );
-            v_g = ( v_d / d ) * (float)( F / o._mass );
+            v_g = ( v_d / (float)d ) * (float)( F / o._mass );
         }
         return v_g;
     }
@@ -423,14 +423,25 @@ class CBody {
         _orbit_points.clear();
     }
 
-    std::string toString() const noexcept {
+    std::string toString(bool add_GM=false) const noexcept {
         fraction_timespec t(_world_time);
+        const double d_GM = GM_0 - GM_1;
+        const double pct_GM = std::abs(d_GM/GM_0);
         t.tv_nsec = 0;
-        return to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s]",
-            _id_s.c_str(),
-            t.to_iso8601_string(true, _time_scale_last > 1_day).c_str(),
-            _d_sun/light_minute,
-            _velo.length()/1000.0f );
+        if( add_GM ) {
+            return to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s, GM[d %f, c %f, err[%f, %f%%]]]",
+                _id_s.c_str(),
+                t.to_iso8601_string(true, _time_scale_last > 1_day).c_str(),
+                _d_sun/light_minute,
+                _velo.length()/1000.0f,
+                GM_0, GM_1, d_GM, pct_GM*100.0);
+        } else {
+            return to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s]",
+                _id_s.c_str(),
+                t.to_iso8601_string(true, _time_scale_last > 1_day).c_str(),
+                _d_sun/light_minute,
+                _velo.length()/1000.0f);
+        }
     }
 };
 
@@ -649,9 +660,9 @@ void mainloop() {
                                  "  - vel err %s [km]\n"
                                  "  - diam %.2f km\n"
                                  "  - 3d dist %.2f km, %.2f ls\n"
-                                 "  - 3d dist %.2f diam, %.2f%% orbit (%.0f km)\n"
+                                 "  - 3d dist %.2f diam, %.2f%% orbit (%.0f km), %.2f%% sun-dist (%.0f km)\n"
                                  "  - 2d dist %.2f km, %.2f ls\n"
-                                 "  - 2d dist %.2f diam, %.2f%% orbit (%.0f km)\n"
+                                 "  - 2d dist %.2f diam, %.2f%% orbit (%.0f km), %.2f%% sun-dist (%.0f km)\n"
                                  "  - 3d dvel %.2f km/s\n",
                 sel_cbody.toString().c_str(),
                 selPlanetNextPos->toString().c_str(),
@@ -662,10 +673,10 @@ void mainloop() {
                 diam/1000.0,
                 l_perr/1000.0, l_perr/light_second,
                 l_perr/diam,
-                (l_perr/circum)*100.0, circum/1000.0,
+                (l_perr/circum)*100.0, circum/1000.0, (l_perr/sel_cbody.sun_dist())*100.0, sel_cbody.sun_dist()/1000.0,
                 l_perr2/1000.0f, l_perr2/light_second,
                 l_perr2/diam,
-                (l_perr2/circum)*100.0f, circum/1000.0f,
+                (l_perr2/circum)*100.0f, circum/1000.0f, (l_perr2/sel_cbody.sun_dist())*100.0, sel_cbody.sun_dist()/1000.0,
                 l_verr/1000.0);
             printf("\n");
         }
@@ -801,12 +812,12 @@ int main(int argc, char *argv[])
     for(size_t i = 0; i <= number(cbodyid_t::pluto); ++i){
         CBodyRef cb = std::make_shared<CBody>( static_cast<cbodyid_t>( i ) );
         cbodies.push_back(cb);
-        printf("%s\n", cb->toString().c_str());
+        printf("%s\n", cb->toString(true).c_str());
     }
     if(with_oobj) {
         CBodyRef cb = std::make_shared<CBody>( cbodyid_t::oobj );
         cbodies.push_back(cb);
-        printf("%s\n", cb->toString().c_str());
+        printf("%s\n", cb->toString(true).c_str());
     }
     space_height = cbodies[number(max_planet_id)]->space_height();
     pixel::cart_coord.set_height(-space_height, space_height);
