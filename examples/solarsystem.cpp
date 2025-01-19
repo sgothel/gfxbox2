@@ -37,7 +37,7 @@ using namespace jau;
 using namespace jau::float_literals;
 using namespace pixel;
 
-static bool formel_one = true;
+static int gravity_formula = 0;
 static bool with_oobj = false;
 
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
@@ -315,7 +315,7 @@ class CBody {
 
     // Returns gravity [m/s^2] acceleration from given body `o` towards this body
     // @param p center of attracted object towards this body
-    pixel::f3::vec_t gravity1a(const CBody& o) {
+    pixel::f3::vec_t gravity0(const CBody& o) {
         pixel::f3::vec_t v_d = _center - o._center;
         const float d = v_d.length();
         pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
@@ -328,7 +328,7 @@ class CBody {
 
     // Returns gravity [m/s^2] acceleration from given body `o` towards this body
     // @param o attracted body towards this body
-    pixel::f3::vec_t gravity1b(const CBody& o) {
+    pixel::f3::vec_t gravity1(const CBody& o) {
         pixel::f3::vec_t v_d = _center - o._center;
         const float d = v_d.length();
         pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
@@ -362,8 +362,12 @@ class CBody {
         for( size_t i = 0; i < cbodies.size(); ++i ) {
             const CBodyRef& cb = cbodies[i];
             if( this != cb.get() ) {
-                const f3::vec_t g = formel_one ?
-                    cb->gravity1a(*this) : cb->gravity2(*this);
+                f3::vec_t g;
+                switch( gravity_formula ) {
+                    case 0:  g = cb->gravity0(*this); break;
+                    case 1:  g = cb->gravity1(*this); break;
+                    default: g = cb->gravity2(*this); break;
+                }
                 if( 0 != i ) {
                     _velo += g * dt * gravity_scale;
                 } else {
@@ -543,9 +547,11 @@ void mainloop() {
                     show_cbody_velo = !show_cbody_velo;
                 }
             } else if( event.released_and_clr(input_event_type_t::F1) ) {
-                formel_one = true;
+                gravity_formula = 0;
             } else if( event.released_and_clr(input_event_type_t::F2) ) {
-                formel_one = false;
+                gravity_formula = 1;
+            } else if( event.released_and_clr(input_event_type_t::F3) ) {
+                gravity_formula = 2;
             }
             if( event.released_and_clr(input_event_type_t::ANY_KEY) ) {
                 if( event.last_key_code == ' ') {
@@ -665,12 +671,12 @@ void mainloop() {
     }
     const fraction_timespec world_t0_sec = sel_cbody.world_time();
     hud_text = pixel::make_text(tl_text, 0, animating ? vec4_text_color0 : vec4_text_color1, text_height,
-                    "%s -> %s, time[x %s, td %us], gscale %0.2f, formel %s, fps %0.1f",
+                    "%s -> %s, time[x %s, td %us], gscale %0.2f, formula %d, fps %0.1f",
                     sel_cbody.toString().c_str(),
                     cbodies[number(max_planet_id)]->ids().c_str(),
                     to_magnitude_timestr(tick_ts).c_str(),
                     static_cast<unsigned>(t1/1000),
-                    global_scale(), formel_one ? "one" : "two", gpu_avg_fps());
+                    global_scale(), gravity_formula, gpu_avg_fps());
     {
         fraction_timespec next_time_min = world_t0_sec-fraction_timespec(1_month);
         fraction_timespec next_time_max = world_t0_sec+fraction_timespec(1_year);
@@ -767,10 +773,9 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-oobj_mass", argv[i]) && i+1<argc) {
                 oobj_mass = atof(argv[i+1]);
                 ++i;
-            } else if( 0 == strcmp("-formel1", argv[i])) {
-                formel_one = true;
-            } else if( 0 == strcmp("-formel2", argv[i])) {
-                formel_one = false;
+            } else if( 0 == strcmp("-formula", argv[i]) && i+1<argc) {
+                gravity_formula = std::max(0, std::min(2, atoi(argv[i+1]))); // [0..2]
+                ++i;
             } else {
                 log_printf(0, "ERROR: Unknown argument %s\n", argv[i]);
                 return 1;
@@ -781,6 +786,7 @@ int main(int argc, char *argv[])
         log_printf(0, "- win size %d x %d\n", window_width, window_height);
         log_printf(0, "- forced_fps %d\n", pixel::gpu_forced_fps());
         log_printf(0, "- data_stop %d\n", ref_cbody_stop);
+        log_printf(0, "- gravity formula %d\n", gravity_formula);
         log_printf(0, "- gravity_scale %f\n", gravity_scale);
     }
     {
