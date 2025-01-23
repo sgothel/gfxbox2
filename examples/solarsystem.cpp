@@ -451,12 +451,15 @@ static cbodyid_t info_id = cbodyid_t::earth;
 std::vector<f2::point_t> pl;
 std::vector<f2::point_t> ipl;
 bool tick_ts_down = false;
+static std::string record_bmpseq_basename;
 
 void mainloop() {
     // scale_all_numbers(0.000001f);
     static pixel::texture_ref hud_text;
     static const fraction_timespec t_start = getMonotonicTime();
     static fraction_timespec t_last = t_start;
+    static uint64_t frame_count_total = 0;
+    static uint64_t snap_count = 0;
     static pixel::input_event_t event;
     static int64_t tick_ts = 1_month;
     static bool animating = true;
@@ -465,6 +468,7 @@ void mainloop() {
     static cbodyid_t selPlanetNextPosCBodyID = info_id;
     static fraction_timespec ref_cbody_t0;
     const f2::point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
+    bool do_snapshot = false;
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
 
     const fraction_timespec t1 = getMonotonicTime();
@@ -509,6 +513,8 @@ void mainloop() {
                 cbodies.push_back(cb);
                 printf("%s\n", cb->toString().c_str());
             }
+        } else if( event.released_and_clr(pixel::input_event_type_t::F12) ) {
+            do_snapshot = true;
         }
 
         if( animating ) {
@@ -748,6 +754,20 @@ void mainloop() {
         hud_text->draw_fbcoord(dx, 0);
     }
     pixel::swap_gpu_buffer();
+    if( record_bmpseq_basename.size() > 0 ) {
+        std::string snap_fname(128, '\0');
+        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
+        snap_fname.resize(written);
+        pixel::save_snapshot(snap_fname);
+    }
+    if( do_snapshot ) {
+        std::string snap_fname(128, '\0');
+        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "solarsystem-%7.7" PRIu64 ".bmp", snap_count++);
+        snap_fname.resize(written);
+        pixel::save_snapshot(snap_fname);
+        printf("Snapshot written to %s\n", snap_fname.c_str());
+    }
+    ++frame_count_total;
 }
 
 int main(int argc, char *argv[])
@@ -769,6 +789,9 @@ int main(int argc, char *argv[])
                 ++i;
             } else if( 0 == strcmp("-color_inv", argv[i]) ) {
                 set_colorinv(true);
+            } else if( 0 == strcmp("-record", argv[i]) && i+1<argc) {
+                record_bmpseq_basename = argv[i+1];
+                ++i;
             } else if( 0 == strcmp("-show_velo", argv[i]) ) {
                 show_cbody_velo = true;
             } else if( 0 == strcmp("-max_planet_id", argv[i]) && i+1<argc) {
@@ -808,6 +831,7 @@ int main(int argc, char *argv[])
         log_printf(0, "- gravity formula %d\n", gravity_formula);
         log_printf(0, "- gravity_scale %f\n", gravity_scale);
         log_printf(0, "- show_velo %d\n", show_cbody_velo);
+        log_printf(0, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
