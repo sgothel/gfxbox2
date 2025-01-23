@@ -22,6 +22,7 @@
 // #include <pixel/pixel3d.hpp>
 #include "pixel/pixel.hpp"
 #include <jau/float_si_types.hpp>
+#include <jau/fraction_type.hpp>
 #include <physics.hpp>
 
 #include <SDL2/SDL.h>
@@ -243,7 +244,7 @@ class CBody {
     std::string _id_s;
     fraction_timespec _world_time;
     fraction_timespec _orbit_world_time_last;
-    si_time_f32 _time_scale_last = 1_day;
+    int64_t _time_scale_last = 1_day;
     std::vector<f2::point_t> _orbit_points;
 
   public:
@@ -356,10 +357,11 @@ class CBody {
         return v_g;
     }
 
-    void sub_tick(const float dt, const fraction_timespec& wts) {
+    void sub_tick(const fraction_timespec dt, const fraction_timespec& wts) {
         if( _id == cbodyid_t::sun && gravity_scale <= 1 && !with_oobj) {
             return;
         }
+        const float dt_f = (float)dt.to_us()/1000000.0f;
         for( size_t i = 0; i < cbodies.size(); ++i ) {
             const CBodyRef& cb = cbodies[i];
             if( this != cb.get() ) {
@@ -370,36 +372,36 @@ class CBody {
                     default: g = cb->gravity2(*this); break;
                 }
                 if( 0 != i ) {
-                    _velo += g * dt * gravity_scale;
+                    _velo += g * dt_f * gravity_scale;
                 } else {
-                    _velo += g * dt;
+                    _velo += g * dt_f;
                 }
             }
         }
-        _center += _velo * dt;
+        _center += _velo * dt_f;
 
-        const si_time_f32 orbit_th = color_inverse ? 0 : 1_day;
-        if( (float)(wts - _orbit_world_time_last).tv_sec > orbit_th ) {
+        const fraction_timespec orbit_th(color_inverse ? 0 : 1_day);
+        if( wts - _orbit_world_time_last > orbit_th ) {
             _orbit_points.emplace_back(_center.x, _center.y);
             _orbit_world_time_last = wts;
         }
     }
 
-    static constexpr si_time_f32 max_time_step = 1_day;
-
-    void tick(const float dt, const si_time_f32 time_scale) {
-        const float dt_world = dt * time_scale; // world [s]
+    void tick(const fraction_timespec dt, const int64_t time_scale) {
+        constexpr fraction_timespec zero;
+        constexpr fraction_timespec max_time_step(1_day);
+        const fraction_timespec dt_world = dt * time_scale; // world [s]
         _time_scale_last = time_scale;
 
-        fraction_timespec wts = _world_time + fraction_timespec(dt);
-        for(float i=dt_world; i > std::numeric_limits<float>::epsilon(); i-=max_time_step ) {
-            const float step = std::min(i, max_time_step);
-            wts += fraction_timespec(step);
-            sub_tick( step, wts);
+        fraction_timespec wts = _world_time;
+        for(fraction_timespec i=dt_world; i > zero; i-=max_time_step ) {
+            const fraction_timespec step = jau::min(i, max_time_step);
+            sub_tick(step, wts);
+            wts += step;
         }
         _d_sun = _center.length();
 
-        _world_time += fraction_timespec(dt_world);
+        _world_time += dt_world;
     }
 
     void draw(bool filled, bool orbit) {
@@ -416,7 +418,7 @@ class CBody {
         if( show_cbody_velo ) {
             set_pixel_color(rgba_dbg_velo);
             f2::vec_t v = {_velo.x, _velo.y};
-            f2::lineseg_t::draw(c, c +v*_time_scale_last);
+            f2::lineseg_t::draw(c, c +v*(float)_time_scale_last);
         }
     }
     void clear_orbit() {
@@ -431,14 +433,14 @@ class CBody {
         if( add_GM ) {
             return to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s, GM[d %f, c %f, err[%f, %f%%]]]",
                 _id_s.c_str(),
-                t.to_iso8601_string(true, _time_scale_last > 1_day).c_str(),
+                t.to_iso8601_string(true, _time_scale_last > (int)1_day).c_str(),
                 _d_sun/light_minute,
                 _velo.length()/1000.0f,
                 GM_0, GM_1, d_GM, pct_GM*100.0);
         } else {
             return to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s]",
                 _id_s.c_str(),
-                t.to_iso8601_string(true, _time_scale_last > 1_day).c_str(),
+                t.to_iso8601_string(true, _time_scale_last > (int)1_day).c_str(),
                 _d_sun/light_minute,
                 _velo.length()/1000.0f);
         }
@@ -453,9 +455,10 @@ bool tick_ts_down = false;
 void mainloop() {
     // scale_all_numbers(0.000001f);
     static pixel::texture_ref hud_text;
-    static uint64_t t_last = getElapsedMillisecond(); // [ms]
+    static const fraction_timespec t_start = getMonotonicTime();
+    static fraction_timespec t_last = t_start;
     static pixel::input_event_t event;
-    static si_time_f32 tick_ts = 1_month;
+    static int64_t tick_ts = 1_month;
     static bool animating = true;
     static CBodyRef selPlanetNextPos = nullptr;
     static ssize_t selPlanetNextPosDataSetIdx = -1;
@@ -463,6 +466,8 @@ void mainloop() {
     static fraction_timespec ref_cbody_t0;
     const f2::point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
+
+    const fraction_timespec t1 = getMonotonicTime();
 
     while (pixel::handle_one_event(event)) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -478,9 +483,6 @@ void mainloop() {
         if( event.paused() ) {
             animating = false;
         } else {
-            if( !animating ) {
-                t_last = getElapsedMillisecond(); // [ms]
-            }
             animating = true;
         }
         // constexpr const float rot_step = 10.0f; // [ang-degrees / s]
@@ -508,6 +510,7 @@ void mainloop() {
                 printf("%s\n", cb->toString().c_str());
             }
         }
+
         if( animating ) {
             if( event.has_any_p1() ) {
                 bool reset_space_height = false;
@@ -518,9 +521,9 @@ void mainloop() {
                         global_scale(0.5f);
                     }
                 } else if( event.released_and_clr(input_event_type_t::P1_UP) ) {
-                    tick_ts = std::min(1_year, tick_ts * 2.0f);
+                    tick_ts = std::min<int64_t>(1_year, tick_ts * 2);
                 } else if( event.released_and_clr(input_event_type_t::P1_DOWN) ) {
-                    tick_ts = std::max(1_s, tick_ts * 0.5f);
+                    tick_ts = std::max<int64_t>(1_s, tick_ts / 2);
                 } else if (event.released_and_clr(input_event_type_t::P1_RIGHT)) {
                     if( max_planet_id < cbodyid_t::pluto ) {
                         ++max_planet_id;
@@ -554,10 +557,8 @@ void mainloop() {
                     }
                 }
             }
-            if( event.has_any_p3() ) {
-                if (event.released_and_clr(input_event_type_t::P3_ACTION1)) {
-                    show_cbody_velo = !show_cbody_velo;
-                }
+            if( event.released_and_clr(input_event_type_t::P3_ACTION1) ) {
+                show_cbody_velo = !show_cbody_velo;
             } else if( event.released_and_clr(input_event_type_t::F1) ) {
                 gravity_formula = 0;
             } else if( event.released_and_clr(input_event_type_t::F2) ) {
@@ -586,20 +587,26 @@ void mainloop() {
             // log_printf(0, "XXX event: %s\n", event.to_string().c_str());
         }
     }
-    const uint64_t t1 = animating ? getElapsedMillisecond() : t_last; // [ms]
-    const float dt = (float)(t1 - t_last) / 1000.0f; // [s]
+    // Better accuracy using the average dt over 5s
+    // const jau::fraction_timespec dt = animating ? t1 - t_last : jau::fraction_timespec();
+    const jau::fraction_timespec dt = animating ? jau::fraction_timespec(pixel::gpu_avg_framedur()) : jau::fraction_timespec();
     t_last = t1;
+    if constexpr ( false ) {
+        const float dt_ms_f = (float)dt.to_us() / 1000.0f;
+        const float dt2_ms_f = pixel::gpu_avg_framedur() * 1000.0f;
+        printf("dt: %.2f, %.2f, ddt %.2f\n", dt_ms_f, dt2_ms_f, dt2_ms_f - dt_ms_f);
+    }
     CBody& sel_cbody = *cbodies[number(info_id)];
     if(animating) {
         const fraction_timespec world_t0 = sel_cbody.world_time();
         if( !ref_cbody_t0.isZero() ) {
-            float tick_ts_pre = tick_ts;
+            int64_t tick_ts_pre = tick_ts;
             int mode = 0;
             if(world_t0.tv_sec >= ref_cbody_t0.tv_sec - (int64_t)5){
-                tick_ts = 1.0f;
+                tick_ts = 1;
                 mode = 1;
             } else if(world_t0.tv_sec >= ref_cbody_t0.tv_sec - (int64_t)1_min){
-                tick_ts = std::max(10.0f, tick_ts * 0.24f);
+                tick_ts = std::max<int64_t>(10, tick_ts / 4);
                 mode = 2;
             } else if(world_t0.tv_sec >= ref_cbody_t0.tv_sec - (int64_t)1_h){
                 tick_ts = 30_min; // 2s
@@ -612,7 +619,7 @@ void mainloop() {
                 mode = 5;
             }
             if( tick_ts_pre != tick_ts ) {
-                const fraction_timespec a(tick_ts_pre), b(tick_ts);
+                const fraction_timespec a(tick_ts_pre, 0), b(tick_ts, 0);
                 log_printf(0, "PAUSE -> RT: %s -> %s, %d, tick %s -> %s\n",
                     world_t0.to_iso8601_string(true).c_str(),
                     ref_cbody_t0.to_iso8601_string(true).c_str(),
@@ -683,11 +690,11 @@ void mainloop() {
     }
     const fraction_timespec world_t0_sec = sel_cbody.world_time();
     hud_text = pixel::make_text(tl_text, 0, animating ? vec4_text_color0 : vec4_text_color1, text_height,
-                    "%s -> %s, time[x %s, td %us], gscale %0.2f, formula %d, fps %0.1f",
+                    "%s -> %s, time[x %s, td %ds], gscale %0.2f, formula %d, fps %0.1f",
                     sel_cbody.toString().c_str(),
                     cbodies[number(max_planet_id)]->ids().c_str(),
-                    to_magnitude_timestr(tick_ts).c_str(),
-                    static_cast<unsigned>(t1/1000),
+                    to_magnitude_timestr((float)tick_ts).c_str(),
+                    (t1-t_start).tv_sec,
                     global_scale(), gravity_formula, gpu_avg_fps());
     {
         fraction_timespec next_time_min = world_t0_sec-fraction_timespec(1_month);
@@ -800,6 +807,7 @@ int main(int argc, char *argv[])
         log_printf(0, "- data_stop %d\n", ref_cbody_stop);
         log_printf(0, "- gravity formula %d\n", gravity_formula);
         log_printf(0, "- gravity_scale %f\n", gravity_scale);
+        log_printf(0, "- show_velo %d\n", show_cbody_velo);
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
