@@ -59,6 +59,27 @@ float jau::next_rnd() noexcept {
  * clock_gettime seems to be well supported at least on kernel >= 4.4.
  * Only bfin and sh are missing, while ia64 seems to be complicated.
  */
+jau::fraction_timespec jau::getMonotonicTime() noexcept {
+    struct timespec t;
+    ::clock_gettime(CLOCK_MONOTONIC, &t);
+    return fraction_timespec( (int64_t)t.tv_sec, (int64_t)t.tv_nsec );
+}
+
+static const jau::fraction_timespec _exe_start_time0 = jau::getMonotonicTime();
+static uint64_t _exe_start_time1 = jau::getCurrentMilliseconds();
+
+jau::fraction_timespec jau::getElapsedMonotonicTime() noexcept {
+    return getMonotonicTime() - _exe_start_time0;
+}
+
+/**
+ * See <http://man7.org/linux/man-pages/man2/clock_gettime.2.html>
+ * <p>
+ * Regarding avoiding kernel via VDSO,
+ * see <http://man7.org/linux/man-pages/man7/vdso.7.html>,
+ * clock_gettime seems to be well supported at least on kernel >= 4.4.
+ * Only bfin and sh are missing, while ia64 seems to be complicated.
+ */
 uint64_t jau::getCurrentMilliseconds() noexcept {
     struct timespec t;
     ::clock_gettime(CLOCK_MONOTONIC, &t);
@@ -66,10 +87,8 @@ uint64_t jau::getCurrentMilliseconds() noexcept {
            static_cast<uint64_t>( t.tv_nsec ) / (uint64_t)NanoPerMilli;
 }
 
-static uint64_t _exe_start_time = jau::getCurrentMilliseconds();
-
 uint64_t jau::getElapsedMillisecond() noexcept {
-    return getCurrentMilliseconds() - _exe_start_time;
+    return getCurrentMilliseconds() - _exe_start_time1;
 }
 
 void jau::milli_sleep(uint64_t td_ms) noexcept {
