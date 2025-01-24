@@ -423,25 +423,14 @@ class CBody {
         _orbit_points.clear();
     }
 
-    std::string toString(bool add_GM=false) const noexcept {
+    std::string toString() const noexcept {
         fraction_timespec t(_world_time);
-        const double d_GM = GM_0 - GM_1;
-        const double pct_GM = std::abs(d_GM/GM_0);
         t.tv_nsec = 0;
-        if( add_GM ) {
-            return to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s, GM[d %f, c %f, err[%f, %f%%]]]",
-                _id_s.c_str(),
-                t.to_iso8601_string(true, _time_scale_last > 1_day).c_str(),
-                _d_sun/light_minute,
-                _velo.length()/1000.0f,
-                GM_0, GM_1, d_GM, pct_GM*100.0);
-        } else {
-            return to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s]",
-                _id_s.c_str(),
-                t.to_iso8601_string(true, _time_scale_last > 1_day).c_str(),
-                _d_sun/light_minute,
-                _velo.length()/1000.0f);
-        }
+        return to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s]",
+            _id_s.c_str(),
+            t.to_iso8601_string(true, _time_scale_last > 1_day).c_str(),
+            _d_sun/light_minute,
+            _velo.length()/1000.0f);
     }
 };
 
@@ -812,12 +801,12 @@ int main(int argc, char *argv[])
     for(size_t i = 0; i <= number(cbodyid_t::pluto); ++i){
         CBodyRef cb = std::make_shared<CBody>( static_cast<cbodyid_t>( i ) );
         cbodies.push_back(cb);
-        printf("%s\n", cb->toString(true).c_str());
+        printf("%s\n", cb->toString().c_str());
     }
     if(with_oobj) {
         CBodyRef cb = std::make_shared<CBody>( cbodyid_t::oobj );
         cbodies.push_back(cb);
-        printf("%s\n", cb->toString(true).c_str());
+        printf("%s\n", cb->toString().c_str());
     }
     space_height = cbodies[number(max_planet_id)]->space_height();
     pixel::cart_coord.set_height(-space_height, space_height);
