@@ -37,7 +37,7 @@ using namespace jau;
 using namespace jau::si_f32_literals;
 using namespace pixel;
 
-static int gravity_formula = 0;
+static int gravity_formula = 2;
 static bool with_oobj = false;
 
 static const uint8_t rgba_white[/*4*/] = { 255, 255, 255, 255 };
@@ -775,7 +775,7 @@ int main(int argc, char *argv[])
                 oobj_mass = atof(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-formula", argv[i]) && i+1<argc) {
-                gravity_formula = std::max(0, std::min(2, atoi(argv[i+1]))); // [0..2]
+                gravity_formula = std::max(1, std::min(2, atoi(argv[i+1]))); // [1..2]
                 ++i;
             } else {
                 log_printf(0, "ERROR: Unknown argument %s\n", argv[i]);
