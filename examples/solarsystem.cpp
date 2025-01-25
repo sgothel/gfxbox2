@@ -58,7 +58,6 @@ static const int text_height = 24;
 static bool draw_all_orbits = false;
 static bool ref_cbody_stop = false;
 static bool show_cbody_velo = false;
-static float gravity_scale = 1;
 static bool color_inverse = false;
 
 static f4::vec_t vec4_text_color0(text_lum0, text_lum0, text_lum0, 1.0f);
@@ -89,7 +88,6 @@ extern "C" {
     EMSCRIPTEN_KEEPALIVE void set_draw_all_orbits(bool v) noexcept { draw_all_orbits = v; }
     EMSCRIPTEN_KEEPALIVE void set_data_stop(bool v) noexcept { ref_cbody_stop = v; }
     EMSCRIPTEN_KEEPALIVE void set_showvelo(bool v) noexcept { show_cbody_velo = v; }
-    EMSCRIPTEN_KEEPALIVE void set_gravityscale(int v) noexcept { gravity_scale = static_cast<float>(v); }
 }
 
 enum class cbodyid_t : size_t {
@@ -128,12 +126,12 @@ constexpr cbodyid_t& operator--(cbodyid_t& rhs) noexcept {
 
 static float default_scale[] {
   1.0f, 5*5, 5*5, 5*5, 5*5,
-  5, 5, 5, 5, 10*5, 5*5
+  5, 5, 5, 5, 10*5, 7
 };
 
 float default2_scale[] {
   1.0f, 4*5*5, 4*5*5, 4*5*5, 4*5*5,
-  5*5, 5*5, 5*5, 5*5, 100*5
+  5*5, 5*5, 5*5, 5*5, 5*5
 };
 
 float normal_scale[] {
@@ -156,9 +154,6 @@ class CBodyConst {
 
 static constexpr si_time_f32 light_second = 299792458.0f;
 static constexpr si_time_f32 light_minute = 60 * light_second;
-si_accel_f32 oobj_gravity = 2479_m_s2 * 100;
-si_velo_f32 oobj_velo = 108000_km_h;
-si_mass_f64 oobj_mass = 198840e+24; // [kg]
 static cbodyid_t max_planet_id = cbodyid_t::mars;
 
 // Gravitational constant
@@ -166,28 +161,28 @@ static constexpr double M_G = 6.6743015e-11; // [N⋅m2⋅kg−2]
 
 // Source: [Horizon JPL](https://ssd.jpl.nasa.gov/horizons/manual.html)
 CBodyConst CBodyConstants[] {
-  {"Sun",    695700_km,           0_km,      132712000000_km3_s2, 274199_mm_s2, 0,
+  {"Sun",    695700_km,           0_km,      132712000000_km3_s2,   274199_mm_s2, 0,
    {1, 1, 0, 1},            1988400e+24},
-  {"Mercury",  2440_km,    58000000_km,     22031869000000_m3_s2,  3701_mm_s2, 172800_km_h,
+  {"Mercury",  2440_km,    58000000_km,     22031869000000_m3_s2,     3701_mm_s2, 172800_km_h,
    {0.5f, 0.5f, 0.5f, 0.5f},    330e+24},
-  {"Venus",    6052_km,   108000000_km,    324858592000000_m3_s2,  8870_mm_s2, 126072_km_h,
+  {"Venus",    6052_km,   108000000_km,    324858592000000_m3_s2,     8870_mm_s2, 126072_km_h,
    {1, 0.5f, 0, 1},            4.87e+24},
-  {"Earth",    6378_km,   149600000_km,    398600435436000_m3_s2,  9820_mm_s2, 108000_km_h,
+  {"Earth",    6378_km,   149600000_km,    398600435436000_m3_s2,     9820_mm_s2, 108000_km_h,
    {0, 0, 1, 1},               5.97e+24},
-  {"Mars",     3396_km,   227900000_km,     42828375214000_m3_s2,  3710_mm_s2,  86652_km_h,
+  {"Mars",     3396_km,   227900000_km,     42828375214000_m3_s2,     3710_mm_s2,  86652_km_h,
    {1, 0, 0, 1},                642e+24},
-  {"Jupiter", 71492_km,   778000000_km, 126686531900000000_m3_s2, 24790_mm_s2,  47160_km_h,
+  {"Jupiter", 71492_km,   778000000_km, 126686531900000000_m3_s2,    24790_mm_s2,  47160_km_h,
    {0.7f, 0.5f, 0.5f, 0.5f},   1898e+24},
-  {"Saturn",  60268_km,  1486000000_km,  37931206234000000_m3_s2, 10440_mm_s2,  34884_km_h,
+  {"Saturn",  60268_km,  1486000000_km,  37931206234000000_m3_s2,    10440_mm_s2,  34884_km_h,
    {0.7f, 0.7f, 0.5f, 0.5f},    568e+24},
-  {"Uranus",  25559_km,  2900000000_km,   5793951256000000_m3_s2,  8870_mm_s2,  24516_km_h,
+  {"Uranus",  25559_km,  2900000000_km,   5793951256000000_m3_s2,     8870_mm_s2,  24516_km_h,
    {0, 0, 1, 1},               86.8e+24},
-  {"Neptun",  24766_km, 45000000000_km,   6835099970000000_m3_s2, 11150_mm_s2,  20000_km_h,
+  {"Neptun",  24766_km, 45000000000_km,   6835099970000000_m3_s2,    11150_mm_s2,  20000_km_h,
    {0, 0, 1, 1},                102e+24},
-  {"Pluto",    1188_km,  7300000000_km,       869326000000_m3_s2,   611_mm_s2,  17064_km_h,
+  {"Pluto",    1188_km,  7300000000_km,       869326000000_m3_s2,      611_mm_s2,  17064_km_h,
    {0.7f, 0.5f, 0.7f, 0.5f}, 0.0130e+24},
-  {"oobj",     6211_km,   227900000_km,        1327120000_km3_s2, oobj_gravity, -oobj_velo,
-  {0.5, 0.5, 0.5, 0.5}, oobj_mass}
+  {"oobj",     62110_km, 730000000_km,        1327120000_km3_s2,  344022_mm_s2, -52200_km_h,
+  {0.5, 0.5, 0.5, 1}, 1988400e+22}
 };
 
 static si_length_f32 space_height; // [m]
@@ -279,7 +274,12 @@ class CBody {
                 _world_time.tv_sec = solarDataSet.set[0].time_u; // [s]
                 center = {cbc.d_sun, 0, 0};
                 f2::point_t center2(center.x, center.y);
-                float angle = (f2::point_t(0, 0) - center2).angle() - (float)M_PI_2;
+                float angle;
+                if(_id == cbodyid_t::oobj){
+                    angle = 25_deg;
+                } else {
+                    angle = (f2::point_t(0, 0) - center2).angle() - (float)M_PI_2;
+                }
                 f2::vec_t velo2 = f2::vec_t::from_length_angle(cbc.v, angle);
                 _velo = {velo2.x, velo2.y, 0};
                 // _velo = {cbc.v, 0, 0};
@@ -346,23 +346,18 @@ class CBody {
     }
 
     void sub_tick(const fraction_timespec& dt, const fraction_timespec& wts) {
-        if( _id == cbodyid_t::sun && gravity_scale <= 1 && !with_oobj) {
+        if( _id == cbodyid_t::sun && !with_oobj) {
             return;
         }
         const float dt_f = (float)dt.to_us()/1000000.0f;
-        for( size_t i = 0; i < cbodies.size(); ++i ) {
-            const CBodyRef& cb = cbodies[i];
+        for( const CBodyRef& cb : cbodies ) {
             if( this != cb.get() ) {
                 f3::vec_t g;
                 switch( gravity_formula ) {
                     case 1:  g = gravity1(*cb, *this); break;
                     default: g = gravity2(*cb, *this); break;
                 }
-                if( 0 != i ) {
-                    _velo += g * dt_f * gravity_scale;
-                } else {
-                    _velo += g * dt_f;
-                }
+                _velo += g * dt_f;
             }
         }
         _center += _velo * dt_f;
@@ -533,14 +528,6 @@ void mainloop() {
             if( event.has_any_p2() ) {
                 if (event.released_and_clr(input_event_type_t::P2_ACTION1)) {
                     draw_all_orbits = !draw_all_orbits;
-                } else if (event.pressed(input_event_type_t::P2_ACTION2)) {
-                    if (event.released_and_clr(input_event_type_t::P1_UP)) {
-                        oobj_gravity *= 2;
-                        oobj_mass *= 2;
-                    } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
-                        oobj_gravity /= 2;
-                        oobj_mass /= 2;
-                    }
                 }
             }
             if( event.released_and_clr(input_event_type_t::P3_ACTION1) ) {
@@ -559,12 +546,6 @@ void mainloop() {
                     }
                     for(CBodyRef &cb : cbodies){
                         cb->clear_orbit();
-                    }
-                } else if (event.pressed(input_event_type_t::P1_ACTION4)) {
-                    if (event.released_and_clr(input_event_type_t::P1_UP)) {
-                        oobj_velo *= 2;
-                    } else if (event.released_and_clr(input_event_type_t::P1_DOWN)) {
-                        oobj_velo /= 2;
                     }
                 }
             }
@@ -797,17 +778,8 @@ int main(int argc, char *argv[])
                 draw_all_orbits = true;
             } else if( 0 == strcmp("-data_stop", argv[i])) {
                 ref_cbody_stop = true;
-            } else if( 0 == strcmp("-gravity_scale", argv[i]) && i+1<argc) {
-                gravity_scale = static_cast<float>(atoi(argv[i+1]));
-                ++i;
             } else if( 0 == strcmp("-woobj", argv[i])) {
                 with_oobj = true;
-            } else if( 0 == strcmp("-oobj_gravity", argv[i]) && i+1<argc) {
-                oobj_gravity = static_cast<float>(atoi(argv[i+1]));
-                ++i;
-            } else if( 0 == strcmp("-oobj_mass", argv[i]) && i+1<argc) {
-                oobj_mass = atof(argv[i+1]);
-                ++i;
             } else if( 0 == strcmp("-formula", argv[i]) && i+1<argc) {
                 gravity_formula = std::max(1, std::min(2, atoi(argv[i+1]))); // [1..2]
                 ++i;
@@ -822,7 +794,6 @@ int main(int argc, char *argv[])
         log_printf(0, "- forced_fps %d\n", pixel::gpu_forced_fps());
         log_printf(0, "- data_stop %d\n", ref_cbody_stop);
         log_printf(0, "- gravity formula %d\n", gravity_formula);
-        log_printf(0, "- gravity_scale %f\n", gravity_scale);
         log_printf(0, "- show_velo %d\n", show_cbody_velo);
         log_printf(0, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
     }

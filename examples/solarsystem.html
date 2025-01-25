@@ -102,7 +102,6 @@
   <span><input type="checkbox" id="DataStop" onclick="setDataStop(this.checked)">data-stop</span>
   <span><input type="checkbox" id="AllOrbits" onclick="setDrawAllOrbits(this.checked)">all-orbits</span>
   <span><input type="checkbox" id="ShowVelo" onclick="setShowVelo(this.checked)">velo-vec</span>
-  <span><input type="number" id="SetGravityScale" min="1" max="1000" step="100" value="1" style="width: 3em;" onchange="setGravityScale(this.value)"/>g-scale</span>
   <span><input type="number" id="SetFPS" min="0" max="60" step="10" value="0" style="width: 3em;" onchange="setForcedFPS(this.value)"/>fps</span>
 </span>
 
@@ -143,7 +142,7 @@
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
       var wasm_set_showvelo, wasm_set_forced_fps, wasm_set_window_size;
-      var wasm_set_draw_all_orbits, wasm_set_data_stop, wasm_set_gravityscale;
+      var wasm_set_draw_all_orbits, wasm_set_data_stop;
 
       var Module = {
         onRuntimeInitialized: function() {
@@ -152,7 +151,6 @@
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
             wasm_set_draw_all_orbits = Module.cwrap('set_draw_all_orbits', 'null', ['boolean'])
             wasm_set_data_stop = Module.cwrap('set_data_stop', 'null', ['boolean'])
-            wasm_set_gravityscale = Module.cwrap('set_gravityscale', 'null', ['number'])
             maximizeCanvas();
         },
         preRun: [],
@@ -234,11 +232,6 @@
       function setForcedFPS(v) {
           if( null != wasm_set_forced_fps ) {
               wasm_set_forced_fps(v);
-          }
-      }
-      function setGravityScale(v) {
-          if( null != wasm_set_gravityscale ) {
-              wasm_set_gravityscale(v);
           }
       }
       function maximizeCanvas() {
