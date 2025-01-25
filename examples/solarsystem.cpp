@@ -309,31 +309,35 @@ class CBody {
 
     const f3::point_t& position() const noexcept { return _center; }
     const f3::point_t& velo() const noexcept { return _velo; }
-    // Returns gravity [m/s^2] acceleration from given body `o` towards this body
-    // @param o attracted body towards this body
-    pixel::f3::vec_t gravity1(const CBody& o) {
-        pixel::f3::vec_t v_d = _center - o._center;
+    
+    // Returns gravity [m/s^2] acceleration body `b` towards body `a`
+    // @param a attracting body
+    // @param b attracted body towards body 'a'
+    static pixel::f3::vec_t gravity1(const CBody& a, const CBody& b) {
+        pixel::f3::vec_t v_d = a._center - b._center;
         const double d = v_d.length();
         pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
         if( !is_zero(d) ) {
             // normal-vector: v_d / d (einheitsvektor, richtung)
-            // const double F_ = GM * o._mass / ( d * d );
-            // v_g = ( v_d / d ) * ( F_ / o._mass);
-            v_g = ( v_d / (float)d ) * (float)( GM_0 / ( d * d ) );
+            // const double F = M_G * (a._mass * b._mass) / ( d * d );
+            // v_g = ( v_d / (float)d ) * (float)( F / b._mass );
+            v_g = ( v_d / (float)d ) * (float)(M_G * a._mass / ( d * d ));
         }
         return v_g;
     }
 
-    // Returns gravity [m/s^2] acceleration from given body `o` towards this body
-    // @param o attracted body towards this body
-    pixel::f3::vec_t gravity2(const CBody& o) {
-        pixel::f3::vec_t v_d = _center - o._center;
+    // Returns gravity [m/s^2] acceleration body `b` towards body `a`
+    // @param a attracting body
+    // @param b attracted body towards body 'a'
+    static pixel::f3::vec_t gravity2(const CBody& a, const CBody& b) {
+        pixel::f3::vec_t v_d = a._center - b._center;
         const double d = v_d.length();
         pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
         if( !is_zero(d) ) {
             // normal-vector: v_d / d (einheitsvektor, richtung)
-            const double F = M_G * (_mass * o._mass) / ( d * d );
-            v_g = ( v_d / (float)d ) * (float)( F / o._mass );
+            // const double F = a.GM * o._mass / ( d * d );
+            // v_g = ( v_d / d ) * ( F / o._mass);
+            v_g = ( v_d / (float)d ) * (float)( a.GM / ( d * d ) );
         }
         return v_g;
     }
