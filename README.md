@@ -17,7 +17,7 @@ Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten
 
 ## Online WebAssembly Examples
 * Educational / Science
-  * [Solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html)
+  * [Solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html)- ([Sonnensystem Simulation](https://jausoft.com/cgit/cs_class/gfxbox2.git/plain/doc/Sonnensystem.pdf))
   * [Piviz](https://jausoft.com/projects/gfxbox2/piviz.html) - ([π Visualisierung](https://jausoft.com/cgit/cs_class/gfxbox2.git/plain/doc/Projekt_Pi.pdf))
   * [Freefall](https://jausoft.com/projects/gfxbox2/freefall01.html)
   * [Funcdraw](https://jausoft.com/projects/gfxbox2/funcdraw.html)
