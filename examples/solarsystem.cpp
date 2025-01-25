@@ -344,7 +344,7 @@ class CBody {
         return v_g;
     }
 
-    void sub_tick(const fraction_timespec dt, const fraction_timespec& wts) {
+    void sub_tick(const fraction_timespec& dt, const fraction_timespec& wts) {
         if( _id == cbodyid_t::sun && gravity_scale <= 1 && !with_oobj) {
             return;
         }
@@ -373,7 +373,7 @@ class CBody {
         }
     }
 
-    void tick(const fraction_timespec dt, const int64_t time_scale) {
+    void tick(const fraction_timespec& dt, const int64_t time_scale) {
         constexpr fraction_timespec zero;
         constexpr fraction_timespec max_time_step(1_h);
         const fraction_timespec dt_world = dt * time_scale; // world [s]
@@ -416,7 +416,7 @@ class CBody {
         t.tv_nsec = 0;
         return to_string("%s[%s, d_sun %.2f lm, velo %.2f km/s]",
             _id_s.c_str(),
-            t.to_iso8601_string(true, _time_scale_last > 1_day).c_str(),
+            t.to_iso8601_string(true, _time_scale_last > int64_t(1_day)).c_str(),
             _d_sun/light_minute,
             _velo.length()/1000.0f);
     }
@@ -740,7 +740,7 @@ void mainloop() {
     }
     ++frame_count_total;
 
-    if constexpr ( true ) {
+    if constexpr ( false ) {
         const fraction_timespec t0 = jau::getMonotonicTime();
         const fraction_timespec dt_total = t0 - t_start;
         const double dur_total = double(( dt_total / frame_count_total ).to_us()) / 1'000.0;
