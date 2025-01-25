@@ -51,6 +51,13 @@ float jau::next_rnd() noexcept {
     return rng_to_norm((float)rng());
 }
 
+#ifdef CLOCK_MONOTONIC_RAW
+    // raw skips NTP adjustments
+    #define JAU_CLOCK_MONOTONIC CLOCK_MONOTONIC_RAW
+#else
+    #define JAU_CLOCK_MONOTONIC CLOCK_MONOTONIC
+#endif
+
 /**
  * See <http://man7.org/linux/man-pages/man2/clock_gettime.2.html>
  * <p>
@@ -61,7 +68,7 @@ float jau::next_rnd() noexcept {
  */
 jau::fraction_timespec jau::getMonotonicTime() noexcept {
     struct timespec t;
-    ::clock_gettime(CLOCK_MONOTONIC, &t);
+    ::clock_gettime(JAU_CLOCK_MONOTONIC, &t);
     return fraction_timespec( (int64_t)t.tv_sec, (int64_t)t.tv_nsec );
 }
 
@@ -82,7 +89,7 @@ jau::fraction_timespec jau::getElapsedMonotonicTime() noexcept {
  */
 uint64_t jau::getCurrentMilliseconds() noexcept {
     struct timespec t;
-    ::clock_gettime(CLOCK_MONOTONIC, &t);
+    ::clock_gettime(JAU_CLOCK_MONOTONIC, &t);
     return static_cast<uint64_t>( t.tv_sec ) * (uint64_t)MilliPerOne +
            static_cast<uint64_t>( t.tv_nsec ) / (uint64_t)NanoPerMilli;
 }
