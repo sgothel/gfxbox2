@@ -3,6 +3,7 @@
  * Funktion Name: solarsystem.cpp
  */
 #include <algorithm>
+#include <cerrno>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -427,6 +428,7 @@ std::vector<f2::point_t> pl;
 std::vector<f2::point_t> ipl;
 bool tick_ts_down = false;
 static std::string record_bmpseq_basename;
+static FILE* stats_file = nullptr;
 
 void mainloop() {
     // scale_all_numbers(0.000001f);
@@ -572,7 +574,6 @@ void mainloop() {
     // Better accuracy using the average dt over 5s
     // const jau::fraction_timespec dt = animating ? t1 - t_last : jau::fraction_timespec();
     const jau::fraction_timespec dt = animating ? pixel::gpu_avg_framedur() : jau::fraction_timespec();
-    t_last = t1;
     CBody& sel_cbody = *cbodies[number(info_id)];
     if(animating) {
         const fraction_timespec world_t0 = sel_cbody.world_time();
@@ -738,19 +739,25 @@ void mainloop() {
         pixel::save_snapshot(snap_fname);
         printf("Snapshot written to %s\n", snap_fname.c_str());
     }
-    ++frame_count_total;
-
-    if constexpr ( false ) {
+    if ( stats_file && frame_count_total > 0 ) {
+        const jau::fraction_timespec dt2 = t1 - t_last;
+        const double fps_2 = 1.0 / ( double(dt2.to_us()) / 1'000'000.0 );
         const fraction_timespec t0 = jau::getMonotonicTime();
         const fraction_timespec dt_total = t0 - t_start;
         const double dur_total = double(( dt_total / frame_count_total ).to_us()) / 1'000.0;
         const double fps_total = double(frame_count_total) / ( double(dt_total.to_us()) / 1'000'000.0 );
         const double dur_one = double(dt.to_us()) / 1000.0;
+        const double dur_one2 = double(dt2.to_us()) / 1000.0;
         const double dur_avg = double(pixel::gpu_avg_framedur().to_us()) / 1000.0;
         const float fps_avg = pixel::gpu_avg_fps();
-        printf("%7.7" PRIi64 ": dt: 1 %.4f, T1 %.4f, A %.4f, A-T %7.4f, A-1 %7.4f; fps T1 %.4f, A %.4f\n",
-            frame_count_total, dur_one, dur_total, dur_avg, dur_avg - dur_total, dur_avg - dur_one, fps_total, fps_avg);
+        if( 1 == frame_count_total ) {
+            fprintf(stats_file, "Frame;TimeT;dt1;dt2;dtT;dtA;FPS-2;FPS-T;FPS-A\n");
+        }
+        fprintf(stats_file, "%7.7" PRIi64 ";%9.9" PRIu64 ";%.4f;%.4f;%.4f;%.4f;%.4f;%.4f;%.4f\n",
+            frame_count_total, dt_total.to_us(), dur_one, dur_one2, dur_total, dur_avg, fps_2, fps_total, fps_avg);
     }
+    ++frame_count_total;
+    t_last = t1;
 }
 
 int main(int argc, char *argv[])
@@ -759,6 +766,7 @@ int main(int argc, char *argv[])
     #if defined(__EMSCRIPTEN__)
         window_width = 1024, window_height = 576; // 16:9
     #endif
+    bool write_stats = false;
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
@@ -777,6 +785,8 @@ int main(int argc, char *argv[])
                 ++i;
             } else if( 0 == strcmp("-show_velo", argv[i]) ) {
                 show_cbody_velo = true;
+            } else if( 0 == strcmp("-stats", argv[i]) ) {
+                write_stats = true;
             } else if( 0 == strcmp("-max_planet_id", argv[i]) && i+1<argc) {
                 max_planet_id = static_cast<cbodyid_t>(atoi(argv[i+1]));
                 ++i;
@@ -848,6 +858,19 @@ int main(int argc, char *argv[])
     #if defined(__EMSCRIPTEN__)
         emscripten_set_main_loop(mainloop, 0, 1);
     #else
+        static const char* stats_filename = "solarsystem.cvs";
+        if( write_stats ) {
+            stats_file = ::fopen(stats_filename, "w");
+            if( !stats_file ) {
+                const int err_no = errno;
+                fprintf(stdout, "Couldn't open stats-file %s, err: %d %s\n", stats_filename, err_no, ::strerror(err_no));
+            } else {
+                fprintf(stdout, "Writing stats to %s\n", stats_filename);
+            }
+        }
         while( true ) { mainloop(); }
+        if( stats_file ) {
+            ::fclose(stats_file);
+        }
     #endif
 }
