@@ -237,8 +237,7 @@ class CBody {
     si_time_f32 _radius; // [m]
     si_mass_f64 _mass; // [kg]
     f3::vec_t _velo; // [m/s]
-    si_gravityparam_f64 GM_0; // [m^3/s^2]
-    si_gravityparam_f64 GM_1; // GM = g * r^2 = [m^3 / s^2] (calculated)
+    si_gravityparam_f64 GM; // [m^3/s^2]
     f3::point_t _center;
     std::string _id_s;
     fraction_timespec _world_time;
@@ -257,7 +256,6 @@ class CBody {
     CBody(cbodyid_t id_, size_t dataset_idx=0)
     : _id(id_) {
         f3::point_t center;
-        float g_surface;
         {
             CBodyConst cbc = CBodyConstants[number(_id)];
             size_t id_idx = number(_id);
@@ -283,17 +281,15 @@ class CBody {
                 _velo = {velo2.x, velo2.y, 0};
                 // _velo = {cbc.v, 0, 0};
             }
-            GM_0 = cbc.GM;
+            GM = cbc.GM;
             _d_sun = center.length();
             _radius = cbc.radius;
-            g_surface = cbc.g_surface;
             _color = cbc.color;
             _id_s = cbc.name;
             _orbit_world_time_last = _world_time;
             _center = center;
             _mass = cbc.mass;
         }
-        GM_1 = (double)g_surface * (double)_radius * (double)_radius; // m^3 / s^2
         _scale = default_scale[number(_id)];
     }
 
@@ -313,20 +309,6 @@ class CBody {
 
     const f3::point_t& position() const noexcept { return _center; }
     const f3::point_t& velo() const noexcept { return _velo; }
-
-    // Returns gravity [m/s^2] acceleration from given body `o` towards this body
-    // @param p center of attracted object towards this body
-    pixel::f3::vec_t gravity0(const CBody& o) {
-        pixel::f3::vec_t v_d = _center - o._center;
-        const double d = v_d.length();
-        pixel::f3::vec_t v_g; // Gravitationsbeschleunigung (Ergebnis)
-        if( !is_zero(d) ) {
-            // normalize: v_d / d
-            v_g = ( v_d / (float)d ) * (float)( GM_1 / ( d * d ) );
-        }
-        return v_g;
-    }
-
     // Returns gravity [m/s^2] acceleration from given body `o` towards this body
     // @param o attracted body towards this body
     pixel::f3::vec_t gravity1(const CBody& o) {
@@ -365,9 +347,8 @@ class CBody {
             if( this != cb.get() ) {
                 f3::vec_t g;
                 switch( gravity_formula ) {
-                    case 0:  g = cb->gravity0(*this); break;
-                    case 1:  g = cb->gravity1(*this); break;
-                    default: g = cb->gravity2(*this); break;
+                    case 1:  g = gravity1(*cb, *this); break;
+                    default: g = gravity2(*cb, *this); break;
                 }
                 if( 0 != i ) {
                     _velo += g * dt * gravity_scale;
@@ -548,10 +529,8 @@ void mainloop() {
                     show_cbody_velo = !show_cbody_velo;
                 }
             } else if( event.released_and_clr(input_event_type_t::F1) ) {
-                gravity_formula = 0;
-            } else if( event.released_and_clr(input_event_type_t::F2) ) {
                 gravity_formula = 1;
-            } else if( event.released_and_clr(input_event_type_t::F3) ) {
+            } else if( event.released_and_clr(input_event_type_t::F2) ) {
                 gravity_formula = 2;
             }
             if( event.released_and_clr(input_event_type_t::ANY_KEY) ) {
