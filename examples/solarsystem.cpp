@@ -649,7 +649,7 @@ void mainloop() {
     }
     const fraction_timespec world_t0_sec = sel_cbody.world_time();
     hud_text = pixel::make_text(tl_text, 0, animating ? vec4_text_color0 : vec4_text_color1, text_height,
-                    "%s -> %s, time[x %s, td %ds], gscale %0.2f, formula %d, fps %0.1f",
+                    "%s -> %s, time[x %s, td %" PRIi64 "s], gscale %0.2f, formula %d, fps %0.1f",
                     sel_cbody.toString().c_str(),
                     cbodies[number(max_planet_id)]->ids().c_str(),
                     to_magnitude_timestr((float)tick_ts).c_str(),
@@ -827,6 +827,7 @@ int main(int argc, char *argv[])
     }
     printf("stop_time = second\n");
     #if defined(__EMSCRIPTEN__)
+        (void)write_stats;
         emscripten_set_main_loop(mainloop, 0, 1);
     #else
         static const char* stats_filename = "solarsystem.cvs";
