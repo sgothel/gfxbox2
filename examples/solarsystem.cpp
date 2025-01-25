@@ -185,7 +185,7 @@ CBodyConst CBodyConstants[] {
    {0, 0, 1, 1},                102e+24},
   {"Pluto",    1188_km,  7300000000_km,       869326000000_m3_s2,   611_mm_s2,  17064_km_h,
    {0.7f, 0.5f, 0.7f, 0.5f}, 0.0130e+24},
-  {"oobj",     6211_km,   227900000_km,       869326000000_m3_s2, oobj_gravity, -oobj_velo,
+  {"oobj",     6211_km,   227900000_km,        1327120000_km3_s2, oobj_gravity, -oobj_velo,
   {0.5, 0.5, 0.5, 0.5}, oobj_mass}
 };
 
