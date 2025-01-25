@@ -45,7 +45,7 @@ constexpr float get_fps(const uint64_t t0, const uint64_t t1, const float event_
 }
 
 inline int get_ms_per_frame() noexcept {
-    return jau::round_to_int(pixel::expected_framedur()*1000.0f);
+    return int(pixel::expected_framedur().to_ms());
 }
 
 //

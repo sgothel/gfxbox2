@@ -495,7 +495,7 @@ void mainloop() {
         bool game_active;
 
         if( 0 < game_mode_ms_left ) {
-            game_mode_ms_left = std::max( 0, game_mode_ms_left - jau::round_to_int(1000.0f*pixel::expected_framedur()) );
+            game_mode_ms_left = std::max( 0, game_mode_ms_left - int(pixel::expected_framedur().to_ms()) );
         }
 
         switch( game_mode ) {

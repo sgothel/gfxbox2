@@ -38,6 +38,7 @@
 #include <cctype>
 
 #include <jau/file_util.hpp>
+#include <jau/fraction_type.hpp>
 #include <jau/utils.hpp>
 #include <pixel/version.hpp>
 
@@ -777,8 +778,8 @@ namespace pixel {
     /** Returns expected fps, either gpu_forced_fps() if set, otherwise monitor_fps(). */
     inline int expected_fps() noexcept { int v=gpu_forced_fps(); return v>0?v:monitor_fps(); }
     /** Returns the expected frame duration in [s], i.e. 1/expected_fps() */
-    inline float expected_framedur() noexcept {
-        return 1.0f/float(expected_fps());
+    inline jau::fraction_timespec  expected_framedur() noexcept {
+        return jau::fraction_timespec(1.0/double(expected_fps()));
     }
 
     bool is_gfx_subsystem_initialized() noexcept;
@@ -794,10 +795,7 @@ namespace pixel {
     /** Returns the measured gpu fps each 5s, starting with monitor_fps() */
     float gpu_avg_fps() noexcept;
     /** Returns the measured gpu frame duration in [s] each 5s, starting with 1/gpu_avg_fps() */
-    inline float gpu_avg_framedur() noexcept {
-        const float fps = gpu_avg_fps();
-        return fps > 0 ? 1.0f/fps : 0;
-    }
+    jau::fraction_timespec gpu_avg_framedur() noexcept;
 
     texture_ref make_text(const std::string& text) noexcept;
 

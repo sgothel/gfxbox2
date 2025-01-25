@@ -23,6 +23,7 @@
 #include "pixel/pixel.hpp"
 #include <jau/float_si_types.hpp>
 #include <jau/fraction_type.hpp>
+#include <jau/utils.hpp>
 #include <physics.hpp>
 
 #include <SDL2/SDL.h>
@@ -456,10 +457,9 @@ static std::string record_bmpseq_basename;
 void mainloop() {
     // scale_all_numbers(0.000001f);
     static pixel::texture_ref hud_text;
-    static const fraction_timespec t_start = getMonotonicTime();
-    static fraction_timespec t_last = t_start;
-    static uint64_t frame_count_total = 0;
-    static uint64_t snap_count = 0;
+    static fraction_timespec t_start, t_last;
+    static int64_t frame_count_total = 0;
+    static int64_t snap_count = 0;
     static pixel::input_event_t event;
     static int64_t tick_ts = 1_month;
     static bool animating = true;
@@ -472,6 +472,10 @@ void mainloop() {
     // resized = event.has_and_clr( input_event_type_t::WINDOW_RESIZED );
 
     const fraction_timespec t1 = getMonotonicTime();
+    if( 0 == frame_count_total ) {
+        t_start = t1;
+        t_last = t_start;
+    }
 
     while (pixel::handle_one_event(event)) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -595,13 +599,8 @@ void mainloop() {
     }
     // Better accuracy using the average dt over 5s
     // const jau::fraction_timespec dt = animating ? t1 - t_last : jau::fraction_timespec();
-    const jau::fraction_timespec dt = animating ? jau::fraction_timespec(pixel::gpu_avg_framedur()) : jau::fraction_timespec();
+    const jau::fraction_timespec dt = animating ? pixel::gpu_avg_framedur() : jau::fraction_timespec();
     t_last = t1;
-    if constexpr ( false ) {
-        const float dt_ms_f = (float)dt.to_us() / 1000.0f;
-        const float dt2_ms_f = pixel::gpu_avg_framedur() * 1000.0f;
-        printf("dt: %.2f, %.2f, ddt %.2f\n", dt_ms_f, dt2_ms_f, dt2_ms_f - dt_ms_f);
-    }
     CBody& sel_cbody = *cbodies[number(info_id)];
     if(animating) {
         const fraction_timespec world_t0 = sel_cbody.world_time();
@@ -756,18 +755,30 @@ void mainloop() {
     pixel::swap_gpu_buffer();
     if( record_bmpseq_basename.size() > 0 ) {
         std::string snap_fname(128, '\0');
-        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
+        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIi64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
         snap_fname.resize(written);
         pixel::save_snapshot(snap_fname);
     }
     if( do_snapshot ) {
         std::string snap_fname(128, '\0');
-        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "solarsystem-%7.7" PRIu64 ".bmp", snap_count++);
+        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "solarsystem-%7.7" PRIi64 ".bmp", snap_count++);
         snap_fname.resize(written);
         pixel::save_snapshot(snap_fname);
         printf("Snapshot written to %s\n", snap_fname.c_str());
     }
     ++frame_count_total;
+
+    if constexpr ( true ) {
+        const fraction_timespec t0 = jau::getMonotonicTime();
+        const fraction_timespec dt_total = t0 - t_start;
+        const double dur_total = double(( dt_total / frame_count_total ).to_us()) / 1'000.0;
+        const double fps_total = double(frame_count_total) / ( double(dt_total.to_us()) / 1'000'000.0 );
+        const double dur_one = double(dt.to_us()) / 1000.0;
+        const double dur_avg = double(pixel::gpu_avg_framedur().to_us()) / 1000.0;
+        const float fps_avg = pixel::gpu_avg_fps();
+        printf("%7.7" PRIi64 ": dt: 1 %.4f, T1 %.4f, A %.4f, A-T %7.4f, A-1 %7.4f; fps T1 %.4f, A %.4f\n",
+            frame_count_total, dur_one, dur_total, dur_avg, dur_avg - dur_total, dur_avg - dur_one, fps_total, fps_avg);
+    }
 }
 
 int main(int argc, char *argv[])

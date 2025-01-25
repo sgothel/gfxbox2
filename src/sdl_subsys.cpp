@@ -24,8 +24,12 @@
 #include "pixel/pixel.hpp"
 #include "pixel/version.hpp"
 #include <jau/file_util.hpp>
+#include <jau/fraction_type.hpp>
+#include <jau/utils.hpp>
 
 #include <atomic>
+#include <cmath>
+#include <cstring>
 #include <thread>
 
 #include <SDL2/SDL.h>
@@ -47,11 +51,13 @@ static SDL_Texture * fb_texture = nullptr;
 static TTF_Font* sdl_font = nullptr;
 static int monitor_frames_per_sec=60;
 static int gpu_forced_fps_ = -1;
+static bool gpu_fps_resync = true;
 static float gpu_fps = 0.0f;
-static int gpu_frame_count = 0;
-static uint64_t gpu_fps_t0 = 0;
-static uint64_t gpu_swap_t0 = 0;
-static uint64_t gpu_swap_t1 = 0;
+static fraction_timespec gpu_fdur;
+static int64_t gpu_frame_count = 0;
+static fraction_timespec gpu_fps_t0;
+static fraction_timespec gpu_swap_t0;
+static fraction_timespec gpu_swap_t1;
 
 uint32_t pixel::rgba_to_uint32(uint8_t r, uint8_t g, uint8_t b, uint8_t a) noexcept {
     // SDL_PIXELFORMAT_ARGB8888
@@ -69,18 +75,20 @@ void pixel::uint32_to_rgba(const uint32_t ui32, uint8_t& r, uint8_t& g, uint8_t&
     b = ( ui32 & 0x000000ffU );
 }
 
-static void reset_gpu_fps(float fps) {
-    gpu_fps = fps;
-    gpu_fps_t0 = getCurrentMilliseconds();
+static void reset_gpu_fps(int fps) {
+    gpu_fps = float(fps);
+    gpu_fdur = fraction_timespec(1.0/double(fps));
+    gpu_fps_t0 = jau::getMonotonicTime();
     gpu_swap_t0 = gpu_fps_t0;
     gpu_swap_t1 = gpu_fps_t0;
+    gpu_fps_resync = true;
 }
 
 int pixel::monitor_fps() noexcept { return monitor_frames_per_sec; }
 
 int pixel::gpu_forced_fps() noexcept { return gpu_forced_fps_; }
 
-void pixel::set_gpu_forced_fps(int fps) noexcept { gpu_forced_fps_=fps; reset_gpu_fps(float(fps)); }
+void pixel::set_gpu_forced_fps(int fps) noexcept { gpu_forced_fps_=fps; reset_gpu_fps(fps); }
 
 static void on_window_resized(int wwidth, int wheight) noexcept {
     if( !sdl_rend ) { return; }
@@ -109,7 +117,7 @@ static void on_window_resized(int wwidth, int wheight) noexcept {
     {
         SDL_DisplayMode mode;
         const int win_display_idx = SDL_GetWindowDisplayIndex(sdl_win);
-        ::bzero(&mode, sizeof(mode));
+        ::memset(&mode, 0, sizeof(mode));
         SDL_GetCurrentDisplayMode(win_display_idx, &mode); // SDL_GetWindowDisplayMode(..) fails on some systems (wrong refresh_rate and logical size
         if( mode.refresh_rate > 0 ) {
             monitor_frames_per_sec = mode.refresh_rate;
@@ -233,7 +241,7 @@ bool pixel::init_gfx_subsystem(const char* exe_path, const char* title, int wwid
 
     on_window_resized(wwidth, wheight);
 
-    reset_gpu_fps(float(monitor_frames_per_sec));
+    reset_gpu_fps(gpu_forced_fps_ > 0 ? gpu_forced_fps_ : monitor_frames_per_sec);
 
     return true;
 }
@@ -292,29 +300,35 @@ void pixel::swap_pixel_fb(const bool swap_buffer, int fps) noexcept {
 void pixel::swap_gpu_buffer(int fps) noexcept {
     if( !sdl_rend ) { return; }
     SDL_RenderPresent(sdl_rend);
-    gpu_swap_t0 = getCurrentMilliseconds();
+    gpu_swap_t0 = jau::getMonotonicTime();
     ++gpu_frame_count;
-    const uint64_t td = gpu_swap_t0 - gpu_fps_t0;
-    if( td >= 5000 ) {
-        gpu_fps = (float)gpu_frame_count / ( (float)td / 1000.0f );
+    constexpr fraction_timespec fps_resync(3, 0); // 3s
+    constexpr fraction_timespec fps_avg_period(5, 0); // 5s
+    const fraction_timespec td = gpu_swap_t0 - gpu_fps_t0;
+    if( gpu_fps_resync && td >= fps_resync ) {
+        gpu_fps_t0 = gpu_swap_t0;
+        gpu_frame_count = 0;
+        gpu_fps_resync = false;
+    } else if( td >= fps_avg_period ) {
+        gpu_fdur = td / gpu_frame_count;
+        gpu_fps = float(double(gpu_frame_count) / ( double(td.to_us()) / 1000000.0 ));
         gpu_fps_t0 = gpu_swap_t0;
         gpu_frame_count = 0;
     }
     if( 0 < fps ) {
-        const int64_t fudge_ns = jau::NanoPerMilli / 4;
-        const uint64_t ms_per_frame = (uint64_t)std::round(1000.0 / fps);
-        const uint64_t ms_this_frame =  gpu_swap_t0 - gpu_swap_t1;
-        int64_t td_ns = int64_t( ms_per_frame - ms_this_frame ) * jau::NanoPerMilli;
-        if( td_ns > fudge_ns ) {
-            const int64_t td_ns_0 = td_ns%jau::NanoPerOne;
+        const fraction_timespec fudge(0, jau::NanoPerMilli / 4); // ns granularity
+        const fraction_timespec td_per_frame(1.0 / fps);
+        const fraction_timespec td_this_frame =  gpu_swap_t0 - gpu_swap_t1;
+        const fraction_timespec td_diff = td_per_frame - td_this_frame;
+        if( td_diff > fudge ) {
             struct timespec ts;
-            ts.tv_sec = static_cast<decltype(ts.tv_sec)>(td_ns/jau::NanoPerOne); // signed 32- or 64-bit integer
-            ts.tv_nsec = td_ns_0 - fudge_ns;
+            ts.tv_sec = static_cast<decltype(ts.tv_sec)>(td_diff.tv_sec); // signed 32- or 64-bit integer
+            ts.tv_nsec = td_diff.tv_nsec - fudge.tv_nsec;
             nanosleep( &ts, nullptr );
             // pixel::log_printf("soft-sync [exp %zd > has %zd]ms, delay %" PRIi64 "ms (%lds, %ldns)\n",
             //         ms_per_frame, ms_this_frame, td_ns/pixel::NanoPerMilli, ts.tv_sec, ts.tv_nsec);
         }
-        gpu_swap_t1 = jau::getCurrentMilliseconds();
+        gpu_swap_t1 = jau::getMonotonicTime();
     } else {
         gpu_swap_t1 = gpu_swap_t0;
     }
@@ -322,6 +336,10 @@ void pixel::swap_gpu_buffer(int fps) noexcept {
 
 float pixel::gpu_avg_fps() noexcept {
     return gpu_fps;
+}
+
+jau::fraction_timespec pixel::gpu_avg_framedur() noexcept {
+    return gpu_fdur;
 }
 
 //
