@@ -51,7 +51,7 @@ float jau::next_rnd() noexcept {
     return rng_to_norm((float)rng());
 }
 
-#ifdef CLOCK_MONOTONIC_RAW
+#if defined(CLOCK_MONOTONIC_RAW) && !defined(__EMSCRIPTEN__)
     // raw skips NTP adjustments
     #define JAU_CLOCK_MONOTONIC CLOCK_MONOTONIC_RAW
 #else
