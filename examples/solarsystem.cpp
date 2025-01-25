@@ -390,7 +390,7 @@ class CBody {
 
     void tick(const fraction_timespec dt, const int64_t time_scale) {
         constexpr fraction_timespec zero;
-        constexpr fraction_timespec max_time_step(1_day);
+        constexpr fraction_timespec max_time_step(1_h);
         const fraction_timespec dt_world = dt * time_scale; // world [s]
         _time_scale_last = time_scale;
 
