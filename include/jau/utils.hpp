@@ -194,7 +194,48 @@ namespace jau {
     inline constexpr const int64_t MilliPerOne = 1000L;
     inline constexpr const int64_t NanoPerOne = NanoPerMilli*MilliPerOne;
 
-    /** Return current milliseconds, since Unix epoch. */
+    /**
+     * \ingroup Fractions
+     *
+     * Returns current monotonic time since Unix Epoch `00:00:00 UTC on 1970-01-01`.
+     *
+     * Returned fraction_timespec is passing machine precision and range of the underlying API.
+     *
+     * See fraction_timespec::to_fraction_i64() of how to measure duration in high range and precision:
+     * <pre>
+     *   fraction_timespec t0 = getMonotonicTime();
+     *   // do something
+     *
+     *   // Exact duration
+     *   fraction_timespec td_1 = getMonotonicTime() - t0;
+     *
+     *   // or for durations <= 292 years
+     *   fraction_i64 td_2 = (getMonotonicTime() - t0).to_fraction_i64();
+     * </pre>
+     *
+     * This is in stark contract to counting nanoseconds in int64_t which only lasts until `2262-04-12`,
+     * since INT64_MAX is 9'223'372'036'854'775'807 for 9'223'372'036 seconds or 292 years.
+     *
+     * Monotonic time shall be used for high-performance measurements of durations,
+     * since the underlying OS shall support fast calls.
+     *
+     * @see fraction_timespec
+     * @see fraction_timespec::to_fraction_i64()
+     */
+    fraction_timespec getMonotonicTime() noexcept;
+
+    /**
+     * Returns elapsed monotonic time using fraction_timespec since module startup,
+     * see {@link #startupTimeMonotonic} and getMonotonicTime().
+     * <pre>
+     *    return getMonotonicTime() - startupTimeMonotonic;
+     * </pre>
+     */
+    fraction_timespec getElapsedMonotonicTime() noexcept;
+
+    /**
+     * Returns current monotonic time in milliseconds.
+     */
     uint64_t getCurrentMilliseconds() noexcept;
     /** Return current milliseconds, since program launch. */
     uint64_t getElapsedMillisecond() noexcept;

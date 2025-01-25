@@ -539,7 +539,7 @@ class alien_group_t : public gobject_t {
     bool tick(const float /*dt*/) noexcept override {
         static int sound_idx = 0;
         static audio_sample_ref audio_sample = nullptr;
-        const float avg_fd = pixel::gpu_avg_framedur();
+        const float avg_fd = float( pixel::gpu_avg_framedur().to_double() );
 
         if( m_pause ) {
             return true;
@@ -778,7 +778,7 @@ class peng_t : public gobject_t {
     }
 
     bool tick(const float /*dt*/) noexcept override {
-        const float avg_fd = pixel::gpu_avg_framedur();
+        const float avg_fd = float( pixel::gpu_avg_framedur().to_double() );
         m_atex.tick(avg_fd);
         if( !box().inside(field_box) ) {
             if( m_owner == base_id ) {
@@ -1006,7 +1006,7 @@ class player_t : public gobject_t {
             if( m_base->is_killed() ) {
                 return;
             }
-            const float avg_fd = pixel::gpu_avg_framedur();
+            const float avg_fd = float( pixel::gpu_avg_framedur().to_double() );
             if( event.has_any_p2() ) {
                 if( event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
                     if(m_base->peng()){
