@@ -126,7 +126,7 @@ namespace jau {
         constexpr void clear() noexcept { tv_sec=0; tv_nsec=0; }
 
         /** Two way comparison operator */
-        constexpr bool operator==(const fraction_timespec& rhs ) noexcept {
+        constexpr bool operator==(const fraction_timespec& rhs ) const noexcept {
             return tv_sec == rhs.tv_sec && tv_nsec == rhs.tv_nsec;
         }
 
