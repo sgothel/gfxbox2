@@ -190,10 +190,6 @@ namespace jau {
     // Misc
     //
 
-    inline constexpr const int64_t NanoPerMilli = 1000000L;
-    inline constexpr const int64_t MilliPerOne = 1000L;
-    inline constexpr const int64_t NanoPerOne = NanoPerMilli*MilliPerOne;
-
     /**
      * \ingroup Fractions
      *

@@ -88,10 +88,12 @@ jau::fraction_timespec jau::getElapsedMonotonicTime() noexcept {
  * Only bfin and sh are missing, while ia64 seems to be complicated.
  */
 uint64_t jau::getCurrentMilliseconds() noexcept {
+    constexpr uint64_t ms_per_sec =     1'000UL;
+    constexpr uint64_t ns_per_ms  = 1'000'000UL;
     struct timespec t;
     ::clock_gettime(JAU_CLOCK_MONOTONIC, &t);
-    return static_cast<uint64_t>( t.tv_sec ) * (uint64_t)MilliPerOne +
-           static_cast<uint64_t>( t.tv_nsec ) / (uint64_t)NanoPerMilli;
+    return static_cast<uint64_t>( t.tv_sec ) * ms_per_sec +
+           static_cast<uint64_t>( t.tv_nsec ) / ns_per_ms;
 }
 
 uint64_t jau::getElapsedMillisecond() noexcept {
@@ -99,9 +101,12 @@ uint64_t jau::getElapsedMillisecond() noexcept {
 }
 
 void jau::milli_sleep(uint64_t td_ms) noexcept {
-    const int64_t td_ns_0 = (int64_t)( (td_ms * (uint64_t)NanoPerMilli) % (uint64_t)NanoPerOne );
+    constexpr uint64_t ms_per_sec =         1'000UL;
+    constexpr uint64_t ns_per_ms  =     1'000'000UL;
+    constexpr uint64_t ns_per_sec = 1'000'000'000UL;
+    const int64_t td_ns_0 = (int64_t)( (td_ms * ns_per_ms) % ns_per_sec );
     struct timespec ts;
-    ts.tv_sec = static_cast<decltype(ts.tv_sec)>(td_ms/(uint64_t)MilliPerOne); // signed 32- or 64-bit integer
+    ts.tv_sec = static_cast<decltype(ts.tv_sec)>(td_ms/ms_per_sec); // signed 32- or 64-bit integer
     ts.tv_nsec = td_ns_0;
     ::nanosleep( &ts, nullptr );
 }

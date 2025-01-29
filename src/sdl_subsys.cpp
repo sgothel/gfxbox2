@@ -173,12 +173,11 @@ bool pixel::is_gfx_subsystem_initialized() noexcept {
 
 bool pixel::init_gfx_subsystem(const char* exe_path, const char* title, int wwidth, int wheight, const float origin_norm[2],
                         bool enable_vsync, bool use_subsys_primitives) {
-    lookup_and_register_asset_dir(exe_path);
-
     bool exp_init_called = false;
     if( !gfx_subsystem_init_called.compare_exchange_strong(exp_init_called, true) ) {
         return gfx_subsystem_init;
     }
+    lookup_and_register_asset_dir(exe_path);
     printf("gfxbox2 version %s\n", pixel::VERSION_LONG);
 
     pixel::use_subsys_primitives_val = use_subsys_primitives;
@@ -316,7 +315,8 @@ void pixel::swap_gpu_buffer(int fps) noexcept {
         gpu_frame_count = 0;
     }
     if( 0 < fps ) {
-        const fraction_timespec fudge(0, jau::NanoPerMilli / 4); // ns granularity
+        constexpr uint64_t ns_per_ms = 1'000'000UL;
+        const fraction_timespec fudge(0, ns_per_ms / 4); // ns granularity
         const fraction_timespec td_per_frame(1.0 / fps);
         const fraction_timespec td_this_frame =  gpu_swap_t0 - gpu_swap_t1;
         const fraction_timespec td_diff = td_per_frame - td_this_frame;
