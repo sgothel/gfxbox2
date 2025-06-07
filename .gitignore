@@ -5,6 +5,8 @@ snaps/
 images/
 media/
 media_external/
+doc_copy/
+examples/*-nope
 /compile_commands.json
 *~
 *.log
