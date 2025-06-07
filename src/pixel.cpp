@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cmath>
 #include <cstdint>
+#include <cinttypes>
 #include <ctime>
 #include <string>
 #include <vector>
