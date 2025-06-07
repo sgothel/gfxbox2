@@ -25,10 +25,20 @@
 #include "pixel/pixel2f.hpp"
 #include "pixel/pixel4f.hpp"
 
+#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <ctime>
+#include <string>
+#include <vector>
+#include <sys/types.h>
 
+#include <jau/utils.hpp>
+#include "pixel/pixel.hpp"
+#include "pixel/pixel2f.hpp"
+#include "pixel/pixel4f.hpp"
+#include "pixel/Highscore.hpp"
+#include <fstream>
 using namespace jau;
 
 bool pixel::use_subsys_primitives_val = true;
@@ -641,3 +651,184 @@ std::string pixel::input_event_t::to_string() const noexcept {
         }
 
 #endif
+
+//
+// Highscore
+//
+std::vector<pixel::texture_ref> pixel::HighScore::textEntries;
+
+void pixel::HighScore::readFile(const std::string& fname){
+    std::ifstream in_file(fname, std::ios::in);
+    if( !in_file.is_open() ) {
+        if(debug_on){
+            printf("HS: failed to open %s\n", fname.c_str());
+        }
+    } else {
+        if(debug_on){
+            printf("HS: opened %s\n", fname.c_str());
+        }
+        size_t i = 0;
+        std::string line;
+        std::getline(in_file, line);
+        while( !line.empty() && i < table.size() ) {
+            if(debug_on){
+                printf("%s\n", line.c_str());
+            }
+            Entry e;
+            char sbuf[3+1];
+            std::sscanf(line.c_str(), "%3s %" PRIu32 "", &sbuf[0], &e.score);
+            e.name = std::string(sbuf);
+            table[i++] = e;
+            std::getline(in_file, line);
+        }
+    }
+}
+
+void pixel::HighScore::write_file(const std::string& fname){
+    std::ofstream out_file = std::ofstream(fname, std::ios::out | std::ios::trunc);
+    for(const Entry& e : table){
+        out_file << e.name << " " << std::to_string(e.score) << std::endl;
+    }
+}
+
+bool pixel::HighScore::addScore(const Entry& p){
+    //Entry& e = table[i];
+    if(!goodEnough(p)){
+        return false;
+    }
+    table.erase(table.end()-1);
+    for(auto it = table.begin(); it != table.end(); ++it){
+        if(p.score >= it->score){
+            table.insert(it, p);
+            return true;
+        }
+    }
+    assert(0);
+    return false;
+}
+
+size_t pixel::HighScore::find_idx(const Entry& p) const {
+    //Entry& e = table[i];
+    if(!goodEnough(p)){
+        return table.size();
+    }
+    for(size_t i = 0; i < table.size(); ++i){
+        if(p.score >= table[i].score){
+            return i;
+        }
+    }
+    assert(0);
+    return 0;
+}
+
+std::string zeichen(int a){
+    switch(a % 10){
+      case 1:
+        return "st";
+        break;
+      case 2:
+        return "nd";
+        break;
+      case 3:
+        return "rd";
+        break;
+      default:
+        return "th";
+    }
+}
+
+int pixel::HighScore::resetTextEntries(int lineno, int edit) {
+    f2::point_t tl_text = topLeft();
+    int pos = 0;
+    textEntries.clear();
+    for(size_t i = 0; i < table.size(); ++i){
+        //printf("AJKSKDJFDKJAJSKDFJJDKAJSDKFJOHJO1234567890\n");
+        pixel::HighScore::Entry e = table[i];
+        if(size_t(edit) == i){
+            textEntries.push_back(pixel::make_text(tl_text, lineno+int(i+1), m_text_color, 30, 
+            "%2.2d%s    : %d", i+1, zeichen(int(i)+1).c_str(), e.score));
+            pos = lineno+int(i+1);
+        } else {
+            textEntries.push_back(pixel::make_text(tl_text, lineno+int(i+1), m_text_color, 30, 
+            "%2.2d%s %3.3s: %d", i+1, zeichen(int(i)+1).c_str(), e.name.c_str(), e.score));       
+        }
+        //printf("ALSALALALALALALAJSJDFJDJJDJDJDJDJJDDJDJ %s\n", e.name.c_str()); 
+    }
+    return pos;
+}
+bool pixel::HighScore::enterEntry(Entry& p, pixel::input_event_t& event){
+    f2::point_t tl_text = topLeft();
+    //printf("ABC\n");
+    static char s = 'A';
+    static int b = 0;
+    static bool a = true;
+    static size_t idx = find_idx(p);
+    static std::string word;
+    textEntries.push_back(make_text(tl_text, 0, m_text_color, 40, "Insert Name"));
+    static int t = 40/30;
+    //printf("HUHU\n");
+    if(a){
+        b = 0;
+        //printf("JUHUHUHUHUHU\n");
+        if(!goodEnough(p)){
+            return true;
+        }
+        a = false;
+        //printf("TOLL\n");
+        word = "";
+    }
+    //printf("HEY, HEY DU\n");
+    std::string letter;
+    letter = s;
+    //printf("Willst du dieses unsichtbare Eis\n");
+    /*
+    for(size_t i = 0; i < table.size(); ++i){
+        //printf("AJKSKDJFDKJAJSKDFJJDKAJSDKFJOHJO1234567890\n");
+        pixel::HighScore::Entry e = table[i];
+        textEntries.push_back(pixel::make_text(tl_text, int(i+1)+t, m_text_color, 30, 
+        "%d%s %s: %dP", i+1, zeichen(int(i)+1).c_str(), e.name.c_str(), e.score));       
+        //printf("ALSALALALALALALAJSJDFJDJJDJDJDJDJJDDJDJ %s\n", e.name.c_str()); 
+    }
+    */
+    resetTextEntries(t);
+    textEntries.push_back(pixel::make_text(tl_text, t, f4::vec_t(255, 0, 0, 255), 30, 
+    "%d%s %s: %dP <-", idx+1, zeichen(int(idx)+1).c_str(), p.name.c_str(), p.score));
+    //addScore(p);
+    //textEntries[idx]-
+    if( event.pressed_and_clr( pixel::input_event_type_t::P1_RIGHT ) ) {
+        if(s == 'Z'){
+            s = 'A';
+        } else {
+            ++s;
+        }
+    } else if( event.pressed_and_clr( pixel::input_event_type_t::P1_LEFT ) ) {
+        if(s == 'A'){
+            s = 'Z';
+        } else {
+            --s;
+        }
+    } else if( event.pressed_and_clr( pixel::input_event_type_t::P2_ACTION2 ) ) {
+        ++b;
+        p.name = word;
+        p.name += letter;
+        for(int i = 0; i < 3-b; ++i){
+            p.name += "A";
+        }
+        word += letter;
+        s = 'A';
+        if(b >= 3){
+            addScore(p);
+            a = true;
+            return true;
+        }
+    }
+    return false;
+}
+
+void pixel::HighScore::showScores() const {
+    f2::point_t tl_text = pixel::f2::point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
+    std::string s;
+    textEntries.push_back(make_text(tl_text, 0, m_text_color, 40, "Highscore"));
+    static int t = 40/30;
+    (void)t; (void)s;
+}
