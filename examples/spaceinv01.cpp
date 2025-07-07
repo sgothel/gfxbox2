@@ -353,7 +353,7 @@ class sprite_t : public gobject_t {
 };
 std::vector<sprite_t> extra_sprites;
 
-class alient_t : public gobject_t {
+class barrel_t : public gobject_t {
   private:
     int m_value;
     pixel::animtex_t m_atex;
@@ -364,7 +364,7 @@ class alient_t : public gobject_t {
 
   public:
 
-    alient_t(int value, const pixel::f2::point_t& bl, pixel::animtex_t atex_alien) noexcept
+    barrel_t(int value, const pixel::f2::point_t& bl, pixel::animtex_t atex_alien) noexcept
     : m_value(value), m_atex(std::move(atex_alien)),
       m_bl( bl ), m_dim((float)m_atex.width(), (float)m_atex.height())
     { }
@@ -422,7 +422,7 @@ class alient_t : public gobject_t {
 
     pixel::animtex_t& atex() { return m_atex; }
 };
-typedef std::shared_ptr<alient_t> alien_ref;
+typedef std::shared_ptr<barrel_t> alien_ref;
 
 class alien_group_t : public gobject_t {
   private:
@@ -471,7 +471,7 @@ class alien_group_t : public gobject_t {
             // bl.x = field_box.bl.x + float( tex_alien1[0]->width - tex_alien3[0]->width )/2.0f;
             bl.x = field_box.bl.x + 1.0f;
             for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(30, bl, pixel::animtex_t("Alien3", m_sec_step_delay, tex_alien3)));
+                m_actives.emplace_back(std::make_shared<barrel_t>(30, bl, pixel::animtex_t("Alien3", m_sec_step_delay, tex_alien3)));
                 m_box.resize(m_actives[m_actives.size()-1]->box());
                 bl.x += cell_width * 1.5f;
             }
@@ -480,7 +480,7 @@ class alien_group_t : public gobject_t {
         for(int y=0; y<2; ++y) {
             bl.x = field_box.bl.x;
             for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(20, bl, pixel::animtex_t("Alien2", m_sec_step_delay, tex_alien2)));
+                m_actives.emplace_back(std::make_shared<barrel_t>(20, bl, pixel::animtex_t("Alien2", m_sec_step_delay, tex_alien2)));
                 m_box.resize(m_actives[m_actives.size()-1]->box());
                 bl.x += cell_width * 1.5f;
             }
@@ -489,7 +489,7 @@ class alien_group_t : public gobject_t {
         for(int y=0; y<2; ++y) {
             bl.x = field_box.bl.x;
             for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(10, bl, pixel::animtex_t("Alien1", m_sec_step_delay, tex_alien1)));
+                m_actives.emplace_back(std::make_shared<barrel_t>(10, bl, pixel::animtex_t("Alien1", m_sec_step_delay, tex_alien1)));
                 bl.x += cell_width * 1.5f;
             }
             bl.y -=  2.0f * cell_height;
@@ -573,7 +573,7 @@ class alien_group_t : public gobject_t {
         if( m_saucer_delay_left <= 0 ) {
             if( !m_saucer ) {
                 const uint8_t lr = next_rnd<uint8_t>(0, 1);
-                m_saucer = std::make_shared<alient_t>(90, lr ? saucer_rpos : saucer_lpos, pixel::animtex_t("Saucer", 1.0f, tex_saucer));
+                m_saucer = std::make_shared<barrel_t>(90, lr ? saucer_rpos : saucer_lpos, pixel::animtex_t("Saucer", 1.0f, tex_saucer));
                 m_saucer_velo = { saucer_velo.x * ( lr ? -1.0f : +1.0f), 0 };
                 audio_saucer->play(1);
                 // pixel::log_printf("XX saucer: lr %u, velo %s, bl %s\n", lr, m_saucer_velo.toString().c_str(), m_saucer->pos().toString().c_str());
@@ -817,7 +817,7 @@ static void reset_items() {
     pengs.clear();
 }
 
-class base_t : public gobject_t {
+class hero_t : public gobject_t {
     public:
         constexpr static const float height = base_height; // [m]
 
@@ -849,7 +849,7 @@ class base_t : public gobject_t {
     public:
         int peng_inventory;
 
-        base_t(const pixel::f2::point_t& bl) noexcept
+        hero_t(const pixel::f2::point_t& bl) noexcept
         : m_atex(pixel::animtex_t("peng", 1.0f, tex_base)), m_bl(bl),
           m_dim((float)tex_base[0]->width, (float)tex_base[0]->height),
           m_killed(false),
@@ -913,12 +913,12 @@ class base_t : public gobject_t {
             }
         }
 };
-typedef std::shared_ptr<base_t> base_ref_t;
+typedef std::shared_ptr<hero_t> base_ref_t;
 
 class player_t : public gobject_t {
     private:
         int m_lives;
-        base_ref_t m_base;
+        base_ref_t m_hero;
         constexpr static int start_live = 3;
         float m_respawn_timer;
         int m_score;
@@ -938,24 +938,24 @@ class player_t : public gobject_t {
                 return;
             }
             m_respawn_timer = 0;
-            m_base = std::make_shared<base_t>(base_start_pos_bl());
+            m_hero = std::make_shared<hero_t>(base_start_pos_bl());
             alien_group.set_pause(false);
         }
 
     public:
         player_t() noexcept
         : m_lives(start_live),
-          m_base(nullptr), m_respawn_timer(0), m_score(0), shoot_number(0)
+          m_hero(nullptr), m_respawn_timer(0), m_score(0), shoot_number(0)
         { respawn_base(); }
 
         /// Returns bottom-left position
-        pixel::f2::point_t pos() const noexcept override { return m_base->pos(); }
+        pixel::f2::point_t pos() const noexcept override { return m_hero->pos(); }
 
-        pixel::f2::aabbox_t box() const noexcept override { return m_base->box(); }
+        pixel::f2::aabbox_t box() const noexcept override { return m_hero->box(); }
 
-        bool on_screen() const noexcept override { return m_base->on_screen(); }
+        bool on_screen() const noexcept override { return m_hero->on_screen(); }
 
-        bool intersection(const pixel::f2::aabbox_t& o) const noexcept override { return m_base->intersection(o); }
+        bool intersection(const pixel::f2::aabbox_t& o) const noexcept override { return m_hero->intersection(o); }
 
         void reset() noexcept {
             m_score = 0;
@@ -964,29 +964,29 @@ class player_t : public gobject_t {
         }
 
         void next_level(){
-            if(!m_base){
+            if(!m_hero){
                 respawn_base();
             } else {
-                m_base->reset(base_start_pos_bl());
+                m_hero->reset(base_start_pos_bl());
             }
         }
 
-        bool is_killed() const noexcept { return m_base->is_killed(); }
+        bool is_killed() const noexcept { return m_hero->is_killed(); }
         constexpr int lives() const noexcept { return m_lives; }
 
-        int peng_inventory() const noexcept { return m_base->peng_inventory; }
-        base_ref_t& base() noexcept { return m_base; }
+        int peng_inventory() const noexcept { return m_hero->peng_inventory; }
+        base_ref_t& base() noexcept { return m_hero; }
         constexpr int score() const noexcept { return m_score; }
         void peng_completed(const peng_t& p) noexcept {
             if(!is_killed())  {
-                ++m_base->peng_inventory;
+                ++m_hero->peng_inventory;
             }
             add_score(p.alien_hit_value());
         }
         void add_score(int diff) noexcept { m_score += diff; }
 
         bool tick(const float dt) noexcept override {
-            if( !m_base->tick(dt) ) {
+            if( !m_hero->tick(dt) ) {
                 base_dtor();
             }
             if( m_respawn_timer > 0 ) {
@@ -998,27 +998,27 @@ class player_t : public gobject_t {
             return true;
         }
         void draw() noexcept override {
-            m_base->draw();
+            m_hero->draw();
         }
         void handle_event0() noexcept {
         }
         void handle_event1(const float /* dt [s] */) noexcept {
-            if( m_base->is_killed() ) {
+            if( m_hero->is_killed() ) {
                 return;
             }
             const float avg_fd = float( pixel::gpu_avg_framedur().to_double() );
             if( event.has_any_p2() ) {
                 if( event.pressed_and_clr(pixel::input_event_type_t::P2_ACTION2) ) {
-                    if(m_base->peng()){
+                    if(m_hero->peng()){
                         ++shoot_number;
                     }
                 }
             }
             if( event.has_any_p1() ) {
                 if( event.pressed(pixel::input_event_type_t::P1_LEFT) ){
-                    m_base->move( { -base_velo_h * avg_fd, 0 } );
+                    m_hero->move( { -base_velo_h * avg_fd, 0 } );
                 } else if( event.pressed(pixel::input_event_type_t::P1_RIGHT) ){
-                    m_base->move( { base_velo_h * avg_fd, 0 } );
+                    m_hero->move( { base_velo_h * avg_fd, 0 } );
                 }
             }
         }
@@ -1201,7 +1201,7 @@ void mainloop() {
             const float h = screen_height - 2;
             const pixel::f2::aabbox_t box = player->base()->box();
             pixel::f2::rect_t r2( {-w/2.0f, +h/2.0f }, w, h);
-            base_t l = { { r2.m_bl.x + abstand_zsl*(float)(i + 1) +
+            hero_t l = { { r2.m_bl.x + abstand_zsl*(float)(i + 1) +
                            box.width()*(float)i + box.width()/2,
                            r2.m_bl.y + abstand_zsl}};
             l.draw();
