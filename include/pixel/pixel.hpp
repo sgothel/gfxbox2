@@ -701,14 +701,14 @@ namespace pixel {
     class animtex_t {
         private:
             std::string m_name;
-            std::vector<texture_ref> m_textures;
 
             float m_sec_per_atex;
             float m_atex_sec_left;
-            size_t m_animation_index;
             bool m_paused;
+            size_t m_animation_index;
 
         public:
+            std::vector<texture_ref> m_textures;
             animtex_t(std::string name, float sec_per_atex, const std::vector<texture_ref>& textures) noexcept;
 
             animtex_t(std::string name, float sec_per_atex, const std::vector<const char*>& filenames) noexcept;
@@ -727,7 +727,7 @@ namespace pixel {
             ~animtex_t() noexcept {
                 clear();
             }
-
+            size_t& anim_idx() { return m_animation_index; }
             void clear() noexcept { m_textures.clear(); m_sec_per_atex=0; m_atex_sec_left=0; m_animation_index=0; m_paused=true; }
 
             const texture_ref texture(const size_t idx) const noexcept { return idx < m_textures.size() ? m_textures[idx] : nullptr; }
