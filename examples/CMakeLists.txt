@@ -4,10 +4,11 @@ include_directories(
 
 # These examples use the standard separate compilation
 if (DEFINED EMSCRIPTEN)
-    set(SOURCES_IDIOMATIC_TARGETS "spacewars.cpp;spaceinv01.cpp;canonball.cpp;piviz.cpp;freefall01.cpp;pong01.cpp;tron.cpp;sandbox01.cpp;solarsystem.cpp;example01.cpp")
+    set(SOURCES_IDIOMATIC_TARGETS "spacewars.cpp;spaceinv01.cpp;canonball.cpp;piviz.cpp;freefall01.cpp;pong01.cpp;tron.cpp;sandbox01.cpp;solarsystem.cpp;example01.cpp;Stau.cpp")
 else()
-    file(GLOB SOURCES_IDIOMATIC_TARGETS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.cpp")
-#    set(SOURCES_IDIOMATIC_TARGETS "spacewars.cpp;spaceinv01.cpp;canonball.cpp;solarsystem.cpp")
+#    file(GLOB SOURCES_IDIOMATIC_TARGETS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.cpp")
+    set(SOURCES_IDIOMATIC_TARGETS "spacewars.cpp;spaceinv01.cpp;canonball.cpp;solarsystem.cpp;tron.cpp;car.cpp")
+#    set(SOURCES_IDIOMATIC_TARGETS "spacewars.cpp;spaceinv01.cpp;mymario.cpp;fangseil.cpp")
 endif()
 
 string( REPLACE ".cpp" "" BASENAMES_IDIOMATIC_TARGETS "${SOURCES_IDIOMATIC_TARGETS}" )
@@ -49,5 +50,5 @@ endforeach()
 install(TARGETS ${SDL_TARGETS_IDIOMATIC_TARGETS} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${SDL_TARGETS_IDIOMATIC_FILES} DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-add_subdirectory (funcdraw)
-add_subdirectory (pacman)
+# add_subdirectory (funcdraw)
+# add_subdirectory (pacman)
