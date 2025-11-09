@@ -27,14 +27,15 @@ class Motorrad : public pixel::f2::linestrip_t {
 public:
     const pixel::f2::point_t sp;
     float angle;
+    float start_angle;
     float velo;
     pixel::f2::point_t head;
     pixel::f2::point_t last;
     pixel::f2::point_t last_last;
     pixel::f2::disk_t body;
 
-    Motorrad(pixel::f2::point_t sp_)
-    : sp(sp_), body(head, 5)
+    Motorrad(pixel::f2::point_t sp_, float a)
+    : sp(sp_), start_angle(a), body(head, 5) 
     {
         reset();
     }
@@ -76,7 +77,7 @@ public:
         body.center = head;
         p_list.clear();
         p_list.push_back(last_last);
-        angle = M_PI_2;
+        angle = start_angle;
         velo = 2.0f / 0.016f; // 2 pixel pro 16 ms
     }
 

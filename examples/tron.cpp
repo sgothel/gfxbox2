@@ -13,13 +13,13 @@
 
 void mainloop() {
     static const pixel::f4::vec_t text_color(0.5f, 0.5f, 0.5f, 1.0f);
-    static const float ax1 = pixel::cart_coord.min_x() + 3 * pixel::cart_coord.width() / 4;
-    static const float ax2 = pixel::cart_coord.min_x() + pixel::cart_coord.width() / 4;
-    static const float ay1 = pixel::cart_coord.min_y() + 100;
+    static const float ax1 = pixel::cart_coord.min_x() + 50;
+    static const float ax2 = pixel::cart_coord.max_x() - 50;
+    static const float ay1 = 0;
     static const int text_height = 24;
 
-    static Tron::Motorrad p1(pixel::f2::point_t(ax2, ay1));
-    static Tron::Motorrad p2(pixel::f2::point_t(ax1, ay1));
+    static Tron::Motorrad p1(pixel::f2::point_t(ax1, ay1), 0);
+    static Tron::Motorrad p2(pixel::f2::point_t(ax2, ay1), M_PI);
     static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static int a1 = 0;
     static int a2 = 0;
@@ -93,6 +93,7 @@ void mainloop() {
         if(!p1.body.on_screen()){
             //  std::cout << "Exited P1: " << p1.toString() << std::endl;
             p1.reset();
+            p2.reset();
             a2 += 100;
         }
 
@@ -100,6 +101,7 @@ void mainloop() {
             if( p1.intersects(p2) ) {
                 //     std::cout << "Crash P1: " << p1.toString() << std::endl;
                 p1.reset();
+                p2.reset();
                 a2 += (int)p2.velo;
             }
         }
@@ -107,6 +109,7 @@ void mainloop() {
         if(!p2.body.on_screen()){
             //   std::cout << "Exited P2: " << p2.toString() << std::endl;
             p2.reset();
+            p1.reset();
             a1 += 100;
         }
 
@@ -114,6 +117,7 @@ void mainloop() {
             if( p2.intersects(p1) ) {
                 //  std::cout << "Crash P2: " << p2.toString() << std::endl;
                 p2.reset();
+                p1.reset();
                 a1 += (int)p1.velo;
             }
         }
