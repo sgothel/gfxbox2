@@ -344,8 +344,10 @@ pixel::texture_ref pixel::make_text(const pixel::f2::point_t& tl, const int line
     tex->dest_sx = (float)font_height_usr / (float)font_height;
     tex->dest_sy = (float)font_height_usr / (float)font_height;
     tex->dest_x = pixel::cart_coord.to_fb_x(tl.x);
+    const float fh2 = pixel::cart_coord.from_fb_dy(font_height_usr);
     tex->dest_y = pixel::cart_coord.to_fb_y(
-            tl.y - std::round((float)lineno * tex->dest_sy * (float)font_height * 1.15f));
+            tl.y - std::round((float)lineno * fh2 * 1.15f));
+//          tl.y - std::round((float)lineno * tex->dest_sy * (float)font_height * 1.15f));
     return tex;
 }
 
