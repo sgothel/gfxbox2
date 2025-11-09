@@ -99,6 +99,7 @@
 
 <span id='controls'>
   <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
+  <span><input type="checkbox" id="Asteroid" onclick="setAsteroid(this.checked)">asteroid</span>
   <span><input type="checkbox" id="DataStop" onclick="setDataStop(this.checked)">data-stop</span>
   <span><input type="checkbox" id="AllOrbits" onclick="setDrawAllOrbits(this.checked)">all-orbits</span>
   <span><input type="checkbox" id="ShowVelo" onclick="setShowVelo(this.checked)">velo-vec</span>
@@ -142,7 +143,7 @@
       var progressElement = document.getElementById('progress');
       var spinnerElement = document.getElementById('spinner');
       var wasm_set_showvelo, wasm_set_forced_fps, wasm_set_window_size;
-      var wasm_set_draw_all_orbits, wasm_set_data_stop;
+      var wasm_set_draw_all_orbits, wasm_set_data_stop, wasm_set_asteroid;
 
       var Module = {
         onRuntimeInitialized: function() {
@@ -151,6 +152,7 @@
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
             wasm_set_draw_all_orbits = Module.cwrap('set_draw_all_orbits', 'null', ['boolean'])
             wasm_set_data_stop = Module.cwrap('set_data_stop', 'null', ['boolean'])
+            wasm_set_asteroid = Module.cwrap('set_asteroid', 'null', ['boolean'])
             maximizeCanvas();
         },
         preRun: [],
@@ -222,6 +224,11 @@
       function setDataStop(v) {
           if( null != wasm_set_data_stop ) {
               wasm_set_data_stop(v);
+          }
+      }
+      function setAsteroid(v) {
+          if( null != wasm_set_asteroid ) {
+              wasm_set_asteroid(v);
           }
       }
       function setShowVelo(v) {

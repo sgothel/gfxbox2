@@ -84,12 +84,6 @@ static void set_colorinv(bool v) noexcept {
     vec4_text_color1 = f4::vec_t(lum1, lum1, lum1, 1.0f);
 }
 
-extern "C" {
-    EMSCRIPTEN_KEEPALIVE void set_draw_all_orbits(bool v) noexcept { draw_all_orbits = v; }
-    EMSCRIPTEN_KEEPALIVE void set_data_stop(bool v) noexcept { ref_cbody_stop = v; }
-    EMSCRIPTEN_KEEPALIVE void set_showvelo(bool v) noexcept { show_cbody_velo = v; }
-}
-
 enum class cbodyid_t : size_t {
     none = std::numeric_limits<size_t>::max(),
     sun = 0,
@@ -419,12 +413,36 @@ class CBody {
 };
 
 static cbodyid_t info_id = cbodyid_t::earth;
-std::vector<f2::point_t> pl;
-std::vector<f2::point_t> ipl;
 bool tick_ts_down = false;
 static std::string record_bmpseq_basename;
 static FILE* stats_file = nullptr;
+static int64_t tick_ts = 1_month;
+static CBodyRef selPlanetNextPos = nullptr;
+static ssize_t selPlanetNextPosDataSetIdx = -1;
+static cbodyid_t selPlanetNextPosCBodyID = info_id;
 
+void reset() {
+    _global_scale = 20;
+    info_id = cbodyid_t::earth;
+    max_planet_id = cbodyid_t::mars;
+    space_height = cbodies[number(max_planet_id)]->space_height();
+    pixel::cart_coord.set_height(-space_height, space_height);
+    tick_ts = 1_month;
+    cbodies.clear();
+    selPlanetNextPos = nullptr;
+    selPlanetNextPosDataSetIdx = -1;
+    selPlanetNextPosCBodyID = info_id;
+    for(size_t i = 0; i <= number(cbodyid_t::pluto); ++i){
+        CBodyRef cb = std::make_shared<CBody>( static_cast<cbodyid_t>( i ) );
+        cbodies.push_back(cb);
+        printf("%s\n", cb->toString().c_str());
+    }
+    if(with_oobj) {
+        CBodyRef cb = std::make_shared<CBody>( cbodyid_t::oobj );
+        cbodies.push_back(cb);
+        printf("%s\n", cb->toString().c_str());
+    }
+}
 void mainloop() {
     // scale_all_numbers(0.000001f);
     static pixel::texture_ref hud_text;
@@ -432,11 +450,7 @@ void mainloop() {
     static int64_t frame_count_total = 0;
     static int64_t snap_count = 0;
     static pixel::input_event_t event;
-    static int64_t tick_ts = 1_month;
     static bool animating = true;
-    static CBodyRef selPlanetNextPos = nullptr;
-    static ssize_t selPlanetNextPosDataSetIdx = -1;
-    static cbodyid_t selPlanetNextPosCBodyID = info_id;
     static fraction_timespec ref_cbody_t0;
     const f2::point_t tl_text(cart_coord.min_x(), cart_coord.max_y());
     bool do_snapshot = false;
@@ -447,7 +461,6 @@ void mainloop() {
         t_start = t1;
         t_last = t_start;
     }
-
     while (pixel::handle_one_event(event)) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -466,28 +479,7 @@ void mainloop() {
         }
         // constexpr const float rot_step = 10.0f; // [ang-degrees / s]
         if( event.released_and_clr(input_event_type_t::RESET) ) {
-            _global_scale = 20;
-            info_id = cbodyid_t::earth;
-            max_planet_id = cbodyid_t::mars;
-            space_height = cbodies[number(max_planet_id)]->space_height();
-            pixel::cart_coord.set_height(-space_height, space_height);
-            tick_ts = 1_month;
-            pl.clear();
-            ipl.clear();
-            cbodies.clear();
-            selPlanetNextPos = nullptr;
-            selPlanetNextPosDataSetIdx = -1;
-            selPlanetNextPosCBodyID = info_id;
-            for(size_t i = 0; i <= number(cbodyid_t::pluto); ++i){
-                CBodyRef cb = std::make_shared<CBody>( static_cast<cbodyid_t>( i ) );
-                cbodies.push_back(cb);
-                printf("%s\n", cb->toString().c_str());
-            }
-            if(with_oobj) {
-                CBodyRef cb = std::make_shared<CBody>( cbodyid_t::oobj );
-                cbodies.push_back(cb);
-                printf("%s\n", cb->toString().c_str());
-            }
+            reset();
         } else if( event.released_and_clr(pixel::input_event_type_t::F12) ) {
             do_snapshot = true;
         }
@@ -516,7 +508,6 @@ void mainloop() {
                         reset_space_height = true;
                         if(info_id > max_planet_id){
                             info_id = max_planet_id;
-                            pl.clear();
                         }
                     }
                 }
@@ -845,4 +836,11 @@ int main(int argc, char *argv[])
             ::fclose(stats_file);
         }
     #endif
+}
+
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_draw_all_orbits(bool v) noexcept { draw_all_orbits = v; }
+    EMSCRIPTEN_KEEPALIVE void set_data_stop(bool v) noexcept { ref_cbody_stop = v; }
+    EMSCRIPTEN_KEEPALIVE void set_asteroid(bool v) noexcept { with_oobj = v; reset(); }
+    EMSCRIPTEN_KEEPALIVE void set_showvelo(bool v) noexcept { show_cbody_velo = v; }
 }
