@@ -171,6 +171,10 @@ else()
     set(EMS_FLAGS ${EMS_FLAGS} "SHELL:-s STACK_OVERFLOW_CHECK=1") # cheap cockie magic, enables CHECK_NULL_WRITES
     #
     # set(EMS_EXE_LD_FLAGS ${EMS_FLAGS}) "SHELL:-s SIDE_MODULE=1")
+    #
+    # iOS 18 Safari issue?
+    set(EMS_FLAGS ${EMS_FLAGS} "-fexceptions")
+    #
     if(DEBUG)
         set(EMS_FLAGS ${EMS_FLAGS} "-g" "-DDEBUG")
         # set(EMS_FLAGS ${EMS_FLAGS} "-g" "-gsource-map" "-DDEBUG")
