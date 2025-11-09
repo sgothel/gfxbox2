@@ -640,6 +640,12 @@ namespace pixel::f2 {
             p1 += l_move_diff;
         }
 
+        lineseg_t move(const vec_t& v) noexcept {
+            p0.add(v.x, v.y);
+            p1.add(v.x, v.y);
+            return *this;
+        }
+
         std::string toString() const noexcept override { return "L[" + p0.toString() + ", " + p1.toString() + "]"; }
 
         bool on_screen() const noexcept override {
