@@ -937,7 +937,7 @@ class player_t : public idscore_t {
         void draw() const noexcept {
             if( m_ship != nullptr) {
                 if(m_cloak){
-                    pixel::set_pixel_color(0.5f, 0.5f, 0.5f, 0.5f);
+                    pixel::set_pixel_color4f(0.5f, 0.5f, 0.5f, 0.5f);
                 }
             
                 m_ship->draw();
