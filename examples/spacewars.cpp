@@ -52,6 +52,7 @@ static const pixel::f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f
 static bool debug_gfx = false;
 static bool show_ship_velo = false;
 static bool cloak_enabled = false;
+static bool draw_grip = false;
 
 class idscore_t {
     public:
@@ -578,7 +579,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
         }
 
         void draw() const noexcept override {
-            pixel::set_pixel_color(rgba_white);
+            //pixel::set_pixel_color(rgba_white);
             if( m_shield ) {
                 shield_body.draw(false);
             }
@@ -778,6 +779,8 @@ class player_t : public idscore_t {
         constexpr static const pixel::f2::point_t p0_ss1 = {  6 * spaceship_height,  6 * spaceship_height };
         constexpr static const pixel::f2::point_t p0_ss2 = { -6 * spaceship_height, -6 * spaceship_height };
         constexpr static const pixel::f2::point_t p0_ss3 = {  6 * spaceship_height, -6 * spaceship_height };
+        bool cloak_shot = false;
+        float cloak_shot_timer = 0.0f;
         float m_respawn_timer;
         spaceship_ref_t m_ship;
         bool m_cloak;
@@ -932,27 +935,37 @@ class player_t : public idscore_t {
                     respawn_ship();
                 }
             }
+            cloak_shot_timer += dt;
+            if(cloak_shot && cloak_shot_timer > 1.0f) {
+                cloak_shot = false;
+            }
             return true;
         }
         void draw() const noexcept {
             if( m_ship != nullptr) {
-                if(m_cloak){
-                    pixel::set_pixel_color4f(0.5f, 0.5f, 0.5f, 0.5f);
+                if(m_cloak && !cloak_shot){
+                    pixel::set_pixel_color4f(0.2f, 0.2f, 0.2f, 0.2f);
+                } else {
+                    pixel::set_pixel_color4f(1.0f, 1.0f, 1.0f, 1.0f);
                 }
-            
                 m_ship->draw();
             }
+            
         }
         void handle_event0() noexcept {
             if( nullptr != m_ship && event.has_any_pn(id()) ) {
                 if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION1)) ) {
                     m_ship->peng();
+                    cloak_shot = true;
+                    cloak_shot_timer = 0.0f;
                 } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION2)) ) {
                     m_ship->set_orbit_velocity();
                 } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION3)) ) {
                     set_cloak(!cloak());
                 } else if( event.pressed(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION4))) {
                     m_ship->mine();
+                    cloak_shot = true;
+                    cloak_shot_timer = 0.0f;
                 }
             }
         }
@@ -987,8 +1000,9 @@ void mainloop() {
 
     static uint64_t frame_count_total = 0;
     static uint64_t t_last = getElapsedMillisecond(); // [ms]
-    static const int text_height = 24;
+    static const int text_height = 35;
     static bool animating = true;
+    static float grip = 50;
 
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
@@ -1092,6 +1106,9 @@ void mainloop() {
     }
     pixel::clear_pixel_fb(0, 0, 0, 255);
 
+    if(draw_grip){
+        pixel::draw_grid(grip, 255, 0, 0, 255, 255, 255, 255, 255);
+    }
     // Draw all objects
     pixel::set_pixel_color(rgba_white);
     p1.draw();
@@ -1101,6 +1118,7 @@ void mainloop() {
     if(2 < player_count) {
         p3.draw();
     }
+    pixel::set_pixel_color(rgba_white);
     for(fragment_ref_t &a : fragments) {
         a->draw();
     }
@@ -1207,6 +1225,8 @@ int main(int argc, char *argv[])
                 cloak_enabled = true;
             } else if( 0 == strcmp("-soft_prim", argv[i]) ) {
                 use_subsys_primitives = false;
+            } else if( 0 == strcmp("-draw_grip", argv[i]) ) {
+                draw_grip = true;
             }
         }
     }
