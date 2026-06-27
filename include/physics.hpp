@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <algorithm>
 #include <vector>
 #include <cctype>
 
@@ -408,10 +409,6 @@ namespace physiks {
                     return true;
                 }
             }
-        }
-
-        void draw(const bool filled) const noexcept {
-            disk_t::draw(filled);
         }
     };
 };

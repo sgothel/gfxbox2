@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <bits/types/siginfo_t.h>
-#include <c++/12/numbers>
 #include <csignal>
 #include <cstddef>
 #include <cstdint>

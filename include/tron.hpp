@@ -286,7 +286,9 @@ public:
         }
     }
 
-    bool on_screen(){ return body.on_screen(); }
+    bool on_screen() const noexcept override {
+        return body.on_screen();
+    }
 
     void changeSpeed(float a){
         velo *= a;
