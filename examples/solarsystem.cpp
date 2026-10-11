@@ -340,9 +340,6 @@ class CBody {
     }
 
     void sub_tick(const fraction_timespec& dt, const fraction_timespec& wts) {
-        if( _id == cbodyid_t::sun && !with_oobj) {
-            return;
-        }
         const float dt_f = (float)dt.to_us()/1000000.0f;
         for( const CBodyRef& cb : cbodies ) {
             if( this != cb.get() ) {
@@ -354,8 +351,16 @@ class CBody {
                 _velo += g * dt_f;
             }
         }
-        _center += _velo * dt_f;
-
+        const auto ds = _velo * dt_f;
+        if( _id == cbodyid_t::sun ) {
+            for(const CBodyRef& cb : cbodies) {
+                if(cb && cb->_id != cbodyid_t::sun){
+                    cb->_center -= ds;
+                }
+            }
+        } else {
+            _center += ds;
+        }
         const fraction_timespec orbit_th(color_inverse ? 0 : 1_day);
         if( wts - _orbit_world_time_last > orbit_th ) {
             _orbit_points.emplace_back(_center.x, _center.y);
