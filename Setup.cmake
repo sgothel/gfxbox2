@@ -41,7 +41,7 @@ else()
 endif()
 
 # for all
-set (CMAKE_CXX_STANDARD 20)
+set (CMAKE_CXX_STANDARD 23)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(cxx_clangd_flags "-pedantic, -pedantic-errors, -Wall, -Wextra, -Werror, -DDEBUG, -std=c++20")
