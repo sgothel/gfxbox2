@@ -298,7 +298,7 @@ namespace pixel::f2 {
     }
 
     constexpr bool operator==(const vec_t& lhs, const vec_t& rhs ) noexcept {
-        return jau::is_zero(lhs.x - rhs.x) && jau::is_zero(lhs.x - rhs.x);
+        return jau::is_zero(lhs.x - rhs.x) && jau::is_zero(lhs.y - rhs.y);
     }
     /** TODO
     constexpr bool operator<=>(const vec_t& lhs, const vec_t& rhs ) noexcept {
