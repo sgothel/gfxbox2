@@ -46,6 +46,12 @@ namespace jau {
     typedef float si_gravityparam_f32;
     /** Angle in fraction of radians. */
     typedef float si_angle_f32;
+    /** Volume in fraction of meter^3. */
+    typedef float si_volume_f32;
+    /** Area in fraction of meter^2. */
+    typedef float si_area_f32;
+    /** Power in fraction of kg*m/s^2(N). */
+    typedef float si_power_f32;
 
     /** Time in fractions of seconds. */
     typedef double si_time_f64;
@@ -61,6 +67,12 @@ namespace jau {
     typedef double si_gravityparam_f64;
     /** Angle in fraction of radians. */
     typedef double si_angle_f64;
+    /** Volume in fraction of meter^3. */
+    typedef double si_volume_f64;
+    /** Area in fraction of meter^2. */
+    typedef double si_area_f64;
+    /** Power in fraction of kg*m/s^2(N). */
+    typedef double si_power_f64;
 
     namespace si_f32_literals {
         constexpr si_time_f32 operator ""_year(unsigned long long int __v)   { return (si_time_f32)__v*365.25f*24.0f*3600.0f; }
@@ -104,6 +116,24 @@ namespace jau {
         constexpr si_angle_f32 operator ""_rad(long double __v)   { return (si_angle_f32)__v; }
         constexpr si_angle_f32 operator ""_deg(long double __v)   { return (si_angle_f32)(__v / 180.0 * std::numbers::pi_v<long double>); }
 
+        constexpr si_volume_f32 operator ""_km3(unsigned long long int __v)   { return (si_volume_f32)__v*1'000'000'000.0f; }
+        constexpr si_volume_f32 operator ""_m3(unsigned long long int __v)   { return (si_volume_f32)__v; }
+        constexpr si_volume_f32 operator ""_dm3(unsigned long long int __v)   { return (si_volume_f32)__v/1000.0f; }
+        constexpr si_volume_f32 operator ""_cm3(unsigned long long int __v)   { return (si_volume_f32)__v/1'000'000.0f; }
+        constexpr si_volume_f32 operator ""_mm3(unsigned long long int __v)   { return (si_volume_f32)__v/1'000'000'000.0f; }
+        constexpr si_volume_f32 operator ""_l(unsigned long long int __v)   { return (si_volume_f32)__v/1000.0f; }
+        constexpr si_volume_f32 operator ""_ml(unsigned long long int __v)   { return (si_volume_f32)__v/1'000'000.0f; }
+
+        constexpr si_area_f32 operator ""_km2(unsigned long long int __v)   { return (si_area_f32)__v*1'000'000.0f; }
+        constexpr si_area_f32 operator ""_ha(unsigned long long int __v)   { return (si_area_f32)__v*10'000.0f; }
+        constexpr si_area_f32 operator ""_a(unsigned long long int __v)   { return (si_area_f32)__v*100.0f; }
+        constexpr si_area_f32 operator ""_m2(unsigned long long int __v)   { return (si_area_f32)__v; }
+        constexpr si_area_f32 operator ""_dm2(unsigned long long int __v)   { return (si_area_f32)__v/100.0f; }
+        constexpr si_area_f32 operator ""_cm2(unsigned long long int __v)   { return (si_area_f32)__v/10'000.0f; }
+        constexpr si_area_f32 operator ""_mm2(unsigned long long int __v)   { return (si_area_f32)__v/1'000'000.0f; }
+
+        constexpr si_power_f32 operator ""_N(unsigned long long int __v)   { return (si_power_f32)__v; }
+        constexpr si_power_f32 operator ""_mN(unsigned long long int __v)   { return (si_power_f32)__v/1000; }
     }
     namespace si_f64_literals {
         constexpr si_time_f64 operator ""_year(unsigned long long int __v)   { return (si_time_f64)__v*365.25*24.0*3600.0; }
@@ -146,6 +176,17 @@ namespace jau {
 
         constexpr si_angle_f64 operator ""_rad(long double __v)   { return (si_angle_f64)__v; }
         constexpr si_angle_f64 operator ""_deg(long double __v)   { return (si_angle_f64)(__v / 180.0 * std::numbers::pi_v<long double>); }
+
+        constexpr si_length_f64 operator ""_km3(unsigned long long int __v)   { return (si_length_f64)__v*1'000'000'000.0f; }
+        constexpr si_length_f64 operator ""_m3(unsigned long long int __v)   { return (si_length_f64)__v; }
+        constexpr si_length_f64 operator ""_dm3(unsigned long long int __v)   { return (si_length_f64)__v/1000.0f; }
+        constexpr si_length_f64 operator ""_cm3(unsigned long long int __v)   { return (si_length_f64)__v/1'000'000.0f; }
+        constexpr si_length_f64 operator ""_mm3(unsigned long long int __v)   { return (si_length_f64)__v/1'000'000'000.0f; }
+        constexpr si_length_f64 operator ""_l(unsigned long long int __v)   { return (si_length_f64)__v/1000.0f; }
+        constexpr si_length_f64 operator ""_ml(unsigned long long int __v)   { return (si_length_f64)__v/1'000'000.0f; }
+
+        constexpr si_power_f64 operator ""_N(unsigned long long int __v)   { return (si_power_f64)__v; }
+        constexpr si_power_f64 operator ""_mN(unsigned long long int __v)   { return (si_power_f64)__v/1000; }
     }
 }
 
