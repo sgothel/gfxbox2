@@ -348,7 +348,7 @@ class peng_t {
         if( !m_peng.on_screen() ) {
             return false;
         }
-        if(!m_velo.is_zero()){
+        if(!m_velo.is_zero() || m_fuse2 < 0){
             pixel::f2::vec_t g = sun->gravity_env(m_peng.p_center);
             m_velo += g * dt;
             m_peng.move( m_velo * dt );
@@ -358,7 +358,7 @@ class peng_t {
         }
         m_peng.rotate(std::numbers::pi_v<float> * dt); // 180 degrees (180_deg)
         m_fuse = std::max(0.0f, m_fuse - dt);
-        return m_fuse2 > 0 && !sun->hit( m_peng.p_center ) &&
+        return !sun->hit( m_peng.p_center ) &&
                !hits_fragment();
     }
     bool armed() const noexcept { return is_zero(m_fuse); }
