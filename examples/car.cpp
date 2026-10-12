@@ -350,38 +350,57 @@ void make_bahnhoefe(){
 }
 */
 
+std::vector<f2::rect_t> TunnelsLicet;
+
 class Tunnel {
   private:
-  public:
     constexpr static uint8_t m_tex_height = 2;
     
+    bool m_d2Setted;
+    si_length_f32 m_length;
     size_t m_id;
+    
+  public:
     f2::disk_t d1;
     f2::disk_t d2;
-    Tunnel(const size_t id, f2::point_t p0, f2::point_t p1, const si_length_f32 d)
-    : m_id(id), d1(p0, d/2), d2(p1, d/2) {}
+    
+    Tunnel(const size_t id, f2::point_t p0, const si_length_f32 d)
+    : m_d2Setted(false), m_length(0), m_id(id), d1(p0, d/2), d2() { }
     Tunnel()               = default;
     Tunnel(const Tunnel &) = default;
     Tunnel(Tunnel &&)      = default;
-    Tunnel& operator=(const Tunnel& o) {
-        m_id = o.m_id;
-        d1 = o.d1;
-        d2 = o.d2;
-        return *this;
+    Tunnel& operator=(const Tunnel& o) = default;
+    
+    bool addToLength(const si_length_f32 l) { if (!m_d2Setted) { m_length += l; return true; } return false; }
+    const si_length_f32& length() const noexcept { return m_length; }
+    size_t id() const noexcept { return m_id; }
+    
+    void setD2(f2::point_t c) {
+        d2 = f2::disk_t(c, d1.radius);
+        m_d2Setted = true;
+        printf("Tunnel[%zu]: length %f, from %s to %s\n", m_id, m_length, d1.center.toString().c_str(), d2.center.toString().c_str());
     }
+    
     void draw() {
         d1.draw(false);
-        d2.draw(false);
+        if(m_d2Setted) {
+            d2.draw(false);
+        }
         {
             f2::point_t tl_tex = d1.box().bl;
             pixel::texture_ref tex = make_text2(tl_tex, 0, {0, 0, 0, 255}, text_height, "%d", m_id);
             tex->draw_fbcoord(0, 0);
         }
-        {
+        if(m_d2Setted) {
             f2::point_t tl_tex = d2.box().bl;
             pixel::texture_ref tex = make_text2(tl_tex, 0, {0, 0, 0, 255}, text_height, "%d", m_id);
             tex->draw_fbcoord(0, 0);
         }
+    }
+    
+    std::string toString() {
+        return to_string("tunnel[%zu]: length %f, from %s to %s", 
+            m_id, m_length, d1.center.toString().c_str(), d2.center.toString().c_str());
     }
 };
 
@@ -395,13 +414,16 @@ class Car {
         cart_coord.min_x() +     cart_coord.width() / 4, cart_coord.min_y() + 3_m};
   private:
     const std::string m_start_bdv = ":-)";
-    const si_velo_f32 m_start_velocity = 0_km_h;
-    const si_angle_f32 m_start_angle = M_PI_2;
-    const si_time_f32 m_start_fuse01 = 10_s;
-    const si_time_f32 m_start_fuse02 = 5_s;
-    const float m_start_stability = 1000.0f;
-    const float m_start_tank = 250.0f;
-    const float m_start_money = 1000.0f;
+    constexpr static si_velo_f32 m_start_velocity = 0_km_h; // [m/s]
+    constexpr static si_angle_f32 m_start_angle = M_PI_2; // [rad]
+    constexpr static si_time_f32 max_fuse01 = 10_s; // [s]
+    constexpr static float max_stability = 100.0f; // [%]
+    constexpr static float start_money = 1'000.0f; // [$]
+    constexpr static si_volume_f32 max_tank = 100_l; // [m^3]
+    constexpr static si_volume_f32 max_tankkanister = 5_l; // [m^3]
+    constexpr static float tank_velocity = 1_l / 1_s; // [m^3/s]
+    constexpr static float repair_velocity = 0.5f / 1_s; // [stability/s]
+    constexpr static int start_lifes = 3;
   public:
     const int m_id;
     std::string m_bdv;
@@ -415,23 +437,25 @@ class Car {
     std::vector<f2::rect_t> wheels;
     std::vector<f2::geom_t> body;
     float m_stability;
-    float m_tank;
+    si_volume_f32 m_tank;
+    si_volume_f32 m_tankkanister;
     bool tankt;
     bool grab_tunnel;
     si_time_f32 tunnel;
     f2::rect_t parkplatz;
-    float max_car_velo;
+    si_velo_f32 max_car_velo;
     float m_money;
     bool reparing;
     int m_life;
     f2::aabbox_t aabbox;
 
+    si_time_f32 noTankAndVeloTime = 10_s; // you can have 10 sec long no velo and tank
+    si_time_f32 brake_time = 0_s;
+    si_time_f32 allowed_stand_time = 30_s;
+
     Car(const int id)
-    : m_id(id), m_bdv(m_start_bdv), m_velocity(m_start_velocity), 
-      m_angle(m_start_angle), m_fuse01(m_start_fuse01), m_length(25_dm), m_width(16_dm), 
-      m_stability(m_start_stability), m_tank(m_start_tank), tankt(false),
-      grab_tunnel(false), tunnel(10_min), max_car_velo(500_km_h), m_money(m_start_money), 
-      reparing(false), m_life(3) {
+    : m_id(id) {
+        reset(true);
         if(id == car_id_1){
             rect_body = {tl1, m_width, m_length*0.75f};
         } else if(id == car_id_2){
@@ -476,38 +500,30 @@ class Car {
         }
     }
     
-    std::string start_bdv(){ return m_start_bdv; }
-    si_velo_f32 start_velo(){ return m_start_velocity; }
-    si_angle_f32 start_angle(){ return m_start_angle; }
-    float start_fuse01(){ return m_start_fuse01; }
-    float start_fuse02(){ return m_start_fuse02; }
-    float start_stability(){ return m_start_stability; }
-    float start_tank(){ return m_start_tank; }
-    float start_money(){ return m_start_money; }
-    int start_life(){ return 3; }
     bool is_car_explodet(){
         return m_life <= 0;
     }
-    si_time_f32 noTankAndVeloTime = 10_s; // you can have 10 sec long no velo and tank
-    si_time_f32 bt = 0_s;
-    si_time_f32 st = 30_s;
-    void reset(){
+    void reset(bool all){
         m_bdv = m_start_bdv;
         m_velocity = m_start_velocity; 
         m_angle = m_start_angle;
-        m_fuse01 = m_start_fuse01;
-        m_stability = m_start_stability; 
+        m_fuse01 = max_fuse01;
+        m_stability = max_stability; 
         m_length = 25_dm;
         m_width = 16_dm;
-        m_tank = m_start_tank;
+        m_tank = max_tank;
         tankt = false;
         grab_tunnel = false;
         tunnel = 1_min;
-        max_car_velo = 500_km_h;
+        max_car_velo = 240_km_h;
         reparing = false;
         noTankAndVeloTime = 10_s;
-        bt = 0;
-        st = 30_s;
+        brake_time = 0;
+        allowed_stand_time = 30_s;
+        if(all) {
+            m_money = start_money;
+            m_life = start_lifes;
+        }
         if(m_id == car_id_1){
             rect_body = {tl1, m_width, (float)(m_length*0.75)};
         } else if(m_id == car_id_2){
@@ -653,13 +669,20 @@ class Car {
                o.m_bl.x <= bl.x;
     }
     
-    void change_velocity(const float m_pro_s, const int vorzeichen=1){
+    void addToVelocity(const si_accel_f32 m_pro_s2, const si_time_f32 dt, bool amBremsen = false){
         if(m_life <= 0){
             return;
         }
-        if(m_tank > 0){
-            m_velocity += m_pro_s*(float)vorzeichen;
-            m_tank -= std::abs(m_pro_s/2);
+        if(m_tank > 0 || amBremsen){
+            m_velocity += m_pro_s2 * dt;
+            if(!amBremsen) {
+                if(m_velocity < 130_km_h) {
+                    m_tank -= m_pro_s2*dt*(1/m_velocity)*1/2000;
+                } else {
+                    m_tank -= m_pro_s2*dt*(1/130_km_h + m_velocity*0.1f)*1/5000;
+                }
+                m_tank = std::max(m_tank, 0.0f);
+            }
         }
     }
     void rotate(const float adeg){
@@ -683,115 +706,189 @@ class Car {
         }
     }
     
-    void move(f2::vec_t vec){
+    void move(f2::vec_t vec, bool overScreen=true){
         rect_body.move(vec);
         for(f2::rect_t &wheel : wheels){
             wheel.move(vec);
         }
         circle_seg_body.move(vec);
-        if( rect_body.p_center.x < pixel::cart_coord.min_x() ) {
-            move({cart_coord.max_x()-rect_body.p_center.x, 0.0f});
-        }
-        if( rect_body.p_center.x > pixel::cart_coord.max_x() ) {
-            move({cart_coord.min_x()-rect_body.p_center.x, 0.0f});
-        }
-        if( rect_body.p_center.y < pixel::cart_coord.min_y() ) {
-            move({0.0f, cart_coord.max_y()-rect_body.p_center.y});
-        }
-        if( rect_body.p_center.y > pixel::cart_coord.max_y() ) {
-            move({0.0f, cart_coord.min_y()-rect_body.p_center.y});
+        if(overScreen) {
+            if( rect_body.p_center.x < pixel::cart_coord.min_x() ) {
+                move({cart_coord.max_x()-rect_body.p_center.x, 0.0f}, false);
+            }
+            if( rect_body.p_center.x > pixel::cart_coord.max_x() ) {
+                move({cart_coord.min_x()-rect_body.p_center.x, 0.0f}, false);
+            }
+            if( rect_body.p_center.y < pixel::cart_coord.min_y() ) {
+                move({0.0f, cart_coord.max_y()-rect_body.p_center.y}, false);
+            }
+            if( rect_body.p_center.y > pixel::cart_coord.max_y() ) {
+                move({0.0f, cart_coord.min_y()-rect_body.p_center.y}, false);
+            }
         }
     }
-    void tick(const float dt){
+    
+    bool last_grab_tunnel = false;
+    f2::point_t anfang_p;
+    Tunnel next_tunnel;
+    si_length_f32 tunnelLength = 0;
+    si_length_f32 tunnelLengthOrig = 0;
+    bool inTunnel;
+    f2::point_t otherTunnelEnd;
+    si_time_f32 neverInTunnelTimer = 0;
+    bool put_KanisterInTank = false;
+    
+    void grabTunnel(const float dt, const bool otherPlayerIsDigging) {
+        if(grab_tunnel){
+            if(!last_grab_tunnel){
+                bool b = false;
+                for(const f2::rect_t& r : TunnelsLicet) {
+                    if(r.contains(rect_body.p_center)){
+                        b = true;
+                        break;
+                    }
+                }
+                grab_tunnel = b;
+                if(!grab_tunnel) {
+                    last_grab_tunnel = grab_tunnel;
+                    return;
+                }
+                anfang_p = rect_body.p_center;
+                next_tunnel = Tunnel(otherPlayerIsDigging ? tunnels.size()+1 : tunnels.size(), anfang_p, m_length);
+            }
+            next_tunnel.addToLength(dt*m_velocity);
+            tunnel -= dt;
+            m_money += 100 * dt;
+            m_velocity *= 0.99f;
+        } else {
+            if(last_grab_tunnel){
+                bool b = true;
+                for(const f2::rect_t& r : TunnelsLicet) {
+                    if(r.contains(rect_body.p_center)){
+                        b = false;
+                        break;
+                    }
+                }
+                grab_tunnel = b;
+                if(!b) {
+                    neverInTunnelTimer = 2_s;
+                    next_tunnel.setD2(rect_body.p_center);
+                    tunnels.push_back(next_tunnel);
+                    printf("%s\n", next_tunnel.toString().c_str());
+                }
+            }
+        }
+        last_grab_tunnel = grab_tunnel;
+    }
+    
+    void tick(const float dt, const bool otherPlayerIsDigging){
+        if(tunnelLength > 0) {
+            tunnelLength -= dt*m_velocity;
+        }
+        if(neverInTunnelTimer <= 0 && !inTunnel && !grab_tunnel) {
+            for(const Tunnel& t : tunnels) {
+                if(t.d1.contains(rect_body.p_center) || t.d2.contains(rect_body.p_center)){
+                    tunnelLength = (tunnelLengthOrig = t.length());
+                    inTunnel = true;
+                    if(t.d1.contains(rect_body.p_center)){
+                        otherTunnelEnd = t.d2.center;
+                    }
+                    if(t.d2.contains(rect_body.p_center)){
+                        otherTunnelEnd = t.d1.center;
+                    }
+                }
+            }
+        }
+        if(tunnelLength <= 0 && inTunnel) {
+            inTunnel = false;
+            move(-rect_body.p_center + otherTunnelEnd);
+            neverInTunnelTimer = 2_s;
+        } else if( tunnelLength > tunnelLengthOrig && inTunnel) { 
+            inTunnel = false;
+            neverInTunnelTimer = 2_s;
+        }
+        if(neverInTunnelTimer > 0) {
+            neverInTunnelTimer -= dt;
+        }
         if(m_life <= 0){
             return;
         }
-        f2::vec_t m_velo_vec = f2::vec_t::from_length_angle(m_velocity, m_angle);
-        move(m_velo_vec * dt);
+        if(!inTunnel) {
+            f2::vec_t m_velo_vec = f2::vec_t::from_length_angle(m_velocity, m_angle);
+            move(m_velo_vec * dt);
+        }
         if(m_fuse01 <= 0 && m_money <= 100){
             --m_life;
-            reset();
+            reset(false);
         } else if(m_fuse01 <= 0 && m_money >= 100){
             m_money -= 100;
-            reset();
+            reset(false);
         } else if(std::abs(m_velocity) <= max_velo){
             m_bdv = ":-)";
         } else if(std::abs(m_velocity) <= max_velo*1.10){
             m_bdv = ":-|";
         } else if(std::abs(m_velocity) > max_velo*1.10){
             m_bdv = ":-(";
-            m_fuse01 -= 1_s * dt;
+            m_fuse01 -= dt;
         }
         if(m_stability <= 0){
             --m_life;
-            reset();
+            reset(false);
         }
         if(std::abs(m_velocity) > max_car_velo){
-            m_stability -= (std::abs(m_velocity) - max_car_velo) / 10 * dt;
-            max_car_velo -= (std::abs(m_velocity) - max_car_velo) / 10 * dt;
+            m_stability -= (std::abs(m_velocity) - max_car_velo) / 100 * dt;
         }
-        if(m_velocity-1_km_h * dt >= 0){
-            m_velocity -= 1_km_h * dt;
-        } else if(m_velocity + 1_km_h * dt <= 0){
-            m_velocity += 1_km_h * dt;
-        } else {
-            m_velocity = 0;
-        }
-        if(noTankAndVeloTime <= 0){
-            --m_life;
-            reset();
-        }
-        if(((m_tank <= 0 && m_velocity <= 0) || m_money < 0) && noTankAndVeloTime > 0){
+                
+        if((m_tank <= 0 && m_velocity <= 0) && noTankAndVeloTime > 0){
             noTankAndVeloTime -= dt;
+        } else if(noTankAndVeloTime <= 0){
+            --m_life;
+            reset(false);
         }
         if(tankt && m_money > 0){
-            m_tank += 50 * dt;
-            m_money = m_money - 50 * dt;
+            if(m_tankkanister < max_tankkanister) {
+                const si_volume_f32 moved_volume = std::min(tank_velocity * dt, max_tankkanister - m_tankkanister);
+                m_tankkanister += moved_volume;
+                m_money -= moved_volume;
+            } else {
+                const si_volume_f32 moved_volume = std::min(tank_velocity * dt, max_tank - m_tank);
+                m_tank += moved_volume;
+                m_money -= moved_volume;
+            }
         }
-        const float max_tank = m_start_tank;
-        if(m_tank > max_tank){
-            m_tank = max_tank;
-            tankt = false;
+        if(put_KanisterInTank) {
+            if(m_tankkanister > 0 && m_tank < max_tank) {
+                const si_volume_f32 moved_volume = std::min(tank_velocity * dt, m_tankkanister);
+                m_tankkanister -= moved_volume;
+                m_tank += moved_volume;                
+            }
         }
         if(reparing && m_money > 0){
-            m_stability += 5 * dt;
-            max_car_velo += 5 * dt;
-            m_money = m_money - 10 * dt;
+            const float repaired = std::min(repair_velocity * dt, max_stability - m_stability);
+            m_stability += repaired;
+            m_money -= repaired * 0.2f * dt;
         }
-        if(m_stability > m_start_stability){
+        if(m_stability > max_stability){
             ++m_life;
-            m_stability = m_stability - m_start_stability;
+            m_stability = m_stability - max_stability;
         }
-        static bool last_grab_tunnel = false;
-        static f2::point_t anfang_p;
-        static Tunnel next_tunnel;
-        if(grab_tunnel){
-            if(!last_grab_tunnel){
-                anfang_p = rect_body.p_center;
-            }
-            next_tunnel = Tunnel(tunnels.size(), anfang_p, rect_body.p_center, m_length);
-            tunnel -= dt;
-            m_money += 100 * dt;
-            m_velocity *= 0.99f;
-        } else {
-            if(last_grab_tunnel){
-                tunnels.push_back(next_tunnel);
-            }
-        }
-        last_grab_tunnel = grab_tunnel;
-        if(bt > 1_s){
-            m_stability -= dt;
+        if(brake_time > 2_s){
+            m_stability -= dt/10;
         }
         if(m_velocity == 0){
-            st -= dt;
+            allowed_stand_time -= dt;
         }
         if(m_velocity != 0){
-            st = 30_s;
+            allowed_stand_time = 1_min;
         }
-        if(st <= 0){
+        if(allowed_stand_time <= 0){
             --m_life;
-            st = 30_s;
+            allowed_stand_time = 1_min;
         }
+        grabTunnel(dt, otherPlayerIsDigging);
+
+        max_car_velo = std::min((m_stability / max_stability) * 500_km_h, 240_km_h);
+        m_velocity += -((m_velocity == 0 ? 1 : m_velocity / abs(m_velocity)) * std::min(3_m_s2 * dt, abs(0 - m_velocity)));
         /*
         for(const f2::geom_ref_t &g : loc_geom_list){
             if(intersects(*g)){
@@ -818,8 +915,11 @@ class Car {
         if(is_car_explodet()){
             return;
         }
+        
+        set_pixel_color4f(0, 0, 0, 0);            
         if(grab_tunnel){
-            return;
+            next_tunnel.draw();
+            set_pixel_color4f(0.5f, 0.5f, 0.5f, 0.5f);            
         }
         rect_body.draw(false);
         circle_seg_body.draw();
@@ -846,19 +946,16 @@ void mainloop() {
     static input_event_t event;
     static std::vector<texture_ref> text_list;
     static float angle_step = 5;
-    static float velo_step = 0.5f;
+    static si_accel_f32 velo_step = 40_m_s2;
     static si_time_f32 start_d_time = 1_min;
     static si_time_f32 dtime = start_d_time;
-    static std::vector<float> max_velos = {  10_km_h, 30_km_h, 50_km_h, 70_km_h, 90_km_h, 
-                                            100_km_h, 120_km_h, 240_km_h, 500_km_h, 600_km_h, 
-                                            700_km_h, 800_km_h, 850_km_h, 900_km_h, 950_km_h, 
-                                            1000_km_h };
+    static std::vector<si_velo_f32> max_velos = { 30_km_h, 50_km_h, 70_km_h, 90_km_h, 
+                                            100_km_h, 120_km_h, 130_km_h, 150_km_h, 200_km_h, 
+                                            500_km_h, 600_km_h };
     static f2::rect_t tankstelle = {{cart_coord.min_x(), 0}, 4_m, 5_m};
     static f2::rect_t werkstatt = {{cart_coord.max_x() - 4_m, 0}, 4_m, 5_m};
     static bool parken;
-    static int m = 0;
-    //static bool b = false;
-    static f2::rect_t ba;
+
 
     const pixel::f2::point_t tl_text(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
     const uint64_t t1 = getElapsedMillisecond(); // [ms]
@@ -866,11 +963,6 @@ void mainloop() {
     t_last = t1;
 
     bool animating = !event.paused();
-    if(getElapsedMillisecond() - (long double)10_min*1000*m >= 10_min*1000){
-        ++m;
-        car1.m_money += car1.start_money();
-        car2.m_money += car2.start_money();
-    }
     while(handle_one_event(event)){
         if( event.pressed_and_clr( input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -887,39 +979,34 @@ void mainloop() {
         animating = !event.paused();
         if(event.released_and_clr(input_event_type_t::RESET)){
             aus_geom_list.clear();
-            car1.reset();
-            car2.reset();
-            car1.m_tank = car1.start_tank();
-            car2.m_tank = car2.start_tank();
-            car1.m_money = car1.start_money();
-            car2.m_money = car2.start_money();
-            car1.m_life = car1.start_life();
-            car2.m_life = car2.start_life();
+            car1.reset(true);
+            car2.reset(true);
             max_velo = start_max_velo;
+            tunnels.clear();
             loc_geom_list.clear();
             schienen_geom_list.clear();
             // train.reset();
         }
-        if(event.pressed(input_event_type_t::P1_ACTION1) && 
-           car1.all_intersects(werkstatt)){
-            if(event.released_and_clr(input_event_type_t::P1_ACTION3)){
-               car1.reparing = !car1.reparing;
+        if(event.released_and_clr(input_event_type_t::P1_ACTION3)){
+            if(car1.all_intersects(tankstelle)) {
+                car1.tankt = !car1.tankt;                
+            } else if(car1.all_intersects(werkstatt)) {
+                car1.reparing = !car1.reparing;
             }
-        } else if(event.pressed(input_event_type_t::P2_ACTION1) && 
-           car2.all_intersects(werkstatt)){
-            if(event.released_and_clr(input_event_type_t::P2_ACTION3)){
-               car2.reparing = !car2.reparing;
+        } else if(event.released_and_clr(input_event_type_t::P2_ACTION3)){
+            if(car2.all_intersects(tankstelle)) {
+                car2.tankt = !car2.tankt;                
+            } else if(car2.all_intersects(werkstatt)) {
+                car2.reparing = !car2.reparing;
             }
-        } else if(event.released_and_clr(input_event_type_t::P1_ACTION3) && 
-                  car1.all_intersects(tankstelle)){
-            car1.tankt = !car1.tankt;
-        } else if(event.released_and_clr(input_event_type_t::P2_ACTION3) && 
-                  car2.all_intersects(tankstelle)){
-            car2.tankt = !car2.tankt;
         } else if(event.released_and_clr(input_event_type_t::P1_ACTION1)){
-            car1.bt = 0;
+            car1.brake_time = 0;
         } else if(event.released_and_clr(input_event_type_t::P2_ACTION1)){
-            car2.bt = 0;
+            car2.brake_time = 0;
+        } else if(event.released_and_clr(input_event_type_t::P1_ACTION4)){
+            car1.put_KanisterInTank = !car1.put_KanisterInTank;
+        } else if(event.released_and_clr(input_event_type_t::P2_ACTION4)){
+            car2.put_KanisterInTank = !car2.put_KanisterInTank;
         }
     }
     {
@@ -930,13 +1017,13 @@ void mainloop() {
                 to_decstring(t1/1000, ',', 9).c_str(), gpu_avg_fps(), (dt*1000),
                 animating?"animating":"paused", car1.m_velocity * 3.6f, 
                 rad_to_adeg(car1.m_angle), (int)dtime, car1.m_bdv.c_str(), car1.m_fuse01, 
-                car1.m_stability, car1.m_tank, car1.tunnel, car1.max_car_velo * 3.6f, car1.m_money, 
+                car1.m_stability, car1.m_tank*1000, car1.tunnel, car1.max_car_velo * 3.6f, car1.m_money, 
                 car1.m_life));
         text_list.push_back(pixel::make_text2(tl_text, 1, text_color, text_height,
         "car2(velo %.2f km/h, angle %.2f degree, %s, fuse %.2f s, stability %.2f%, tank %.2fl, "
         "tunnel %.2f, max velo %.2fkm/h, money %.2f$, life %d)",
                 car2.m_velocity * 3.6f, rad_to_adeg(car2.m_angle), car2.m_bdv.c_str(),
-                car2.m_fuse01, car2.m_stability, car2.m_tank, car2.tunnel, car2.max_car_velo * 3.6f,
+                car2.m_fuse01, car2.m_stability, car2.m_tank * 1000, car2.tunnel, car2.max_car_velo * 3.6f,
                 car2.m_money, car2.m_life));
         if(parken){
             text_list.push_back(make_text2(tl_text, 2, text_color, text_height,
@@ -955,10 +1042,12 @@ void mainloop() {
         if(parken && car1.all_intersects(car1.parkplatz) && car2.all_intersects(car2.parkplatz)){
             dtime = 0;
         }
-        car1.grab_tunnel = event.pressed(input_event_type_t::P1_ACTION2);
-        printf("Car1 grab: %d\n", car1.grab_tunnel);
-        car2.grab_tunnel = event.pressed(input_event_type_t::P2_ACTION2);
-        printf("Car2 grab: %d\n\n", car2.grab_tunnel);
+        if(event.released_and_clr(input_event_type_t::P1_ACTION2)) {
+            car1.grab_tunnel = !car1.grab_tunnel;
+        }
+        if(event.released_and_clr(input_event_type_t::P2_ACTION2)) {
+            car2.grab_tunnel = !car2.grab_tunnel;
+        }
         dtime -= dt;
         if(dtime <= 0){
             float max_velo_old = max_velo;
@@ -971,14 +1060,14 @@ void mainloop() {
             if(parken){
                 if(!car1.all_intersects(car1.parkplatz)){
                     --car1.m_life;
-                    car1.reset();
+                    car1.reset(false);
                 }
                 if(!car2.all_intersects(car1.parkplatz)){
                     --car1.m_life;
-                    car2.reset();
+                    car2.reset(false);
                 }
                 parken = false;
-            } else if(max_velo > 800_km_h){
+            } else if(max_velo > 500_km_h){
                 max_velo = 50_km_h;
                 parken = true;
             }
@@ -1012,49 +1101,49 @@ void mainloop() {
         }
         if(event.has_any_p1()){
             if (event.pressed(input_event_type_t::P1_UP) && !car1.is_car_explodet()) {
-                car1.change_velocity(velo_step,  1);
+                car1.addToVelocity(velo_step, dt);
             } else if (event.pressed(input_event_type_t::P1_DOWN) && !car1.is_car_explodet()) {
-                car1.change_velocity(velo_step, -1);
+                car1.addToVelocity(-velo_step, dt);
             } else if (event.pressed(input_event_type_t::P1_LEFT)) {
                 car1.rotate( angle_step);
             } else if (event.pressed(input_event_type_t::P1_RIGHT)) {
                 car1.rotate(-angle_step);
             } else if (event.pressed(input_event_type_t::P1_ACTION1)) {
                 if(car1.m_velocity > 0){
-                    car1.change_velocity(-1);
+                    car1.addToVelocity(-std::min(2*velo_step,  car1.m_velocity), dt, true);
                 } else if(car1.m_velocity < 0) {
-                    car1.change_velocity( 1);
+                    car1.addToVelocity( std::min(2*velo_step, -car1.m_velocity), dt, true);
                 }
                 if(car1.m_velocity != 0){
-                    car1.bt += dt;
+                    car1.brake_time += dt;
                 }
             }
         }
         if(event.has_any_p2()){
             if (event.pressed(input_event_type_t::P2_UP) && !car2.is_car_explodet()) {
-                car2.change_velocity( velo_step);
+                car2.addToVelocity( velo_step, dt);
             } else if (event.pressed(input_event_type_t::P2_DOWN) && !car2.is_car_explodet()) {
-                car2.change_velocity(-velo_step);
+                car2.addToVelocity(-velo_step, dt);
             } else if (event.pressed(input_event_type_t::P2_LEFT)) {
                 car2.rotate( angle_step);
             } else if (event.pressed(input_event_type_t::P2_RIGHT)) {
                 car2.rotate(-angle_step);
             } else if (event.pressed(input_event_type_t::P2_ACTION1)) {
                 if(car2.m_velocity > 0){
-                    car2.change_velocity(-1);
+                    car2.addToVelocity(-std::min(velo_step*2,  car2.m_velocity), dt, true);
                 } else if(car2.m_velocity < 0) {
-                    car2.change_velocity( 1);
+                    car2.addToVelocity( std::min(velo_step*2, -car2.m_velocity), dt, true);
                 }
                 if(car2.m_velocity != 0){
-                    car2.bt += dt;
+                    car2.brake_time += dt;
                 }
             }
         }
         if(!car1.is_car_explodet()){
-            car1.tick(dt);
+            car1.tick(dt, car2.grab_tunnel);
         }
         if(!car2.is_car_explodet()){
-            car2.tick(dt);
+            car2.tick(dt, car1.grab_tunnel);
         }
     }
     /*
@@ -1091,13 +1180,16 @@ void mainloop() {
         car2.m_stability -= 100.0f * dt;
     }
     */
-    car1.draw();
-    car2.draw();
     // gleis.draw();
     tankstelle.draw(false);
     werkstatt.draw(false);
     car1.draw();
     car2.draw();
+    for(const f2::rect_t& tLicet : TunnelsLicet) {
+        set_pixel_color(0, 255, 0, 255);
+        tLicet.draw(false);
+    }
+    set_pixel_color(0, 0, 0, 0);
     for(Tunnel t : tunnels) {
         t.draw();
     }
@@ -1118,24 +1210,24 @@ void mainloop() {
 
 int main(int argc, char *argv[])
 {
-    unsigned int win_width = 1920, win_height = 1000;
+    unsigned int window_width = 1920, window_height = 1000;
     #if defined(__EMSCRIPTEN__)
         win_width = 1024, win_height = 576; // 16:9
     #endif
     {
         for(int i=1; i<argc; ++i) {
             if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
-                win_width = atoi(argv[i+1]);
+                window_width = atoi(argv[i+1]);
                 ++i;
             } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
-                win_height = atoi(argv[i+1]);
+                window_height = atoi(argv[i+1]);
                 ++i;
             }
         }
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
-        init_gfx_subsystem(argv[0], "car", (int)win_width, (int)win_height, origin_norm, true);
+        init_gfx_subsystem(argv[0], "car", (int)window_width, (int)window_height, origin_norm, true);
     }
     pixel::cart_coord.set_height(-space_height/2.0f, space_height/2.0f);
     log_printf(0, "XX %s\n", cart_coord.toString().c_str());
@@ -1146,6 +1238,11 @@ int main(int argc, char *argv[])
         float a = w / h;
         printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]\n", w, h, r01, a);
     }
+    TunnelsLicet.emplace_back(f2::point_t(0, 0), 20_m, 15_m, 1_rad);
+    TunnelsLicet.emplace_back(f2::point_t(cart_coord.max_x()-40_m, 20_m), 30_m, 50_m);
+    TunnelsLicet.emplace_back(f2::point_t(-50, -10), 20_m, 30_m, 30_deg);
+    TunnelsLicet.emplace_back(f2::point_t(-80, 40), 30_m, 50_m);
+    
     //make_bahnhoefe();
     #if defined(__EMSCRIPTEN__)
         emscripten_set_main_loop(mainloop, 0, 1);
