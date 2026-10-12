@@ -11,7 +11,8 @@ Checks:  'clang-diagnostic-*, clang-analyzer-*,
           -modernize-avoid-c-arrays, -modernize-use-default-member-init, -modernize-return-braced-init-list, 
           -modernize-avoid-bind, -modernize-use-transparent-functors,
           -modernize-use-constraints, -modernize-avoid-variadic-functions,
-          -modernize-avoid-c-style-cast,
+          -modernize-avoid-c-style-cast, -modernize-use-designated-initializers,
+          -modernize-use-std-print,
           -performance-avoid-endl, -performance-enum-size'
 
 CheckOptions:

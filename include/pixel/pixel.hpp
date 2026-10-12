@@ -515,7 +515,7 @@ namespace pixel {
                 if(!m_pixels || x >= width || y >= height ) {
                     return 0;
                 }
-                const uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp));
+                const uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp)); // NOLINT
                 return *target_pixel;
             }
 
@@ -524,7 +524,7 @@ namespace pixel {
                 if(!m_pixels || x >= width || y >= height ) {
                     return;
                 }
-                uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp));
+                uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp)); // NOLINT
                 *target_pixel = abgr;
             }
 
@@ -537,7 +537,7 @@ namespace pixel {
             std::string toString() const noexcept {
                 return (m_handle ? " (set) " : " (empty) ") +
                        std::to_string(width)+"x"+std::to_string(height)+"x"+std::to_string(bpp)+
-                       ", stride "+std::to_string(stride)+", "+format_str(format)+", pix "+std::to_string((intptr_t)(void*)m_pixels);
+                       ", stride "+std::to_string(stride)+", "+format_str(format)+", pix "+std::to_string((intptr_t)(void*)m_pixels); // NOLINT
             }
     };
     typedef std::shared_ptr<bitmap_t> bitmap_ref;
