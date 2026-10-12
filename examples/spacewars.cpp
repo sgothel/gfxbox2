@@ -368,7 +368,7 @@ class peng_t {
         if( !armed() ) {
             pixel::set_pixel_color(rgba_green);
         } else {
-            const float pct = m_fuse2 / fuse2_max;
+            const float pct = std::max(m_fuse2 / fuse2_max, 0.0f);
             pixel::set_pixel_color4f(1.0f, pct, pct, 1.0f);
         }
         m_peng.draw(false);
