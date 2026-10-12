@@ -53,6 +53,7 @@ static bool debug_gfx = false;
 static bool show_ship_velo = false;
 static bool cloak_enabled = false;
 static bool draw_grip = false;
+static bool shields_with_energy = false;
 
 class idscore_t {
     public:
@@ -396,14 +397,16 @@ class spaceship_t : public pixel::f2::linestrip_t {
         constexpr static const float peng_velo_0 = vel_max / 2;
         constexpr static const int peng_inventory_max = 4000;
         constexpr static const int mine_inventory_max = 2000;
+        constexpr static const si_mass_f32 mine_mass = 10_kg;
 
         constexpr static const float shield_radius = spaceship_height * 0.9f;
-        constexpr static const float shield_time_max = 10; // [s]
+        constexpr static const float shield_time_or_energie_max = 10; // [s]
+        constexpr static const float shield_falling_per_collision = 0.5f; // [s]
 
     private:
         idscore_t* m_owner;
 
-        float m_shield_time;
+        float m_shield_time_or_energy;
         bool m_shield;
 
         bool hits_fragment(const pixel::f2::aabbox_t& box) noexcept {
@@ -414,6 +417,8 @@ class spaceship_t : public pixel::f2::linestrip_t {
                 if( box.intersects(f->box()) ) {
                     if( !m_shield ) {
                         m_owner->add_score(-idscore_t::score_ship);
+                    } else if(shields_with_energy) {
+                        m_shield_time_or_energy -= shield_falling_per_collision;
                     }
                     hit = true;
                     it = fragments.erase(it);
@@ -440,6 +445,8 @@ class spaceship_t : public pixel::f2::linestrip_t {
                         } else {
                             p.owner().add_score(idscore_t::score_ship);
                         }
+                    } else if(shields_with_energy) {
+                        m_shield_time_or_energy -= shield_falling_per_collision;
                     }
                 } else {
                     ++it;
@@ -457,7 +464,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
         spaceship_t(idscore_t* owner,
                     const pixel::f2::point_t& center, const float angle) noexcept
         : linestrip_t(center, angle), m_owner(owner),
-          m_shield_time(shield_time_max), m_shield(false),
+          m_shield_time_or_energy(shield_time_or_energie_max), m_shield(false),
           velocity(), peng_inventory(peng_inventory_max), mine_inventory(mine_inventory_max)
         {}
 
@@ -504,13 +511,14 @@ class spaceship_t : public pixel::f2::linestrip_t {
         }
 
         bool shield() const noexcept { return m_shield; }
-        float shield_time() const noexcept { return m_shield_time; }
+        float shield_time_or_energie() const noexcept { return m_shield_time_or_energy; }
+        void add_to_shields(const float add) { if(shields_with_energy) { m_shield_time_or_energy += add; } }
 
         void toggle_shield() noexcept {
             set_shield(!m_shield);
         }
         void set_shield(bool v) noexcept {
-            if( m_shield_time <= 0 ) {
+            if( m_shield_time_or_energy <= 0 ) {
                 m_shield = false;
             } else {
                 m_shield = v;
@@ -549,10 +557,12 @@ class spaceship_t : public pixel::f2::linestrip_t {
             move(velocity * dt);
 
             if( m_shield ) {
-                m_shield_time -= dt;
-                if( m_shield_time <= 0 ) {
+                if(!shields_with_energy) {
+                    m_shield_time_or_energy -= dt;
+                }
+                if( m_shield_time_or_energy <= 0 ) {
                     m_shield = false;
-                    m_shield_time = 0;
+                    m_shield_time_or_energy = 0;
                 }
             }
             if( sun->hit(p_center) ) {
@@ -815,10 +825,20 @@ class player_t : public idscore_t {
                 } else if( !ship2->shield() && ship1->shield() ) {
                     player2.ship_dtor();
                     player2.add_score(-score_ship);
+                    if(shields_with_energy) {
+                        player1.m_ship->add_to_shields(-spaceship_t::shield_falling_per_collision);
+                    }
                 } else if( ship2->shield() && !ship1->shield() ) {
                     player1.add_score(-score_ship);
                     player1.ship_dtor();
+                    if(shields_with_energy) {
+                        player2.m_ship->add_to_shields(-spaceship_t::shield_falling_per_collision);
+                    }
                 } else if( ship2->shield() && ship1->shield() ) {
+                    if(shields_with_energy) {
+                        player1.m_ship->add_to_shields(-spaceship_t::shield_falling_per_collision);
+                        player2.m_ship->add_to_shields(-spaceship_t::shield_falling_per_collision);
+                    }
                     /**
                     pixel::f2::vec_t cross_normal;
                     pixel::f2::point_t cross_point;
@@ -908,7 +928,12 @@ class player_t : public idscore_t {
 
         int mine_inventory() const noexcept { return nullptr != m_ship ? m_ship->mine_inventory : 0; }
 
-        float shield_time() const noexcept { return nullptr != m_ship ? m_ship->shield_time() : 0; }
+        float shield_time_or_energy() const noexcept { return nullptr != m_ship ? m_ship->shield_time_or_energie() : 0; }
+
+        std::string shield_toString() const noexcept {
+            return shields_with_energy ? 
+                to_string("%d", int(shield_time_or_energy()*10)) : to_string("%.1f s", shield_time_or_energy());
+        }
 
         bool cloak() const noexcept { return m_cloak; }
 
@@ -978,7 +1003,13 @@ class player_t : public idscore_t {
                 } else if( event.pressed(pixel::to_input_event(id(), pixel::player_event_type_t::RIGHT)) ){
                     m_ship->rotate_adeg(-spaceship_t::rot_step * dt);
                 }
-                m_ship->set_shield( event.pressed(pixel::to_input_event(id(), pixel::player_event_type_t::DOWN)) );
+                if(shields_with_energy) {
+                    if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::DOWN)) ){
+                        m_ship->set_shield(!m_ship->shield());
+                    }
+                } else {
+                    m_ship->set_shield( event.pressed(pixel::to_input_event(id(), pixel::player_event_type_t::DOWN)) );
+                }
             }
         }
 };
@@ -1138,24 +1169,24 @@ void mainloop() {
             if( cloak_enabled ) {
                 c = to_string(", %6.2f / %6.2f", p1.center().x, p1.center().y);
             }
-            sp1 = to_string("S1 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s%s)",
-                p1.score(), p1.peng_inventory(), p1.mine_inventory(), p1.shield_time(), p1.velocity(), c.c_str());
+            sp1 = to_string("S1 %4d (%4d pengs, %2d mines, %s shield, %4.2f m/s%s)",
+                p1.score(), p1.peng_inventory(), p1.mine_inventory(), p1.shield_toString().c_str(), p1.velocity(), c.c_str());
             }
         if(1 < player_count) {
             std::string c;
             if( cloak_enabled ) {
                 c = to_string(", %6.2f / %6.2f", p2.center().x, p2.center().y);
             }
-            sp2 = to_string(", S2 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s)",
-                p2.score(), p2.peng_inventory(), p2.mine_inventory(), p2.shield_time(), p2.velocity(), c.c_str());
+            sp2 = to_string(", S2 %4d (%4d pengs, %2d mines, %s shield, %4.2f m/s)",
+                p2.score(), p2.peng_inventory(), p2.mine_inventory(), p2.shield_toString().c_str(), p2.velocity(), c.c_str());
         }
         if(2 < player_count) {
             std::string c;
             if( cloak_enabled ) {
                 c = to_string(", %6.2f / %6.2f", p3.center().x, p3.center().y);
             }
-            sp3 = to_string(", S3 %4d (%4d pengs, %2d mines, %.1f s shield, %4.2f m/s)",
-                p3.score(), p3.peng_inventory(), p3.mine_inventory(), p3.shield_time(), p3.velocity(), c.c_str());
+            sp3 = to_string(", S3 %4d (%4d pengs, %2d mines, %s shield, %4.2f m/s)",
+                p3.score(), p3.peng_inventory(), p3.mine_inventory(), p3.shield_toString().c_str(), p3.velocity(), c.c_str());
         }
         hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f, %s%s%s",
                         to_decstring(t1/1000, ',', 5).c_str(), // 1d limit
@@ -1227,6 +1258,8 @@ int main(int argc, char *argv[])
                 use_subsys_primitives = false;
             } else if( 0 == strcmp("-draw_grip", argv[i]) ) {
                 draw_grip = true;
+            } else if( 0 == strcmp("-energy_shields", argv[i]) ) {
+                shields_with_energy = true;
             }
         }
     }
