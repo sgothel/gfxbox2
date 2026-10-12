@@ -1,0 +1,122 @@
+<h1 id="car">Car</h1>
+<p>Car is a game for two players. Each player have to drive a car.</p>
+<h2 id="keys">Keys</h2>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Player 1</th>
+<th style="text-align: left;">Player 2</th>
+<th style="text-align: left;">Funktion</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Curser-Up</td>
+<td style="text-align: left;">W</td>
+<td style="text-align: left;">Forward-Acceleration</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Curser-Down</td>
+<td style="text-align: left;">S</td>
+<td style="text-align: left;">Backward-Acceleration</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Curser-Left</td>
+<td style="text-align: left;">A</td>
+<td style="text-align: left;">Left-Turn</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Curser-Right</td>
+<td style="text-align: left;">D</td>
+<td style="text-align: left;">Right-Turn</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RShift</td>
+<td style="text-align: left;">LShift</td>
+<td style="text-align: left;">Slow-Down</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Return</td>
+<td style="text-align: left;">LCtr</td>
+<td style="text-align: left;">make tunnel</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RAlt</td>
+<td style="text-align: left;">LAlt</td>
+<td style="text-align: left;">begin/end to tank^</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RShift + RAlt</td>
+<td style="text-align: left;">LShift + LAlt</td>
+<td style="text-align: left;">begin/end to repair^^</td>
+</tr>
+</tbody>
+</table>
+<p>^ only at the tank station ^^ only at the repair station</p>
+<h2 id="rules">Rules</h2>
+<ul>
+<li>Speed
+<ul>
+<li>Global Speed Limit
+<ul>
+<li>Don’t violate the speed limit, otherwise the car explodes after 10s
+driving 10% above the limit.</li>
+<li>The speed limit changes every minute</li>
+</ul></li>
+<li>Speed Status: Smiley
+<ul>
+<li>If your car’s velocity exceeds the speed limit but is still within
+the 10% tolerance, the face will become <code>:-|</code></li>
+<li>If the car velocity exceeds the speed limit and tolerance the face
+will become <code>:-(</code></li>
+<li>If the car velocity is under the speed limit the face will become:
+<code>:-)</code></li>
+</ul></li>
+<li>Car Speed
+<ul>
+<li>Don’t stand for 30 sec, otherwise the car explodes</li>
+<li>The car has a maximum velocity</li>
+<li>If the car is faster than the maximum velocity, it will be reduced
+and the car loses stability</li>
+</ul></li>
+</ul></li>
+<li>Tank
+<ul>
+<li>The car has to go to the gas station to maintain its fuel</li>
+<li>If the car tanks up, the player loses money</li>
+<li>If the tank is empty and the car stands for 10 seconds, it
+explodes</li>
+<li>The gas station is marked with a <code>P</code></li>
+</ul></li>
+<li>Stability
+<ul>
+<li>If the car intersects with an other thing(e.g. the other car), the
+stability fall</li>
+<li>If the stability equals zero, the car explodes</li>
+<li>The car can go to the repair shop to repair itsself</li>
+<li>If the car will be repair, the player loses money</li>
+<li>If the player wants to repair his car super much, that the stability
+is over the maximum stability, the player gets a car, and the stability
+will set on zero</li>
+<li>The repair shop is marked with a <code>R</code></li>
+</ul></li>
+<li>Tunnel
+<ul>
+<li>One car can makes tunnels for 1 minute</li>
+<li>If the car makes a tunnel, the player gets money</li>
+<li>Later, the players cannot drives the cars into the tunnel</li>
+</ul></li>
+<li>Money
+<ul>
+<li>If the money is for 10 seconds under zero, the player loses a
+car</li>
+</ul></li>
+<li>Mode: Park
+<ul>
+<li>Speed limit equals 50 km/h</li>
+<li>The car must go to the parking place</li>
+<li>At the end of the mode, the car must be on it parking place</li>
+</ul></li>
+<li>At the start every player has three cars</li>
+<li>A car can brake one second per brake-period</li>
+</ul>
