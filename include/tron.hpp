@@ -97,7 +97,7 @@ public:
                 ", tail "+std::to_string(p_list.size())+"]";
     }
 
-    bool intersects(const Motorrad& o) const {
+    bool intersects0(const Motorrad& o) const {
         const pixel::f2::lineseg_t h(head, last);
         const pixel::f2::lineseg_t o_h(o.head, o.last);
         return my_intersects(h) ||
