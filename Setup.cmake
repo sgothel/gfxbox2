@@ -44,7 +44,7 @@ endif()
 set (CMAKE_CXX_STANDARD 23)
 set (CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(cxx_clangd_flags "-pedantic, -pedantic-errors, -Wall, -Wextra, -Werror, -DDEBUG, -std=c++20")
+set(cxx_clangd_flags "-pedantic, -pedantic-errors, -Wall, -Wextra, -Werror, -DDEBUG, -std=c++23")
 message(STATUS "cxx_clangd_flags: ${cxx_clangd_flags}")
 
 # for all
