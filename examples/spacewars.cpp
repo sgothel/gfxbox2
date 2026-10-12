@@ -1023,7 +1023,6 @@ static int player_count = 2;
 static int asteroid_count = 6;
 static pixel::f2::point_t tl_text;
 static std::string record_bmpseq_basename;
-static bool raster = false;
 
 extern "C" {
     EMSCRIPTEN_KEEPALIVE void set_showvelo(bool v) noexcept { show_ship_velo = v; }
@@ -1104,9 +1103,6 @@ void mainloop() {
         {
             p1.handle_event1(dt);
             p1.tick(dt);
-        }
-        if (raster) {
-            pixel::draw_grid(50, 255, 0, 0, 0, 255, 0, 0, 0);
         }
 
         // fragments tick
@@ -1281,7 +1277,6 @@ int main(int argc, char *argv[])
         log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         log_printf(elapsed_ms, "- show_ship_velo %d\n", show_ship_velo);
         log_printf(elapsed_ms, "- players %d\n", player_count);
-        log_printf(elapsed_ms, "- raster %d\n", raster);
         log_printf(elapsed_ms, "- asteroid_count %d\n", asteroid_count);
         log_printf(elapsed_ms, "- sun_gravity_scale_env %d -> %f [m/s^2]\n", sun_gravity_scale_env, sun_gravity * (float)sun_gravity_scale_env);
         log_printf(elapsed_ms, "- sun_gravity_scale_ships %d -> %f [m/s^2]\n", sun_gravity_scale_ships, sun_gravity * (float)sun_gravity_scale_ships);
