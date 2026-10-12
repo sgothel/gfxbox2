@@ -108,10 +108,10 @@ void pixel::draw_grid(float raster_sz,
 
     pixel::set_pixel_color(gr, gg, gb, ga);
     pixel::f2::point_t bl(pixel::cart_coord.min_x(), pixel::cart_coord.min_y());
-    for(float y=b; y<pixel::cart_coord.max_y(); y+=raster_sz) {
+    for(float y=b; y<pixel::cart_coord.max_y(); y+=raster_sz) { // NOLINT
         pixel::draw_line(pixel::cart_coord.min_x(), y, pixel::cart_coord.max_x(), y);
     }
-    for(float x=l; x<pixel::cart_coord.max_x(); x+=raster_sz) {
+    for(float x=l; x<pixel::cart_coord.max_x(); x+=raster_sz) { // NOLINT
         pixel::draw_line(x, pixel::cart_coord.min_y(), x, pixel::cart_coord.max_y());
     }
     pixel::set_pixel_color(cr, cg, cb, ca);
@@ -134,7 +134,7 @@ void pixel::bitmap_t::put(const f2::aabbox_t& box, uint32_t abgr) noexcept {
     const uint32_t y2 = std::min<uint32_t>(height, ceil_to_uint32(box.tr.y));
     for(uint32_t y=y1; y<y2; ++y) {
         for(uint32_t x=x1; x<x2; ++x) {
-            uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp));
+            uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp)); // NOLINT
             *target_pixel = abgr;
         }
     }
@@ -150,7 +150,7 @@ bool pixel::bitmap_t::equals(const f2::aabbox_t& box, uint32_t abgr) noexcept {
     const uint32_t y2 = std::min<uint32_t>(height, ceil_to_uint32(box.tr.y));
     for(uint32_t y=y1; y<y2; ++y) {
         for(uint32_t x=x1; x<x2; ++x) {
-            const uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp));
+            const uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_pixels + static_cast<size_t>((height - y - 1) * stride) + static_cast<size_t>(x * bpp)); // NOLINT
             if( abgr != *target_pixel ) {
                 return false;
             }
@@ -421,8 +421,8 @@ void pixel::f2::disk_t::draw(const bool filled) const noexcept {
     const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
     const float ival2 = 1.0f*std::min(x_ival, y_ival);
     const aabbox_t b = box();
-    for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) {
-        for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
+    for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) { // NOLINT
+        for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) { // NOLINT
             const point_t p { x, y };
             const float cp = center.dist(p);
             if( ( filled && cp <= radius ) ||
@@ -494,8 +494,8 @@ void pixel::f2::triangle_t::draw(const bool filled) const noexcept {
         const float x_ival = pixel::cart_coord.width() / (float)pixel::fb_width;
         const float y_ival = pixel::cart_coord.height() / (float)pixel::fb_height;
         const aabbox_t b = box();
-        for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) {
-            for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) {
+        for(float y=b.bl.y; y<=b.tr.y; y+=y_ival) { // NOLINT
+            for(float x=b.bl.x; x<=b.tr.x; x+=x_ival) { // NOLINT
                 const point_t p { x, y };
                 if( contains(p) ){
                     p.draw();
@@ -757,7 +757,7 @@ int pixel::HighScore::resetTextEntries(int lineno, int edit) {
     for(size_t i = 0; i < table.size(); ++i){
         //printf("AJKSKDJFDKJAJSKDFJJDKAJSDKFJOHJO1234567890\n");
         pixel::HighScore::Entry e = table[i];
-        if(size_t(edit) == i){
+        if(edit == ssize_t(i)){ // NOLINT
             textEntries.push_back(pixel::make_text(tl_text, lineno+int(i+1), m_text_color, 30, 
             "%2.2d%s    : %d", i+1, zeichen(int(i)+1), e.score));
             pos = lineno+int(i+1);
@@ -825,7 +825,7 @@ bool pixel::HighScore::enterEntry(Entry& p, pixel::input_event_t& event){
         p.name = word;
         p.name += letter;
         for(int i = 0; i < 3-b; ++i){
-            p.name += "A";
+            p.name += 'A';
         }
         word += letter;
         s = 'A';
