@@ -1,6 +1,6 @@
 /*
  * Author: Hermann Kai Gothel <hkg@jausoft.com>
- * Copyright (c) 2022 Gothel Software e.K.
+ * Copyright (c) 2026 Gothel Software e.K.
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -25,16 +25,15 @@
 #include <cstdint>
 #include <cstdlib>
 #include <ctime>
-#include <iostream>
-#include <iterator>
 #include <pixel/pixel2f.hpp>
 #include <pixel/pixel2i.hpp>
-#include "pixel/pixel.hpp"
+#include <pixel/pixel.hpp>
+#include <pixel/dynarray2d.hpp>
 #include <jau/utils.hpp>
 
 #include <cstdio>
 #include <cmath>
-#include <utility>
+#include <algorithm>
 #include <vector>
 
 using std::round;
@@ -42,15 +41,11 @@ using std::round;
 using namespace jau;
 static pixel::input_event_t event;
 
-static const int cellcount = 3;
-static const int cellsToWin = 3;
-
 static const float border = 1;
-static const float spaceheight = cellcount + 2 * border;
 static const float wh = 1.0f;
 
 struct ICoord {
-	int x, y;
+	size_t x, y;
 };
 
 constexpr bool operator==(const ICoord& lhs, const ICoord& rhs ) noexcept {
@@ -72,8 +67,12 @@ class TicTacToe {
 		}
 	}
   private:
-    Value m_arena[cellcount][cellcount]; ///< [Y][X]
-	int m_cursorX=0, m_cursorY=0;
+    DynArray2D<Value> m_arena = DynArray2D<Value>(3, 3); ///< [X][Y]
+    float m_spaceheight = (float)m_arena.rows() + 2.0f * border;
+    float m_spacewidth = (float)m_arena.columns() + 2.0f * border;
+
+    size_t m_cellsToWin = 3;
+	size_t m_cursorX=0, m_cursorY=0;
 	Value m_turn = Value::o;
 	Value m_winner = Value::none;
 	std::vector<ICoord> m_winline;
@@ -83,20 +82,20 @@ class TicTacToe {
 	void drawRaster() {
 		pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 0 /* a */);
 		{
-			for(float ypos=border+wh; ypos<spaceheight-border; ypos+=wh) {
+			for(float ypos=border+wh; ypos<m_spaceheight-border; ypos+=wh) { // NOLINT(bugprone-float-loop-counter)
 				pixel::f2::point_t p1(border,    ypos);
-				pixel::f2::point_t p2(spaceheight-border, ypos);
+				pixel::f2::point_t p2(m_spacewidth-border, ypos);
 				pixel::f2::lineseg_t::draw(p1, p2);
 			}
-			for(float xpos=border+wh; xpos<spaceheight-border; xpos+=wh) {
+			for(float xpos=border+wh; xpos<m_spacewidth-border; xpos+=wh) { // NOLINT(bugprone-float-loop-counter)
 				pixel::f2::point_t p1(xpos, border);
-				pixel::f2::point_t p2(xpos,  spaceheight-border);
+				pixel::f2::point_t p2(xpos,  m_spaceheight-border);
 				pixel::f2::lineseg_t::draw(p1, p2);
 			}
 		}
 	}
 
-	void drawO(int xi, int yi) {
+	void drawO(size_t xi, size_t yi) {
 		static uint8_t O_b = 0;
 		static int8_t O_coldir = 1;
 		pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 0 /* a */);
@@ -124,8 +123,8 @@ class TicTacToe {
 			float step_x = (p1.x - p0.x)/400.0f;
 			float step_y = (p1.y - p0.y)/ 400.0f;
 		    //pixel::f2::lineseg_t::draw(p0, p1);
-			for(float y=p0.y;y<p1.y; y+=step_y) {
-				for(float x=p0.x;x<p1.x; x+=step_x) {
+			for(float y=p0.y;y<p1.y; y+=step_y) { // NOLINT(bugprone-float-loop-counter)
+				for(float x=p0.x;x<p1.x; x+=step_x) { // NOLINT(bugprone-float-loop-counter)
 					pixel::f2::point_t p { x, y };
 					pixel::f2::vec_t v = p - m;
 					const float l = v.length();
@@ -137,7 +136,7 @@ class TicTacToe {
 			}
 		}
 	}
-	void drawX(int xi, int yi) {
+	void drawX(size_t xi, size_t yi) {
 		static uint8_t X_b = 0;
 		static int8_t X_coldir = 1;
 		pixel::set_pixel_color(0 /* r */, 0 /* g */, 255 /* b */, 0 /* a */);
@@ -185,9 +184,9 @@ class TicTacToe {
     TicTacToe() noexcept { reset(); }
 
 	void reset() {
-		for(size_t y=0; y<cellcount; ++y) { // NOLINT
-			for(size_t x=0; x<cellcount; ++x) {
-				m_arena[y][x] = Value::none;
+		for(size_t y=0; y<m_arena.rows(); ++y) { // NOLINT
+			for(size_t x=0; x<m_arena.columns(); ++x) {
+				m_arena[x, y] = Value::none;
 			}
 		}
 		m_cursorX=0, m_cursorY=0;
@@ -198,48 +197,80 @@ class TicTacToe {
 		m_cursor_coldir=1;
 	}
 
+    float spaceheight() noexcept { return m_spaceheight; }
+
+    void resize(size_t columns, size_t rows) {
+        if (columns < 3 || rows < 3) {
+            return;
+        }
+        if (columns != m_arena.columns() || rows != m_arena.rows()) {
+            m_arena = DynArray2D<Value>(columns, rows); ///< [X][Y]
+            m_spaceheight = (float)m_arena.rows() + 2.0f * border;
+            m_spacewidth = (float)m_arena.columns() + 2.0f * border;
+            reset();
+        }
+    }
+    size_t cellsToWin() noexcept  { return m_cellsToWin; }
+    void setCellsToWin(size_t v) noexcept {
+        if (m_cellsToWin < 3) {
+            return;
+        }
+        m_cellsToWin = v;
+    }
+    void setTicTacToeDefaults() noexcept {
+        m_cellsToWin = 3;
+        resize(3, 3);
+    }
+    void setWuZiQiDefaults() noexcept {
+        m_cellsToWin = 5;
+        resize(10, 10);
+    }
+
 	Value getTurn() { return m_turn; }
 
+	size_t columns() { return m_arena.columns(); }
+    size_t rows() { return m_arena.rows(); }
+
   private:
-	bool isWinner([[maybe_unused]] Value v, int x, int y) {
-		// direction: straight right
-		if(x + cellsToWin <= cellcount ) {
+	bool isWinner([[maybe_unused]] Value v, size_t x, size_t y) {
+		// direction: horizontal to the right
+		if(x + m_cellsToWin <= m_arena.columns() ) {
 			m_winline.push_back({x, y});
-			int xi;
-			for(xi=x+1;
-				xi < x+cellsToWin && v == m_arena[xi][y];
+			size_t xi;
+			for(xi = x + 1;
+				xi < x + m_cellsToWin && v == m_arena[xi, y];
 				++xi)
 			{ m_winline.push_back({xi, y}); }
-			if( xi - x == cellsToWin ) {
+			if( xi - x == m_cellsToWin ) {
 				return true;
 			} else {
 				m_winline.clear();
 			}
 		}
-		// direction: straight top
-		if(y + cellsToWin <= cellcount) {
+		// direction: vertical to the top
+		if(y + m_cellsToWin <= m_arena.rows()) {
 			m_winline.push_back({x, y});
-			int yi;
-			for(yi=y+1;
-				yi < y+cellsToWin && v == m_arena[x][yi];
+			size_t yi;
+			for(yi = y + 1;
+				yi < y + m_cellsToWin && v == m_arena[x, yi];
 				++yi)
 			{ m_winline.push_back({x, yi}); }
-			if( yi - y == cellsToWin ) {
+			if( yi - y == m_cellsToWin ) {
 				return true;
 			} else {
 				m_winline.clear();
 			}
 		}
-		// direction: diagonal top-right
-		if(x + cellsToWin <= cellcount && y + cellsToWin <= cellcount) {
+		// direction: diagonal to the top-right
+		if(x + m_cellsToWin <= m_arena.columns() && y + m_cellsToWin <= m_arena.rows()) {
 			m_winline.push_back({x, y});
-			int yi, xi;
-			for(xi=x+1, yi=y+1;
-				xi < x+cellsToWin && yi < y+cellsToWin &&
-				v == m_arena[xi][yi];
+			size_t yi, xi;
+			for(xi = x + 1, yi = y + 1;
+				xi < x + m_cellsToWin && yi < y + m_cellsToWin &&
+				v == m_arena[xi, yi];
 				++xi, ++yi)
 			{ m_winline.push_back({xi, yi}); }
-			if( xi - x == cellsToWin && yi - y == cellsToWin ) {
+			if( xi == x + m_cellsToWin && yi == y + m_cellsToWin) {
 				return true;
 			} else {
 				m_winline.clear();
@@ -251,16 +282,16 @@ class TicTacToe {
 	            }
 	        } */
 		}
-		// direction: diagonal top-left
-		if(x - cellsToWin + 1 >= 0 && y + cellsToWin <= cellcount) {
+		// direction: diagonal to the top-left
+		if(x + 1 >= m_cellsToWin && y + m_cellsToWin <= m_arena.rows()) {
 			m_winline.push_back({x, y});
-			int xi, yi;
-			for(xi=x-1, yi=y+1;
-				xi > x - cellsToWin && yi < y+cellsToWin &&
-				v == m_arena[xi][yi];
-				--xi, ++yi)
+			size_t xi, yi;
+			for(xi = x, yi = y + 1;
+				(--xi) + m_cellsToWin > x && yi < y + m_cellsToWin && // NOLINT
+				v == m_arena[xi, yi];
+				++yi)
 			{ m_winline.push_back({xi, yi}); }
-			if( x - xi == cellsToWin && yi - y == cellsToWin ) {
+			if( x == xi + m_cellsToWin && yi == y + m_cellsToWin ) {
 				return true;
 			} else {
 				m_winline.clear();
@@ -275,9 +306,9 @@ class TicTacToe {
 		return false;
 	}
 	void updateWinner() noexcept {
-		for(int x=0; x<cellcount; ++x) { // NOLINT
-			for(int y=0; y<cellcount; ++y) {
-				[[maybe_unused]] Value v = m_arena[x][y];
+		for(size_t x=0; x<m_arena.columns(); ++x) { // NOLINT
+			for(size_t y=0; y<m_arena.rows(); ++y) {
+				[[maybe_unused]] Value v = m_arena[x, y];
 				if (v != Value::none) {
 					if (isWinner(v, x, y)) {
 						m_winner = v;
@@ -293,7 +324,7 @@ class TicTacToe {
 
 	void moveCursorUp(Value player) {
 		if (getWinner() != Value::none) { return; }
-		if(m_turn==player && m_cursorY+1<cellcount) {
+		if(m_turn==player && m_cursorY+1 < m_arena.rows()) {//FIXME
 			++m_cursorY;
 		}
 	}
@@ -305,7 +336,7 @@ class TicTacToe {
 	}
 	void moveCursorRight(Value player) {
 		if (getWinner() != Value::none) { return; }
-		if(m_turn==player &&m_cursorX+1<cellcount) {
+		if(m_turn==player &&m_cursorX+1 < m_arena.columns()) {//FIXME
 			++m_cursorX;
 		}
 	}
@@ -320,9 +351,9 @@ class TicTacToe {
 		if(m_turn!=player) {
 			return;
 		}
-		const int x = m_cursorX, y = m_cursorY;
-		if( m_arena[x][y] == Value::none ) {
-			m_arena[x][y] = m_turn;
+		const size_t x = m_cursorX, y = m_cursorY;
+		if( m_arena[x, y] == Value::none ) {
+			m_arena[x, y] = m_turn;
 			updateWinner();
 			if (m_turn == Value::o) {
 				m_turn = Value::x;
@@ -333,11 +364,11 @@ class TicTacToe {
 	}
 	void draw() {
 		drawRaster();
-		for(int x=0; x<cellcount; ++x) {
-			for(int y=0; y<cellcount; ++y) {
-				if( m_arena[x][y] == Value::o ) {
+		for(size_t x=0; x<m_arena.columns(); ++x) {
+			for(size_t y=0; y<m_arena.rows(); ++y) {
+				if( m_arena[x, y] == Value::o ) {
 					drawO(x, y);
-				} else if( m_arena[x][y] == Value::x ) {
+				} else if( m_arena[x, y] == Value::x ) {
 					drawX(x, y);
 				}
 			}
@@ -361,7 +392,6 @@ class TicTacToe {
 		}
 	}
 };
-
 static TicTacToe game;
 
 void mainloop() {
@@ -379,7 +409,7 @@ void mainloop() {
         } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             // nop for this demo, resize already performed
 			//pixel::cart_coord.set_height(-spaceheight/2, spaceheight/2);
-			pixel::cart_coord.set_height2(0, spaceheight);
+			pixel::cart_coord.set_height2(0, game.spaceheight());
 		} else if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
 			game.reset();
         } else if( event.has_any_p1() ) {
@@ -407,8 +437,23 @@ void mainloop() {
 				game.enter(TicTacToe::Value::x);
 			}
 		}
-
-
+        if( event.released_and_clr( pixel::input_event_type_t::F1) ) {
+            game.setTicTacToeDefaults();
+            pixel::cart_coord.set_height2(0, game.spaceheight());
+        } else if( event.released_and_clr( pixel::input_event_type_t::F2) ) {
+            game.setWuZiQiDefaults();
+            pixel::cart_coord.set_height2(0, game.spaceheight());
+        } else if( event.released_and_clr( pixel::input_event_type_t::F5 ) ) {
+            game.resize(game.columns()-1, game.rows()-1);
+            pixel::cart_coord.set_height2(0, game.spaceheight());
+        } else if( event.released_and_clr( pixel::input_event_type_t::F6) ) {
+            game.resize(game.columns()+1, game.rows()+1);
+            pixel::cart_coord.set_height2(0, game.spaceheight());
+        } else if( event.released_and_clr( pixel::input_event_type_t::F7) ) {
+            game.setCellsToWin(game.cellsToWin()-1);
+        } else if( event.released_and_clr( pixel::input_event_type_t::F8) ) {
+            game.setCellsToWin(game.cellsToWin()+1);
+        }
         if( event.paused() ) {
             animating = false;
         } else {
@@ -439,9 +484,9 @@ void mainloop() {
         hud_text->draw_fbcoord(0, 0);
     }
 	pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-	pixel::texture_ref hud2 = pixel::make_text("Turn %c, Winner %c (need %d)",
+	pixel::texture_ref hud2 = pixel::make_text("Turn %c, Winner %c (need %zu)",
 	        TicTacToe::toChar(game.getTurn()),
-			TicTacToe::toChar(game.getWinner()), cellsToWin);
+			TicTacToe::toChar(game.getWinner()), game.cellsToWin());
 	if( nullptr != hud2 ) {
 		hud2->draw_fbcoord(0, pixel::fb_height - hud2->height);
 		//hud2->draw(0, 1);
@@ -456,24 +501,34 @@ int main(int argc, char *argv[])
     #if defined(__EMSCRIPTEN__)
         window_width = 1024, window_height = 576; // 16:9
     #endif
+    size_t g_columns = game.columns(), g_rows = game.rows();
     {
         for(int i=1; i<argc; ++i) {
-            if( 0 == strcmp("-width", argv[i]) && i+1<argc) {
-                window_width = atoi(argv[i+1]);
+            if (0 == strcmp("-width", argv[i]) && i + 1 < argc) {
+                window_width = atoi(argv[i + 1]);
                 ++i;
-            } else if( 0 == strcmp("-height", argv[i]) && i+1<argc) {
-                window_height = atoi(argv[i+1]);
+            } else if (0 == strcmp("-height", argv[i]) && i + 1 < argc) {
+                window_height = atoi(argv[i + 1]);
                 ++i;
+            } else if (0 == strcmp("-columns", argv[i]) && i + 1 < argc) {
+                g_columns = atoi(argv[i + 1]);
+                                ++i;
+            } else if (0 == strcmp("-rows", argv[i]) && i + 1 < argc) {
+                g_rows = atoi(argv[i + 1]);
+                ++i;
+            } else if (0 == strcmp("-wuziqi", argv[i])) {
+                game.setWuZiQiDefaults();
             }
         }
     }
+    game.resize(g_columns, g_rows);
     {
         const float origin_norm[] = { 0.0f, 1.0f };
         if( !pixel::init_gfx_subsystem(argv[0], "sandbox01", window_width, window_height, origin_norm, true, true /* subsys primitives */) ) {
             return 1;
         }
 		// pixel::cart_coord.set_height(-spaceheight/2, spaceheight/2);
-		pixel::cart_coord.set_height2(0, spaceheight);
+		pixel::cart_coord.set_height2(0, game.spaceheight());
     }
 
     log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
