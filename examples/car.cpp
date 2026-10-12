@@ -49,13 +49,13 @@ class Schienen {
     si_length_f32 m_length;
     si_length_f32 m_width;
     f2::point_t m_tl;
-    
+
     Schienen(f2::point_t tl, si_length_f32 length)
     : m_length(length), m_width(30_dm), m_tl(tl){}
-    
+
     void draw(){
         // FIXME: Either add track elements to global list only once, e.g. in ctor
-        // FIXME: or maintain own f2::geom_list_t instead of using global gobjects (-> ctor)! 
+        // FIXME: or maintain own f2::geom_list_t instead of using global gobjects (-> ctor)!
         f2::geom_list_t &list = f2::gobjects();
         {
             f2::rect_ref_t r = std::make_shared<f2::rect_t>(m_tl, 1_dm, m_length);
@@ -63,15 +63,15 @@ class Schienen {
             list.push_back(r);
         }
         {
-            f2::rect_ref_t r = std::make_shared<f2::rect_t>(f2::point_t(m_tl.x + (m_width - 1_dm), 
-                                                                        m_tl.y), 
+            f2::rect_ref_t r = std::make_shared<f2::rect_t>(f2::point_t(m_tl.x + (m_width - 1_dm),
+                                                                        m_tl.y),
                                                             1_dm, m_length);
             r->draw(false);
             list.push_back(r);
         }
         si_length_f32 l = 0;
         while(l < m_length) {
-            f2::rect_ref_t r = std::make_shared<f2::rect_t>(f2::point_t(m_tl.x + 1_dm, m_tl.y - l), 
+            f2::rect_ref_t r = std::make_shared<f2::rect_t>(f2::point_t(m_tl.x + 1_dm, m_tl.y - l),
             m_width - 2_dm, 50_cm);
             r->draw(false);
             list.push_back(r);
@@ -95,7 +95,7 @@ class Waggon {
     Waggon(){
         reset();
     }
-    
+
     void reset(){
         length = 8_m;
         width = 4_m;
@@ -103,18 +103,18 @@ class Waggon {
         tl_body = {-width / 2, cart_coord.max_y() - width * 2 - 95_dm};
         body = std::make_shared<f2::rect_t>(tl_body, width, length);
         tria1 = std::make_shared<f2::triangle_t>(
-                f2::point_t(tl_body.x + width / 4, tl_body.y), 
-                f2::point_t(tl_body.x + width * 0.75f, tl_body.y), 
+                f2::point_t(tl_body.x + width / 4, tl_body.y),
+                f2::point_t(tl_body.x + width * 0.75f, tl_body.y),
                 f2::point_t(tl_body.x + width * 0.5f, tl_body.y + width / 2));
         tria2 = std::make_shared<f2::triangle_t>(
-                f2::point_t(body->m_bl.x + width / 4, body->m_bl.y), 
-                f2::point_t(body->m_bl.x + width * 0.75f, body->m_bl.y), 
+                f2::point_t(body->m_bl.x + width / 4, body->m_bl.y),
+                f2::point_t(body->m_bl.x + width * 0.75f, body->m_bl.y),
                 f2::point_t(body->m_bl.x + width * 0.5f, body->m_bl.y - width / 2));
         door1 = std::make_shared<f2::lineseg_t>(
-                f2::point_t(body->m_tl.x, body->m_tl.y - 1.0f/4 * length), 
+                f2::point_t(body->m_tl.x, body->m_tl.y - 1.0f/4 * length),
                 f2::point_t(body->m_bl.x, body->m_bl.y + 1.0f/4 * length));
         door2 = std::make_shared<f2::lineseg_t>(
-                f2::point_t(body->m_tr.x, body->m_tr.y - 1.0f/4 * length), 
+                f2::point_t(body->m_tr.x, body->m_tr.y - 1.0f/4 * length),
                 f2::point_t(body->m_br.x, body->m_br.y + 1.0f/4 * length));
         velocity = max_train_velo;
         angle = 90_deg;
@@ -124,12 +124,12 @@ class Waggon {
         loc_geom_list.push_back(tria1);
         loc_geom_list.push_back(tria2);
     }
-    
+
     void change_velocity(const si_velo_f32 v){
         velocity = std::min(velocity + v, max_train_velo);
         velocity = std::max(velocity, 0.0f);
     }
-    
+
     void rotate(const float radians){
         angle += radians;
         body->rotate(radians, body->p_center);
@@ -138,7 +138,7 @@ class Waggon {
         door1->rotate(radians, body->p_center);
         door2->rotate(radians, body->p_center);
     }
-    
+
     void move(f2::vec_t vec){
         body->move(vec);
         tria1->move(vec);
@@ -160,7 +160,7 @@ class Waggon {
             move({0.0f, cart_coord.min_y()-body->p_center.y});
         }
     }
-    
+
     void tick(const float dt){
         f2::vec_t vec = f2::vec_t::from_length_angle(velocity, angle);
         move(vec * dt);
@@ -178,7 +178,7 @@ class Waggon {
 };
 
 // FIXME: Zug or Train is a noun denoting the whole train,
-// e.g. Triebwagen + Wagons (Locomotive + Waggons) 
+// e.g. Triebwagen + Wagons (Locomotive + Waggons)
 class Automotora {
   public:
     si_length_f32 length;
@@ -193,7 +193,7 @@ class Automotora {
     Automotora(){
         reset();
     }
-    
+
     void reset(){
         length = 8_m;
         width = 4_m;
@@ -201,18 +201,18 @@ class Automotora {
         tl_body = {-width / 2, cart_coord.max_y() - width * 2};
         body = std::make_shared<f2::rect_t>(tl_body, width, length);
         tria1 = std::make_shared<f2::triangle_t>(
-                tl_body, 
-                f2::point_t(tl_body.x + width, tl_body.y), 
+                tl_body,
+                f2::point_t(tl_body.x + width, tl_body.y),
                 f2::point_t(tl_body.x + width * 0.5f, tl_body.y + width));
         tria2 = std::make_shared<f2::triangle_t>(
-                f2::point_t(body->m_bl.x + width / 4, body->m_bl.y), 
-                f2::point_t(body->m_bl.x + width * 0.75f, body->m_bl.y), 
+                f2::point_t(body->m_bl.x + width / 4, body->m_bl.y),
+                f2::point_t(body->m_bl.x + width * 0.75f, body->m_bl.y),
                 f2::point_t(body->m_bl.x + width * 0.5f, body->m_bl.y - width / 2));
         door1 = std::make_shared<f2::lineseg_t>(
-                f2::point_t(body->m_tl.x, body->m_tl.y - 1.0f/3 * length), 
+                f2::point_t(body->m_tl.x, body->m_tl.y - 1.0f/3 * length),
                 f2::point_t(body->m_bl.x, body->m_bl.y + 1.0f/3 * length));
         door2 = std::make_shared<f2::lineseg_t>(
-                f2::point_t(body->m_tr.x, body->m_tr.y - 1.0f/3 * length), 
+                f2::point_t(body->m_tr.x, body->m_tr.y - 1.0f/3 * length),
                 f2::point_t(body->m_br.x, body->m_br.y + 1.0f/3 * length));
         velocity = max_train_velo;
         angle = 90_deg;
@@ -222,12 +222,12 @@ class Automotora {
         loc_geom_list.push_back(tria1);
         loc_geom_list.push_back(tria2);
     }
-    
+
     void change_velocity(const si_velo_f32 v){
         velocity = std::min(velocity + v, max_train_velo);
         velocity = std::max(velocity, 0.0f);
     }
-    
+
     void rotate(const float radians){
         angle += radians;
         body->rotate(radians, body->p_center);
@@ -236,7 +236,7 @@ class Automotora {
         door1->rotate(radians, body->p_center);
         door2->rotate(radians, body->p_center);
     }
-    
+
     void move(f2::vec_t vec){
         body->move(vec);
         tria1->move(vec);
@@ -258,12 +258,12 @@ class Automotora {
             move({0.0f, cart_coord.min_y()-body->p_center.y});
         }
     }
-    
+
     void tick(const float dt){
         f2::vec_t vec = f2::vec_t::from_length_angle(velocity, angle);
         move(vec * dt);
     }
-    
+
     void draw(){
         body->draw(false);
         tria1->draw(false);
@@ -276,33 +276,33 @@ class Automotora {
 };
 
 // FIXME: Zug or Train is a noun denoting the whole train,
-// e.g. Triebwagen + Wagons (Locomotive + Waggons) 
+// e.g. Triebwagen + Wagons (Locomotive + Waggons)
 class Train {
   public:
     Waggon waggon;
     Automotora automotora;
     Train()
     : waggon(), automotora(){}
-    
+
     void reset(){
         waggon.reset();
         automotora.reset();
     }
-    
+
     void change_velocity(si_velo_f32 v){
         velocity = std::min(velocity + v, max_train_velo);
         velocity = std::max(velocity, 0.0f);
     }
-    
+
     si_velo_f32 velocity = automotora.velocity;
-    
+
     void move(f2::vec_t vec){
         waggon.move(vec);
         automotora.move(vec);
     }
-    
+
     si_time_f32 t = 10_s;
-    
+
     void tick(const float dt){
         if(t <= 0_s){
             change_velocity(100_km_h * dt);
@@ -312,7 +312,7 @@ class Train {
         waggon.tick(dt);
         automotora.tick(dt);
     }
-    
+
     void draw(){
         waggon.draw();
         automotora.draw();
@@ -321,7 +321,7 @@ class Train {
 
 Train train;
 
-Schienen gleis = {{-train.waggon.width / 2, cart_coord.max_y()}, 
+Schienen gleis = {{-train.waggon.width / 2, cart_coord.max_y()},
                        cart_coord.height()};
 
 std::vector<f2::rect_t> bahnhoefe;
@@ -332,19 +332,19 @@ void make_bahnhoefe(){
     {
         bahnhoefe.emplace_back(f2::point_t(-width / 2, cart_coord.max_y()), width, length);
         aus_geom_list.emplace_back(std::make_shared<f2::rect_t>(
-                                        f2::point_t(-width / 2, cart_coord.max_y()), 
+                                        f2::point_t(-width / 2, cart_coord.max_y()),
                                         width, length));
     }
     {
         bahnhoefe.emplace_back(f2::point_t(-width / 2, length / 2), width, length);
         aus_geom_list.emplace_back(std::make_shared<f2::rect_t>(
-                                        f2::point_t(-width / 2, length / 2), 
+                                        f2::point_t(-width / 2, length / 2),
                                         width, length));
     }
     {
         bahnhoefe.emplace_back(f2::point_t(-width / 2, cart_coord.min_y() + length), width, length);
         aus_geom_list.emplace_back(std::make_shared<f2::rect_t>(
-                                        f2::point_t(-width / 2, cart_coord.min_y() + length), 
+                                        f2::point_t(-width / 2, cart_coord.min_y() + length),
                                         width, length));
     }
 }
@@ -462,14 +462,14 @@ class Car {
             rect_body = {tl2, m_width, m_length*0.75f};
         }
         circle_seg_body = {
-            f2::point_t(rect_body.m_tl.x + m_width / 2, rect_body.m_tl.y), 
+            f2::point_t(rect_body.m_tl.x + m_width / 2, rect_body.m_tl.y),
             m_width / 2, 0, M_PI};
         {
             const si_length_f32 wheel_width = (float)(m_width * 0.25);
             const si_length_f32 wheel_length = (float)(wheel_width * 2);
             {
                 f2::rect_t wheeltl = {
-                    {rect_body.m_tl.x - wheel_width, rect_body.m_tl.y}, 
+                    {rect_body.m_tl.x - wheel_width, rect_body.m_tl.y},
                     wheel_width, wheel_length};
                 wheels.push_back(wheeltl);
             }
@@ -479,19 +479,19 @@ class Car {
             }
             {
                 f2::rect_t wheelbl = {
-                    {rect_body.m_bl.x - wheel_width, rect_body.m_bl.y + wheel_length}, 
+                    {rect_body.m_bl.x - wheel_width, rect_body.m_bl.y + wheel_length},
                     wheel_width, wheel_length};
                 wheels.push_back(wheelbl);
             }
             {
                 f2::rect_t wheelbr = {
-                    {rect_body.m_br.x, rect_body.m_br.y + wheel_length}, 
+                    {rect_body.m_br.x, rect_body.m_br.y + wheel_length},
                     wheel_width, wheel_length};
                 wheels.push_back(wheelbr);
             }
         }
         m_length = m_length*0.75f + m_width / 2;
-        parkplatz = {{rect_body.m_tl.x - 1_m, rect_body.m_tl.y + m_width / 2 + 125_cm}, 
+        parkplatz = {{rect_body.m_tl.x - 1_m, rect_body.m_tl.y + m_width / 2 + 125_cm},
                      m_width + 2_m, m_length + 25_dm};
         aabbox.resize(circle_seg_body.box());
         aabbox.resize(rect_body.box());
@@ -505,7 +505,7 @@ class Car {
     }
     void reset(bool all){
         m_bdv = m_start_bdv;
-        m_velocity = m_start_velocity; 
+        m_velocity = m_start_velocity;
         m_angle = m_start_angle;
         m_fuse01 = max_fuse01;
         m_stability = max_stability; 
@@ -530,7 +530,7 @@ class Car {
             rect_body = {tl2, m_width, (float)(m_length*0.75)};
         }
         circle_seg_body = {
-            f2::point_t(rect_body.m_tl.x + m_width / 2, rect_body.m_tl.y), 
+            f2::point_t(rect_body.m_tl.x + m_width / 2, rect_body.m_tl.y),
             m_width / 2, 0, M_PI};
         {
             wheels.clear();
@@ -538,7 +538,7 @@ class Car {
             const si_length_f32 wheel_length = (float)(wheel_width * 2);
             {
                 f2::rect_t wheeltl = {
-                    {rect_body.m_tl.x - wheel_width, rect_body.m_tl.y}, 
+                    {rect_body.m_tl.x - wheel_width, rect_body.m_tl.y},
                     wheel_width, wheel_length};
                 wheels.push_back(wheeltl);
             }
@@ -548,19 +548,19 @@ class Car {
             }
             {
                 f2::rect_t wheelbl = {
-                    {rect_body.m_bl.x - wheel_width, rect_body.m_bl.y + wheel_length}, 
+                    {rect_body.m_bl.x - wheel_width, rect_body.m_bl.y + wheel_length},
                     wheel_width, wheel_length};
                 wheels.push_back(wheelbl);
             }
             {
                 f2::rect_t wheelbr = {
-                    {rect_body.m_br.x, rect_body.m_br.y + wheel_length}, 
+                    {rect_body.m_br.x, rect_body.m_br.y + wheel_length},
                     wheel_width, wheel_length};
                 wheels.push_back(wheelbr);
             }
         }
     }
-    
+
     bool intersects(const f2::rect_t &o) const noexcept {
         if(m_life <= 0){
             return false;
@@ -629,7 +629,7 @@ class Car {
         result = result || circle_seg_body.intersects(o.circle_seg_body);
         return result;
     }
-    
+
     bool intersection(f2::vec_t &reflect_out, const Car &o) const noexcept {
         if(m_life <= 0){
             return false;
@@ -647,13 +647,13 @@ class Car {
         }
         return true;
     }
-    
+
     /*
     bool intersects(const Train &o) const noexcept {
         return intersects(*o.automotora.body) || intersects(*o.waggon.body);
     }
     */
-    
+
     bool inside(const f2::rect_t &o) const noexcept {
         f2::point_t tl = {aabbox.bl.x, aabbox.tr.y};
         f2::point_t tr = aabbox.tr;
@@ -895,7 +895,7 @@ class Car {
                 for(const f2::geom_ref_t &aug : aus_geom_list){
                     if(!intersects(*aug)){
                         for(f2::rect_t &bahnhof : bahnhoefe){
-                            if(!inside(bahnhof) || !inside(*train.automotora.body) || 
+                            if(!inside(bahnhof) || !inside(*train.automotora.body) ||
                             !inside(*train.waggon.body)){
                                 m_stability -= m_velocity * dt;
                             }
@@ -904,7 +904,7 @@ class Car {
                 }
             }
         }
-        
+
         if((inside(*train.automotora.body) || inside(*train.waggon.body))){
             m_velocity = train.velocity;
         }
@@ -927,7 +927,7 @@ class Car {
             r.draw(false);
         }
     }
-    
+
     f2::point_t make_point(f2::point_t p, const float radians, const float length) {
         const float x = length * cos(radians);
         const float y = length * sin(radians);
@@ -1054,8 +1054,8 @@ void mainloop() {
             do {
                 size_t a = (size_t)((float)(max_velos.size()-1) * next_rnd());
                 max_velo = max_velos[a];
-                std::cout << "rnd: idx " << a << 
-                             ", max_velo " << max_velo_old * 3.6f << " -> " << max_velo * 3.6f << " km/h" << std::endl; 
+                std::cout << "rnd: idx " << a <<
+                             ", max_velo " << max_velo_old * 3.6f << " -> " << max_velo * 3.6f << " km/h" << std::endl;
             } while( equals(max_velo_old, max_velo) );
             if(parken){
                 if(!car1.all_intersects(car1.parkplatz)){
@@ -1164,17 +1164,17 @@ void mainloop() {
     }
     */
     /*
-    if(((!car1.all_intersects(*train.waggon.body) && 
-          car1.all_intersects(*train.waggon.body)) || 
-        (!car1.all_intersects(*train.automotora.body) && 
+    if(((!car1.all_intersects(*train.waggon.body) &&
+          car1.all_intersects(*train.waggon.body)) ||
+        (!car1.all_intersects(*train.automotora.body) &&
           car1.all_intersects(*train.automotora.body))) &&
         train.velocity > 0){
         car1.m_stability -= 100.0f * dt;
     }
-    
-    if(((!car2.all_intersects(*train.waggon.body) && 
-          car2.all_intersects(*train.waggon.body)) || 
-        (!car2.all_intersects(*train.automotora.body) && 
+
+    if(((!car2.all_intersects(*train.waggon.body) &&
+          car2.all_intersects(*train.waggon.body)) ||
+        (!car2.all_intersects(*train.automotora.body) &&
           car2.all_intersects(*train.automotora.body))) &&
         train.velocity > 0){
         car2.m_stability -= 100.0f * dt;
