@@ -734,7 +734,7 @@ size_t pixel::HighScore::find_idx(const Entry& p) const {
     return 0;
 }
 
-std::string zeichen(int a){
+std::string_view zeichen(int a){
     switch(a % 10){
       case 1:
         return "st";
@@ -759,11 +759,11 @@ int pixel::HighScore::resetTextEntries(int lineno, int edit) {
         pixel::HighScore::Entry e = table[i];
         if(size_t(edit) == i){
             textEntries.push_back(pixel::make_text(tl_text, lineno+int(i+1), m_text_color, 30, 
-            "%2.2d%s    : %d", i+1, zeichen(int(i)+1).c_str(), e.score));
+            "%2.2d%s    : %d", i+1, zeichen(int(i)+1), e.score));
             pos = lineno+int(i+1);
         } else {
             textEntries.push_back(pixel::make_text(tl_text, lineno+int(i+1), m_text_color, 30, 
-            "%2.2d%s %3.3s: %d", i+1, zeichen(int(i)+1).c_str(), e.name.c_str(), e.score));       
+            "%2.2d%s %3.3s: %d", i+1, zeichen(int(i)+1), e.name.c_str(), e.score));       
         }
         //printf("ALSALALALALALALAJSJDFJDJJDJDJDJDJJDDJDJ %s\n", e.name.c_str()); 
     }
@@ -805,7 +805,7 @@ bool pixel::HighScore::enterEntry(Entry& p, pixel::input_event_t& event){
     */
     resetTextEntries(t);
     textEntries.push_back(pixel::make_text(tl_text, t, f4::vec_t(255, 0, 0, 255), 30, 
-    "%d%s %s: %dP <-", idx+1, zeichen(int(idx)+1).c_str(), p.name.c_str(), p.score));
+    "%d%s %s: %dP <-", idx+1, zeichen(int(idx)+1), p.name.c_str(), p.score));
     //addScore(p);
     //textEntries[idx]-
     if( event.pressed_and_clr( pixel::input_event_type_t::P1_RIGHT ) ) {
