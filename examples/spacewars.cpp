@@ -919,9 +919,10 @@ class player_t : public idscore_t {
           m_ship(nullptr)
         { respawn_ship(); }
 
-        void reset() noexcept {
+        const player_t& resetP() noexcept {
             idscore_t::reset();
             respawn_ship();
+            return *this;
         }
         spaceship_ref_t ship() noexcept { return m_ship; }
         bool has_ship() noexcept { return nullptr != m_ship; }
@@ -1066,12 +1067,12 @@ void mainloop() {
         if( event.released_and_clr(pixel::input_event_type_t::RESET) ) {
             pengs.clear();
             reset_asteroids(asteroid_count);
-            p1.reset();
+            p1.resetP();
             if(1 < player_count) {
-                p2.reset();
+                p2.resetP();
             }
             if(2 < player_count) {
-                p3.reset();
+                p3.resetP();
             }
         }
 
