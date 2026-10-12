@@ -36,6 +36,7 @@ using namespace jau::si_f32_literals;
 const int car_id_1 = 1;
 const int car_id_2 = 2;
 const si_velo_f32 start_max_velo = 50_km_h;
+constexpr static si_length_f32 text_height = 17_dm;
 si_velo_f32 max_velo = start_max_velo;
 si_velo_f32 max_train_velo = 100_km_h;
 std::vector<f2::geom_ref_t> aus_geom_list;
@@ -351,9 +352,9 @@ void make_bahnhoefe(){
 
 class Tunnel {
   private:
-    const int tex_height = 30;
-
   public:
+    constexpr static uint8_t m_tex_height = 2;
+    
     size_t m_id;
     f2::disk_t d1;
     f2::disk_t d2;
@@ -373,12 +374,12 @@ class Tunnel {
         d2.draw(false);
         {
             f2::point_t tl_tex = d1.box().bl;
-            pixel::texture_ref tex = make_text(tl_tex, 0, {0, 0, 0, 255}, tex_height, "%d", m_id);
+            pixel::texture_ref tex = make_text2(tl_tex, 0, {0, 0, 0, 255}, text_height, "%d", m_id);
             tex->draw_fbcoord(0, 0);
         }
         {
             f2::point_t tl_tex = d2.box().bl;
-            pixel::texture_ref tex = make_text(tl_tex, 0, {0, 0, 0, 255}, tex_height, "%d", m_id);
+            pixel::texture_ref tex = make_text2(tl_tex, 0, {0, 0, 0, 255}, text_height, "%d", m_id);
             tex->draw_fbcoord(0, 0);
         }
     }
@@ -841,7 +842,6 @@ void mainloop() {
     static Car car1(car_id_1);
     static Car car2(car_id_2);
     static const f4::vec_t text_color = {0, 0, 0, 0};
-    static const int text_height = 30;
     static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static input_event_t event;
     static std::vector<texture_ref> text_list;
@@ -923,30 +923,30 @@ void mainloop() {
         }
     }
     {
-        text_list.push_back(pixel::make_text(tl_text, 0, text_color, text_height,
-        "td %s, fps %2.2f, dt %.2f ms, %s, d_time %2d, car1(velo %.2f km/h, angle %.2f grad, %s, "
-        "fuse %.2f s, stability %.2f, tank %.2f, tunnel %.2f, max velo %.2f, money %.2f, "
+        text_list.push_back(pixel::make_text2(tl_text, 0, text_color, text_height,
+        "td %s, fps %2.2f, dt %.2f ms, %s, d_time %2d, car1(velo %3.2f km/h, angle %.2f degree, %s, "
+        "fuse %.2f s, stability %.2f%, tank %.2fl, tunnel %.2f, max velo %.2fkm/h, money %.2f$, "
         "life %d), ",
                 to_decstring(t1/1000, ',', 9).c_str(), gpu_avg_fps(), (dt*1000),
                 animating?"animating":"paused", car1.m_velocity * 3.6f, 
                 rad_to_adeg(car1.m_angle), (int)dtime, car1.m_bdv.c_str(), car1.m_fuse01, 
                 car1.m_stability, car1.m_tank, car1.tunnel, car1.max_car_velo * 3.6f, car1.m_money, 
                 car1.m_life));
-        text_list.push_back(pixel::make_text(tl_text, 1, text_color, text_height,
-        "car2(velo %.2f km/h, angle %.2f grad, %s, fuse %.2f s, stability %.2f, tank %.2f, "
-        "tunnel %.2f, max velo %.2f, money %.2f, life %d)",
+        text_list.push_back(pixel::make_text2(tl_text, 1, text_color, text_height,
+        "car2(velo %.2f km/h, angle %.2f degree, %s, fuse %.2f s, stability %.2f%, tank %.2fl, "
+        "tunnel %.2f, max velo %.2fkm/h, money %.2f$, life %d)",
                 car2.m_velocity * 3.6f, rad_to_adeg(car2.m_angle), car2.m_bdv.c_str(),
                 car2.m_fuse01, car2.m_stability, car2.m_tank, car2.tunnel, car2.max_car_velo * 3.6f,
                 car2.m_money, car2.m_life));
         if(parken){
-            text_list.push_back(make_text(tl_text, 2, text_color, text_height,
+            text_list.push_back(make_text2(tl_text, 2, text_color, text_height,
             "park, %.2f km/h", max_velo * 3.6f));
         } else {
-            text_list.push_back(make_text(tl_text, 2, text_color, text_height,
+            text_list.push_back(make_text2(tl_text, 2, text_color, text_height,
             "%.2f km/h", max_velo * 3.6f));
         }
-        text_list.push_back(pixel::make_text(tankstelle.m_tl, 0, text_color, text_height * 2, "P"));
-        text_list.push_back(pixel::make_text(werkstatt.m_tl, 0, text_color, text_height * 2, "R"));
+        text_list.push_back(pixel::make_text2(tankstelle.m_tl, 0, text_color, text_height * 2, "T"));
+        text_list.push_back(pixel::make_text2(werkstatt.m_tl, 0, text_color, text_height * 2, "W"));
     }
     // white background
     clear_pixel_fb(255, 255, 255, 255);
