@@ -505,8 +505,8 @@ class spaceship_t : public pixel::f2::linestrip_t {
 
         void velo_up(const float dv = vel_step) noexcept {
             pixel::f2::vec_t v = velocity;
-            v += pixel::f2::vec_t::from_length_angle(dv, dir_angle);
-            if( v.length() < vel_max ) {
+            v += pixel::f2::vec_t::from_length_angle(shields_with_energy && m_shield ? dv*0.25f : dv, dir_angle);
+            if( v.length() < (shields_with_energy && m_shield ? vel_max*0.8f : vel_max)) {
                 velocity = v;
             }
         }
