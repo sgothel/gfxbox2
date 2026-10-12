@@ -389,14 +389,16 @@ std::vector<peng_t> pengs;
 class spaceship_t : public pixel::f2::linestrip_t {
     public:
         constexpr static const float height = spaceship_height; // [m]
-        constexpr static const float vel_step = 5.0f; // [m/s]
-        constexpr static const float vel_max = 100.0f + vel_step; // [m/s]
+        constexpr static const si_mass_f32 ship_mass = 15_t;
+        constexpr static const si_velo_f32 vel_step = 5_m_s; // [m/s]
+        constexpr static const si_velo_f32 vel_max = 100.0f + vel_step; // [m/s]
         constexpr static const float rot_step = 180.0f; // [ang-degrees / s]
 
         constexpr static const float peng_diag = 0.15f*height;
-        constexpr static const float peng_velo_0 = vel_max / 2;
-        constexpr static const int peng_inventory_max = 4000;
-        constexpr static const int mine_inventory_max = 2000;
+        constexpr static const si_mass_f32 peng_mass = 5_kg;
+        constexpr static const si_power_f32 peng_power = 30'000_N;
+        constexpr static const int peng_inventory_max = 1000;
+        constexpr static const int mine_inventory_max = 500;
         constexpr static const si_mass_f32 mine_mass = 10_kg;
 
         constexpr static const float shield_radius = spaceship_height * 0.9f;
@@ -468,7 +470,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
           velocity(), peng_inventory(peng_inventory_max), mine_inventory(mine_inventory_max)
         {}
 
-        void peng() noexcept {
+        void peng(const float dt) noexcept {
             if(peng_inventory > 0){
                 pixel::f2::point_t p0;
                 // adjust start posision to geometric ship model
@@ -477,13 +479,14 @@ class spaceship_t : public pixel::f2::linestrip_t {
                 } else {
                     p0 = p_list[0];
                 }
-                pixel::f2::vec_t v_p = velocity + pixel::f2::vec_t::from_length_angle(peng_velo_0, dir_angle);
-                pengs.emplace_back(m_owner, p0, peng_diag, v_p);
+                pixel::f2::vec_t v_p = velocity + pixel::f2::vec_t::from_length_angle(peng_power / peng_mass * dt, dir_angle);
                 --peng_inventory;
+                velocity += pixel::f2::vec_t::from_length_angle(peng_power / (ship_mass + peng_mass * (float)peng_inventory + (float)mine_inventory*mine_mass) * dt, dir_angle + 180_deg);
+                pengs.emplace_back(m_owner, p0, peng_diag, v_p);
             }
         }
 
-        void mine() noexcept {
+        void mine(const float dt) noexcept {
             if(mine_inventory <= 0){
                 return;
             }
@@ -492,6 +495,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
                     pixel::f2::point_t(p_center.x, p_center.y-peng_diag)-
                     5*velocity.copy().normalize(),
                     peng_diag, pixel::f2::vec_t(), 2);
+                velocity += pixel::f2::vec_t::from_length_angle(-(velocity.length()/dt*mine_mass) / (ship_mass + peng_mass * (float)peng_inventory + (float)mine_inventory*mine_mass) * dt, dir_angle + 180_deg);
             } else {
                 pengs.emplace_back(m_owner,
                     p_center, peng_diag, -velocity, 2);
@@ -977,18 +981,18 @@ class player_t : public idscore_t {
             }
             
         }
-        void handle_event0() noexcept {
+        void handle_event0(const float dt) noexcept {
             if( nullptr != m_ship && event.has_any_pn(id()) ) {
                 if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION1)) ) {
-                    m_ship->peng();
+                    m_ship->peng(dt);
                     cloak_shot = true;
                     cloak_shot_timer = 0.0f;
                 } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION2)) ) {
                     m_ship->set_orbit_velocity();
                 } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION3)) ) {
                     set_cloak(!cloak());
-                } else if( event.pressed(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION4))) {
-                    m_ship->mine();
+                } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION4))) {
+                    m_ship->mine(dt);
                     cloak_shot = true;
                     cloak_shot_timer = 0.0f;
                 }
@@ -1035,6 +1039,10 @@ void mainloop() {
     static bool animating = true;
     static float grip = 50;
 
+    const uint64_t t1 = animating ? getElapsedMillisecond() : t_last; // [ms]
+    const float dt = (float)(t1 - t_last) / 1000.0f; // [s]
+    t_last = t1;
+
     while( pixel::handle_one_event(event) ) {
         if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_CLOSE_REQ ) ) {
             printf("Exit Application\n");
@@ -1069,19 +1077,16 @@ void mainloop() {
 
         // Pass events to all animated objects
         if( animating ) {
-            p1.handle_event0();
+            p1.handle_event0(dt);
 
             if(1 < player_count) {
-                p2.handle_event0();
+                p2.handle_event0(dt);
             }
             if(2 < player_count) {
-                p3.handle_event0();
+                p3.handle_event0(dt);
             }
         }
     }
-    const uint64_t t1 = animating ? getElapsedMillisecond() : t_last; // [ms]
-    const float dt = (float)(t1 - t_last) / 1000.0f; // [s]
-    t_last = t1;
 
     if(animating) {
         if(2 < player_count) {
