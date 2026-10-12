@@ -810,6 +810,10 @@ namespace pixel {
                           const pixel::f4::vec_t& color, const int font_height_usr,
                           const char* format, ...) noexcept;
 
+    texture_ref make_text2(const pixel::f2::point_t& tl, const int lineno,
+                          const pixel::f4::vec_t& color, const float font_height_usr,
+                          const char* format, ...) noexcept;
+
     inline texture_ref make_text(const pixel::f2::point_t& tl, const int lineno,
                           const pixel::f4::vec_t& color,
                           const std::string& text) noexcept {
