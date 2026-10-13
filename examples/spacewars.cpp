@@ -390,8 +390,8 @@ class spaceship_t : public pixel::f2::linestrip_t {
     public:
         constexpr static const float height = spaceship_height; // [m]
         constexpr static const si_mass_f32 ship_mass = 15_t;
-        constexpr static const si_velo_f32 vel_step = 5_m_s; // [m/s]
-        constexpr static const si_velo_f32 vel_max = 100.0f + vel_step; // [m/s]
+        constexpr static const si_power_f32 vel_power = 6_MN; // [N]
+        constexpr static const si_velo_f32 vel_max = 100_m_s; // [m/s]
         constexpr static const float rot_step = 180.0f; // [ang-degrees / s]
 
         constexpr static const float peng_diag = 0.15f*height;
@@ -502,10 +502,9 @@ class spaceship_t : public pixel::f2::linestrip_t {
             }
             --mine_inventory;
         }
-
-        void velo_up(const float dv = vel_step) noexcept {
+        void velo_up(const float dt, const si_power_f32 dv = vel_power) noexcept {
             pixel::f2::vec_t v = velocity;
-            v += pixel::f2::vec_t::from_length_angle(shields_with_energy && m_shield ? dv*0.25f : dv, dir_angle);
+            v += pixel::f2::vec_t::from_length_angle((shields_with_energy && m_shield ? dv*0.25f : dv)/total_mass()*dt, dir_angle);
             if( v.length() < (shields_with_energy && m_shield ? vel_max*0.8f : vel_max)) {
                 velocity = v;
             }
@@ -799,8 +798,8 @@ class player_t : public idscore_t {
         spaceship_ref_t m_ship;
         bool m_cloak;
 
-        void ship_dtor() noexcept {
-            make_fragments(fragments, m_ship, m_ship->velocity.length() + spaceship_t::vel_step, 0.003f);
+        void ship_dtor(const float dt) noexcept {
+            make_fragments(fragments, m_ship, m_ship->velocity.length() + spaceship_t::vel_power/m_ship->total_mass()*dt, 0.003f);
             m_ship = nullptr;
             m_respawn_timer = 5; // [s]
         }
@@ -819,22 +818,22 @@ class player_t : public idscore_t {
         }
 
     public:
-        static void collision(player_t& player1, player_t& player2) noexcept {
+        static void collision(player_t& player1, player_t& player2, const float dt) noexcept {
             spaceship_ref_t& ship1 = player1.m_ship;
             spaceship_ref_t& ship2 = player2.m_ship;
             if( nullptr != ship1 && nullptr != ship2 && ship1->intersects(*ship2)) {
                 if( !ship2->shield() && !ship1->shield() ) {
-                    player1.ship_dtor();
-                    player2.ship_dtor();
+                    player1.ship_dtor(dt);
+                    player2.ship_dtor(dt);
                 } else if( !ship2->shield() && ship1->shield() ) {
-                    player2.ship_dtor();
+                    player2.ship_dtor(dt);
                     player2.add_score(-score_ship);
                     if(shields_with_energy) {
                         player1.m_ship->add_to_shields(-spaceship_t::shield_falling_per_collision);
                     }
                 } else if( ship2->shield() && !ship1->shield() ) {
                     player1.add_score(-score_ship);
-                    player1.ship_dtor();
+                    player1.ship_dtor(dt);
                     if(shields_with_energy) {
                         player2.m_ship->add_to_shields(-spaceship_t::shield_falling_per_collision);
                     }
@@ -955,7 +954,7 @@ class player_t : public idscore_t {
         bool tick(const float dt) noexcept {
             if( nullptr != m_ship ) {
                 if( !m_ship->tick(dt) ) {
-                    ship_dtor();
+                    ship_dtor(dt);
                 }
             } else {
                 if( m_respawn_timer > 0 ) {
@@ -1002,7 +1001,7 @@ class player_t : public idscore_t {
         void handle_event1(const float dt /* [s] */) noexcept {
             if( nullptr != m_ship && event.has_any_pn(id()) ) {
                 if( event.pressed(pixel::to_input_event(id(), pixel::player_event_type_t::UP)) ) {
-                    m_ship->velo_up(spaceship_t::vel_step);
+                    m_ship->velo_up(dt, spaceship_t::vel_power);
                 } else if( event.pressed(pixel::to_input_event(id(), pixel::player_event_type_t::LEFT)) ){
                     m_ship->rotate_adeg(spaceship_t::rot_step * dt);
                 } else if( event.pressed(pixel::to_input_event(id(), pixel::player_event_type_t::RIGHT)) ){
@@ -1092,13 +1091,13 @@ void mainloop() {
         if(2 < player_count) {
             p3.handle_event1(dt);
             p3.tick(dt);
-            player_t::collision(p1, p3);
-            player_t::collision(p2, p3);
+            player_t::collision(p1, p3, dt);
+            player_t::collision(p2, p3, dt);
         }
         if(1 < player_count) {
             p2.handle_event1(dt);
             p2.tick(dt);
-            player_t::collision(p1, p2);
+            player_t::collision(p1, p2, dt);
         }
         {
             p1.handle_event1(dt);
