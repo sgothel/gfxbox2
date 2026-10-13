@@ -481,7 +481,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
                 }
                 pixel::f2::vec_t v_p = velocity + pixel::f2::vec_t::from_length_angle(peng_power / peng_mass * dt, dir_angle);
                 --peng_inventory;
-                velocity += pixel::f2::vec_t::from_length_angle(peng_power / (ship_mass + peng_mass * (float)peng_inventory + (float)mine_inventory*mine_mass) * dt, dir_angle + 180_deg);
+                velocity += pixel::f2::vec_t::from_length_angle(peng_power / total_mass() * dt, dir_angle + 180_deg);
                 pengs.emplace_back(m_owner, p0, peng_diag, v_p);
             }
         }
@@ -495,7 +495,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
                     pixel::f2::point_t(p_center.x, p_center.y-peng_diag)-
                     5*velocity.copy().normalize(),
                     peng_diag, pixel::f2::vec_t(), 2);
-                velocity += pixel::f2::vec_t::from_length_angle(-(velocity.length()/dt*mine_mass) / (ship_mass + peng_mass * (float)peng_inventory + (float)mine_inventory*mine_mass) * dt, dir_angle + 180_deg);
+                velocity += pixel::f2::vec_t::from_length_angle(-(velocity.length()/dt*mine_mass) / total_mass() * dt, dir_angle + 180_deg);
             } else {
                 pengs.emplace_back(m_owner,
                     p_center, peng_diag, -velocity, 2);
@@ -516,6 +516,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
         bool shield() const noexcept { return m_shield; }
         float shield_time_or_energie() const noexcept { return m_shield_time_or_energy; }
         void add_to_shields(const float add) { if(shields_with_energy) { m_shield_time_or_energy += add; } }
+        si_mass_f32 total_mass() { return ship_mass + peng_inventory * peng_mass + mine_inventory * mine_mass; } // NOLINT
 
         void toggle_shield() noexcept {
             set_shield(!m_shield);
