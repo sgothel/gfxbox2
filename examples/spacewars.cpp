@@ -396,9 +396,9 @@ class spaceship_t : public pixel::f2::linestrip_t {
 
         constexpr static const float peng_diag = 0.15f*height;
         constexpr static const si_mass_f32 peng_mass = 5_kg;
-        constexpr static const int peng_inventory_max = 1000;
-        constexpr static const int mine_inventory_max = 500;
         constexpr static const si_power_f32 peng_power = 30_kN;
+        constexpr static const int peng_inventory_max = 500;
+        constexpr static const int mine_inventory_max = 250;
         constexpr static const si_mass_f32 mine_mass = 10_kg;
 
         constexpr static const float shield_radius = spaceship_height * 0.9f;
