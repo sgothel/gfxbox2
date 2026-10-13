@@ -405,6 +405,7 @@ class spaceship_t : public pixel::f2::linestrip_t {
         constexpr static const float shield_time_or_energie_max = 10; // [s]
         constexpr static const float shield_falling_per_collision = 0.5f; // [s]
 
+        constexpr static const si_time_f32 time_distanceBySalve = 60_ms;
     private:
         idscore_t* m_owner;
 
@@ -456,12 +457,20 @@ class spaceship_t : public pixel::f2::linestrip_t {
             }
             return hit;
         }
-
+    
+        struct auto_fire_t {
+            float fire_time = 0.0f;
+            int fire_number = 0;
+            bool fire_mines = false;
+            bool released_after_start = false;
+        };
+        
     public:
         pixel::f2::disk_t shield_body = pixel::f2::disk_t(p_center, shield_radius);
         pixel::f2::vec_t velocity; // [m/s]
         int peng_inventory;
         int mine_inventory;
+        auto_fire_t auto_fire;
 
         spaceship_t(idscore_t* owner,
                     const pixel::f2::point_t& center, const float angle) noexcept
@@ -502,6 +511,14 @@ class spaceship_t : public pixel::f2::linestrip_t {
             }
             --mine_inventory;
         }
+    
+        void automatic_fire(const bool mine, const int number) {
+            auto_fire.fire_mines = mine;
+            auto_fire.fire_number = number;
+            auto_fire.fire_time = time_distanceBySalve;
+            auto_fire.released_after_start = false;
+        }
+        
         void velo_up(const float dt, const si_power_f32 dv = vel_power) noexcept {
             pixel::f2::vec_t v = velocity;
             v += pixel::f2::vec_t::from_length_angle((shields_with_energy && m_shield ? dv*0.25f : dv)/total_mass()*dt, dir_angle);
@@ -572,6 +589,22 @@ class spaceship_t : public pixel::f2::linestrip_t {
             if( sun->hit(p_center) ) {
                 m_owner->add_score(-m_owner->score_ship);
                 return false;
+            }
+            if(auto_fire.fire_number > 0) { // automatic firing
+                auto_fire.fire_time -= dt;
+                if(auto_fire.fire_time <= 0) {
+                    if(auto_fire.fire_mines) {
+                        mine(dt);
+                    } else {
+                        peng(dt);
+                    }
+                    --auto_fire.fire_number;
+                    if(auto_fire.fire_number > 0) {
+                        auto_fire.fire_time = time_distanceBySalve;
+                    } else {
+                        auto_fire.fire_time = 0;
+                    }
+                }
             }
             pixel::f2::aabbox_t b = box();
             return ( !hits_fragment(b) && !hits_peng(b) ) || m_shield;
@@ -984,14 +1017,42 @@ class player_t : public idscore_t {
         }
         void handle_event0(const float dt) noexcept {
             if( nullptr != m_ship && event.has_any_pn(id()) ) {
-                if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION1)) ) {
+                if( event.pressed(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION2)) ) {
+                    if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION1)) ) {
+                        m_ship->automatic_fire(false, 50);
+                        cloak_shot = true;
+                        cloak_shot_timer = 0.0f;
+                    } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION4)) ) {
+                        m_ship->automatic_fire( true, 50);
+                        cloak_shot = true;
+                        cloak_shot_timer = 0.0f;
+                    }
+                } else if( event.pressed(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION3)) ) {
+                    if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION1)) ) {
+                        m_ship->automatic_fire(false, m_ship->peng_inventory);
+                        cloak_shot = true;
+                        cloak_shot_timer = 0.0f;
+                    } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION4)) ) {
+                        m_ship->automatic_fire( true, m_ship->mine_inventory);
+                        cloak_shot = true;
+                        cloak_shot_timer = 0.0f;
+                    }
+                } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION1)) ) {
                     m_ship->peng(dt);
                     cloak_shot = true;
                     cloak_shot_timer = 0.0f;
                 } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION2)) ) {
-                    m_ship->set_orbit_velocity();
+                    if(m_ship->auto_fire.released_after_start) {
+                        m_ship->set_orbit_velocity();
+                    } else {
+                        m_ship->auto_fire.released_after_start = true;
+                    }
                 } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION3)) ) {
-                    set_cloak(!cloak());
+                    if(m_ship->auto_fire.released_after_start && m_ship->auto_fire.fire_time == 0) {
+                        set_cloak(!cloak());
+                    } else if(!m_ship->auto_fire.released_after_start) {
+                        m_ship->auto_fire.released_after_start = true;
+                    }
                 } else if( event.released_and_clr(pixel::to_input_event(id(), pixel::player_event_type_t::ACTION4))) {
                     m_ship->mine(dt);
                     cloak_shot = true;
