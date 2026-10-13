@@ -337,7 +337,7 @@ class peng_t {
 
     peng_t(idscore_t* owner,
            const pixel::f2::point_t& p0, const float diag, const pixel::f2::vec_t& v,
-           const float fuse = 0.25f) noexcept
+           const float fuse = 0.1f) noexcept
     : m_owner(owner), m_fuse(fuse), m_velo( v ),
       m_peng(p0 + pixel::f2::point_t(-diag/2, +diag/2), diag, diag, v.angle())
     { }
