@@ -132,8 +132,11 @@ namespace jau {
         constexpr si_area_f32 operator ""_cm2(unsigned long long int __v)   { return (si_area_f32)__v/10'000.0f; }
         constexpr si_area_f32 operator ""_mm2(unsigned long long int __v)   { return (si_area_f32)__v/1'000'000.0f; }
 
+        constexpr si_power_f32 operator ""_GN(unsigned long long int __v)   { return (si_power_f32)__v*1'000'000'000.0f; }
+        constexpr si_power_f32 operator ""_MN(unsigned long long int __v)   { return (si_power_f32)__v*1'000'000.0f; }
+        constexpr si_power_f32 operator ""_kN(unsigned long long int __v)   { return (si_power_f32)__v*1'000.0f; }
         constexpr si_power_f32 operator ""_N(unsigned long long int __v)   { return (si_power_f32)__v; }
-        constexpr si_power_f32 operator ""_mN(unsigned long long int __v)   { return (si_power_f32)__v/1000; }
+        constexpr si_power_f32 operator ""_mN(unsigned long long int __v)   { return (si_power_f32)__v/1000.0f; }
     }
     namespace si_f64_literals {
         constexpr si_time_f64 operator ""_year(unsigned long long int __v)   { return (si_time_f64)__v*365.25*24.0*3600.0; }
@@ -185,8 +188,11 @@ namespace jau {
         constexpr si_length_f64 operator ""_l(unsigned long long int __v)   { return (si_length_f64)__v/1000.0f; }
         constexpr si_length_f64 operator ""_ml(unsigned long long int __v)   { return (si_length_f64)__v/1'000'000.0f; }
 
+        constexpr si_power_f64 operator ""_GN(unsigned long long int __v)   { return (si_power_f64)__v*1'000'000'000.0; }
+        constexpr si_power_f64 operator ""_MN(unsigned long long int __v)   { return (si_power_f64)__v*1'000'000.0; }
+        constexpr si_power_f64 operator ""_kN(unsigned long long int __v)   { return (si_power_f64)__v*1'000.0; }
         constexpr si_power_f64 operator ""_N(unsigned long long int __v)   { return (si_power_f64)__v; }
-        constexpr si_power_f64 operator ""_mN(unsigned long long int __v)   { return (si_power_f64)__v/1000; }
+        constexpr si_power_f64 operator ""_mN(unsigned long long int __v)   { return (si_power_f64)__v/1000.0; }
     }
 }
 
