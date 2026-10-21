@@ -637,7 +637,6 @@ namespace pixel::f2 {
         }
 
         void rotate(const float radians, point_t p) noexcept {
-            p1.rotate(radians);
             p1.rotate(radians, p);
             p0.rotate(radians, p);
         }
