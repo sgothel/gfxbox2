@@ -876,11 +876,29 @@ namespace pixel {
         return static_cast<int>(e) - static_cast<int>(input_event_type_t::ANY_KEY);
     }
     constexpr uint64_t bitmask(const input_event_type_t e) noexcept {
-        return (uint64_t)1 << bitno(e);
+        return (uint64_t)1 << (unsigned)bitno(e);
     }
-    constexpr uint64_t bitmask(const int bit) noexcept {
+    constexpr uint64_t bitmask(const unsigned int bit) noexcept {
         return (uint64_t)1 << bit;
     }
+
+    constexpr static const uint64_t p1_cursor_mask =
+        pixel::bitmask(bitno(pixel::input_event_type_t::P1_UP)) |
+        pixel::bitmask(bitno(pixel::input_event_type_t::P1_DOWN)) |
+        pixel::bitmask(bitno(pixel::input_event_type_t::P1_LEFT)) |
+        pixel::bitmask(bitno(pixel::input_event_type_t::P1_RIGHT));
+
+    constexpr static const uint64_t p2_cursor_mask =
+        pixel::bitmask(bitno(pixel::input_event_type_t::P2_UP)) |
+        pixel::bitmask(bitno(pixel::input_event_type_t::P2_DOWN)) |
+        pixel::bitmask(bitno(pixel::input_event_type_t::P2_LEFT)) |
+        pixel::bitmask(bitno(pixel::input_event_type_t::P2_RIGHT));
+
+    constexpr static const uint64_t p3_cursor_mask =
+        pixel::bitmask(bitno(pixel::input_event_type_t::P3_UP)) |
+        pixel::bitmask(bitno(pixel::input_event_type_t::P3_DOWN)) |
+        pixel::bitmask(bitno(pixel::input_event_type_t::P3_LEFT)) |
+        pixel::bitmask(bitno(pixel::input_event_type_t::P3_RIGHT));
 
     enum class player_event_type_t : int {
         NONE,
@@ -1034,10 +1052,13 @@ namespace pixel {
             bool pressed(input_event_type_t e) const noexcept {
                 const int bit = bitno(e);
                 if( 0 <= bit && bit < 64 ) {
-                    return 0 != ( m_pressed & bitmask(bit) );
+                    return pressed_mask(bitmask(bit));
                 } else {
                     return false;
                 }
+            }
+            bool pressed_mask(uint64_t m) const noexcept {
+                return 0 != ( m_pressed & m );
             }
             bool pressed_and_clr(input_event_type_t e) noexcept {
                 if( pressed(e) ) {
@@ -1050,11 +1071,14 @@ namespace pixel {
             bool released_and_clr(input_event_type_t e) noexcept {
                 const int bit = bitno(e);
                 if( 0 <= bit && bit < 64 ) {
-                    const uint64_t m = bitmask(bit);
-                    if( 0 != ( m_lifted & m ) ) {
-                        m_lifted &= ~m;
-                        return true;
-                    }
+                    return released_and_clr_mask( bitmask(bit) );
+                }
+                return false;
+            }
+            bool released_and_clr_mask(const uint64_t m) noexcept {
+                if( 0 != ( m_lifted & m ) ) {
+                    m_lifted &= ~m;
+                    return true;
                 }
                 return false;
             }
