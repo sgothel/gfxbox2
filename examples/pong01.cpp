@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
 
     ball = physiks::ball_t::create("one", pixel::f2::point_t(0.0f, 0.0f), ball_radius,
                                     4.0f /* [m/s] */, adeg_to_rad(0),
-                                    max_velocity, false, player_pads);
+                                    max_velocity, player_pads);
     ball->set_debug_gfx(debug_gfx, ball_color);
 
     reset_playfield();

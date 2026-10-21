@@ -69,9 +69,9 @@ namespace physiks {
         float m_gravity; // [m/s^2]
         bool has_gravity;
         float start_velocity_max; // [m/s], derived from drop_height
-        bool m_debug_gfx;
         pixel::f4::vec_t m_debug_ball_color { 0, 0, 0, 1 };
         bool m_make_do_reset;
+        bool m_debug_gfx;
 
         float velocity_max; // [m/s], derived from drop_height
         bool use_velocity_max; // only use velo_max if drop_height > 0
@@ -108,15 +108,15 @@ namespace physiks {
         ball_t(secret_t s, std::string id_, const point_t& center_, const float r_m,
                const float velocity_, const float v_angle_rad,
                const float gravity, const float drop_height,
-               const bool debug_gfx, bool make_do_reset = true)
+               bool make_do_reset, const bool debug_gfx)
         : disk_t(center_, r_m),
           id(std::move(id_)), start_pos(center_),
           velocity_start(velocity_),
           start_angle(v_angle_rad),
-          m_gravity(gravity), has_gravity(true),
+          m_gravity(gravity), has_gravity(gravity != 0),
           start_velocity_max( std::sqrt( 2 * gravity * std::abs(drop_height) ) ),
-          m_debug_gfx(debug_gfx),
           m_make_do_reset(make_do_reset),
+          m_debug_gfx(debug_gfx),
           velocity_max(start_velocity_max),
           use_velocity_max( !jau::is_zero(velocity_max) ),
           m_rho(rho_default),
@@ -131,6 +131,7 @@ namespace physiks {
                         id.c_str(), velocity.toString().c_str(), velocity.length(), box().toString().c_str());
             }
         }
+
         /**
          * Public factory ctor for ball exposed to gravity.
          * @param id_
@@ -142,27 +143,28 @@ namespace physiks {
          * @param drop_height total height this ball will fall in [m]
          * @param debug_gfx
          */
-        static ball_ref_t create(std::string id_, const point_t& center_, const float r_m,
+        static ball_ref_t create(const std::string& id_, const point_t& center_, const float r_m,
                const float velocity_, const float v_angle_rad,
                const float gravity, const float drop_height,
-               const bool debug_gfx, bool make_do_reset = true) {
+               bool make_do_reset = true, const bool debug_gfx = false) {
             return std::make_shared<ball_t>(secret_t(42), id_, center_, r_m, velocity_, v_angle_rad,
-                                            gravity, drop_height, debug_gfx, make_do_reset);
+                                            gravity, drop_height, make_do_reset, debug_gfx);
         }
 
         /** Actually a private ctor, use ball_t::create() */
         ball_t(secret_t s, std::string id_, const point_t& center_, const float r_m,
                const float velocity_, const float v_angle_rad,
                const float velocity_max_,
-               const bool debug_gfx, std::vector<rect_ref_t> playerpads)
+               std::vector<rect_ref_t> playerpads,
+               bool make_do_reset, const bool debug_gfx)
         : disk_t(center_, r_m),
           id(std::move(id_)), start_pos(center_),
           velocity_start(velocity_),
           start_angle(v_angle_rad),
           m_gravity(0), has_gravity(false),
           start_velocity_max( velocity_max_ ),
+          m_make_do_reset(make_do_reset),
           m_debug_gfx(debug_gfx),
-          m_make_do_reset(false),
           velocity_max(start_velocity_max),
           use_velocity_max( false ),
           m_rho(rho_default),
@@ -189,12 +191,14 @@ namespace physiks {
          * @param drop_height total height this ball will fall in [m]
          * @param debug_gfx
          */
-        static ball_ref_t create(std::string id_, const point_t& center_,
+        static ball_ref_t create(const std::string& id_, const point_t& center_,
                const float r_m, const float velocity_, const float v_angle_rad,
                const float velocity_max_,
-               const bool debug_gfx, std::vector<rect_ref_t> playerpads) {
+               const std::vector<rect_ref_t>& playerpads,
+               bool make_do_reset = true, const bool debug_gfx = false) {
             return std::make_shared<ball_t>(secret_t(42), id_, center_, r_m, velocity_, v_angle_rad,
-                                            velocity_max_, debug_gfx, playerpads);
+                                            velocity_max_, playerpads,
+                                            make_do_reset, debug_gfx);
         }
 
         void set_debug_gfx(bool v) noexcept { m_debug_gfx = v; }
@@ -362,14 +366,17 @@ namespace physiks {
                     } else {
                         velocity = vec_t::from_length_angle(velocity.length() * m_rho, coll_out.angle()); // cont using simulated velocity
                     }
-                } else {
+                } else if (!player_pads.empty()) {
                     float accel_factor;
-                    if( std::find(player_pads.begin(), player_pads.end(), coll_obj) != player_pads.end() ) {
+                    if( std::find(player_pads.begin(), player_pads.end(), coll_obj) != player_pads.end() ) { // NOLINT
                         accel_factor = pad_accel; // speedup
                     } else {
                         accel_factor = rho_deaccel; // rho deaccel
                     }
                     velocity = vec_t::from_length_angle(velocity.length() * accel_factor, coll_out.angle()); // cont using simulated velocity
+                    center = coll_point + coll_out;
+                } else {
+                    velocity = vec_t::from_length_angle(velocity.length() * rho_deaccel, coll_out.angle()); // cont using simulated velocity
                     center = coll_point + coll_out;
                 }
                 if( !this->on_screen() ) {
