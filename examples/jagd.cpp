@@ -43,9 +43,6 @@ using namespace pixel::f2;
 
 static constexpr bool DEBUG_ON = false;
 
-//
-// tile_t
-//
 enum class tile_t : int {
     EMPTY = 0,
     WALL = 1,
@@ -62,8 +59,24 @@ enum class tile_t : int {
     KEY = 12
 };
 
+enum class wall_t : int {
+    EMPTY = 0,
+    JOINT = 1,
+    HORZ = 2,
+    VERT = 3
+};
+
+static char getChar(wall_t t) noexcept {
+    switch(t) {
+        case wall_t::HORZ: return '-';
+        case wall_t::VERT: return '|';
+        case wall_t::JOINT: return '+';
+        default: return ' ';
+    }
+}
+
 // Orientation: 0/0 bottom-left
-static DynArray2D<bool> walls;
+static DynArray2D<wall_t> walls;
 point_t fritz_start;
 static std::vector<pixel::f2::lineseg_t> h_lines;
 static std::vector<pixel::f2::lineseg_t> v_lines;
@@ -103,8 +116,8 @@ void read_maze(const std::string& fname0) noexcept
                     sscanf(line.c_str(), "%d %d %d %d", &w, &h, &visual_width, &visual_height);
                     width = w;
                     height = h;
-                    walls = DynArray2D<bool>(width, height);
-                    walls.clear(false);
+                    walls = DynArray2D<wall_t>(width, height);
+                    walls.clear(wall_t::EMPTY);
                     if( DEBUG_ON ) {
                         jau::log_printf("maze: read dimension: %dx%d\n", width, height);
                     }
@@ -121,17 +134,15 @@ void read_maze(const std::string& fname0) noexcept
                             case '_':
                                 [[fallthrough]];
                             case ' ':
-                                // original.add_tile(tile_t::EMPTY);
-                                //printf("_");
                                 break;
                             case '|':
-                                [[fallthrough]];
+                                walls[x, height-1-y] = wall_t::VERT;
+                                break;
                             case '+':
-                                [[fallthrough]];
+                                walls[x, height-1-y] = wall_t::JOINT;
+                                break;
                             case '-':
-                                // original.add_tile(tile_t::WALL);
-                                walls[x, height-1-y] = true;
-                                //printf("|");
+                                walls[x, height-1-y] = wall_t::HORZ;
                                 break;
                             case '.':
                                 // original.add_tile(tile_t::PELLET);
@@ -159,44 +170,40 @@ void read_maze(const std::string& fname0) noexcept
             using pixel::f2::point_t;
             for(size_t y = 0; y < walls.rows(); ++y) {
                 point_t left;
-                point_t right;
                 bool has_pre = false;
                 for(size_t x = 0; x < walls.columns(); ++x) {
-                    if(walls[x, y]) {
+                    const wall_t t = walls[x, y];
+                    if(wall_t::JOINT == t) {
                         if(!has_pre) {
                             left = {(float)x, (float)y};
                             has_pre = true;
+                        } else {
+                            point_t right = {(float)x, (float)y};
+                            h_lines.emplace_back(left, right);
+                            has_pre = false;
                         }
-                        right = {(float)x, (float)y};
-                    } else if (has_pre) {
-                        h_lines.emplace_back(left, right);
+                    } else if(wall_t::HORZ != t) {
                         has_pre = false;
                     }
-                }
-                if (has_pre) {
-                    h_lines.emplace_back(left, right);
-                    has_pre = false;
                 }
             }
             for(size_t x = 0; x < walls.columns(); ++x) {
                 point_t bottom;
-                point_t top;
                 bool has_pre = false;
                 for(size_t y = 0; y < walls.rows(); ++y) {
-                    if(walls[x, y]) {
+                    const wall_t t = walls[x, y];
+                    if(wall_t::JOINT == t) {
                         if(!has_pre) {
                             bottom = {(float)x, (float)y};
                             has_pre = true;
+                        } else {
+                            point_t top = {(float)x, (float)y};
+                            v_lines.emplace_back(bottom, top);
+                            has_pre = false;
                         }
-                        top = {(float)x, (float)y};
-                    } else if (has_pre) {
-                        v_lines.emplace_back(bottom, top);
+                    } else if(wall_t::VERT != t) {
                         has_pre = false;
                     }
-                }
-                if (has_pre) {
-                    v_lines.emplace_back(bottom, top);
-                    has_pre = false;
                 }
             }
         }
@@ -330,7 +337,7 @@ class Person {
             point_t c = aabbox.center();
             const int x = int(c.x+0.5f); // NOLINT
             const int y = int(c.y+0.5f); // NOLINT
-            bool hit = walls[x, y];
+            const bool hit = wall_t::EMPTY != walls[x, y];
             // if (walls[l, b] || walls[r, b] || walls[l, t] || walls[r, t]) {
             if (hit) {
                 m_velocity = vec_t();
@@ -430,7 +437,7 @@ void mainloop() {
             animating = true;
         }
     }
-    
+
     [[maybe_unused]] constexpr int lala = 1U << 2U;
 
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
@@ -498,11 +505,7 @@ int main(int argc, char *argv[])
         printf("Wall bitmap:\n");
         for(size_t y=walls.rows(); y-->0; ) {
             for(size_t x=0; x<walls.columns(); ++x) {
-                if(walls[x,y]) {
-                    printf("X");
-                } else {
-                    printf(" ");
-                }
+                printf("%c", getChar(walls[x,y]));
             }
             printf("\n");
         }
