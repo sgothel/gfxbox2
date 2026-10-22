@@ -840,9 +840,9 @@ namespace pixel {
         P1_ACTION4, ///< RCTRL
         PAUSE,      ///< P, 11
         P2_UP,      ///< W
-        P2_DOWN,    ///< A
-        P2_RIGHT,   ///< S
-        P2_LEFT,    ///< D
+        P2_DOWN,    ///< S
+        P2_RIGHT,   ///< D
+        P2_LEFT,    ///< A
         P2_ACTION1, ///< LSHIFT
         P2_ACTION2, ///< LCTRL
         P2_ACTION3, ///< LALT
