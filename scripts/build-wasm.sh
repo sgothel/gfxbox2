@@ -1,4 +1,4 @@
-#! /bin/sh
+#!/bin/sh
 
 sdir=`dirname $(readlink -f $0)`
 rootdir=`dirname $sdir`
