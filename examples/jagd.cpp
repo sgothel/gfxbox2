@@ -229,16 +229,16 @@ void kreis(pixel::f2::point_t m, float r) {
 
 class Person {
   private:
-    constexpr static si_length_f32 height = 1;
+    constexpr static si_length_f32 height = 1.3;
     constexpr static si_length_f32 width = height * (8.0f/5.0f);
     constexpr static si_length_f32 shoulder_height = height*0.6f;
     constexpr static si_length_f32 arm_width = width*0.20f;
     constexpr static si_length_f32 leg_width = width*0.25f;
     constexpr static float max_ausdauer = 10;
-    constexpr static si_angle_f32 start_angle = 0_deg;
+    constexpr static si_angle_f32 start_angle = 90_deg;
     constexpr static si_length_f32 step = height/2;
     constexpr static si_length_f32 nose_length = height/4;
-    constexpr static si_velo_f32 def_velocity = 2; // [m/s]
+    constexpr static si_velo_f32 def_velocity = 4; // [m/s]
 
     disk_t m_head;
     rect_t m_shoulders;
@@ -273,9 +273,10 @@ class Person {
     : m_head(pos, height / 2), m_aabbox(), m_angle(start_angle), m_ausdauer(max_ausdauer) {
         const point_t tl = point_t(pos.x - width/2, pos.y + shoulder_height/2);
         m_shoulders = rect_t(tl, width, shoulder_height);
-        rotateInt(-90_deg); // links
-        m_angle -= 90_deg; // links
-        m_nose = lineseg_t(m_head.center+vec_t(-m_head.radius, 0), m_head.center+vec_t(-(m_head.radius + nose_length), 0));
+        // m_nose = lineseg_t(m_head.center+vec_t(-m_head.radius, 0), m_head.center+vec_t(-(m_head.radius + nose_length), 0));
+        m_nose = lineseg_t(m_head.center+vec_t(0, m_head.radius), m_head.center+vec_t(0, m_head.radius + nose_length));
+        // rotateInt(-90_deg); // links
+        // m_angle -= 90_deg; // links
         m_aabbox.resize(m_head.box());
         m_aabbox.resize(m_shoulders.box());
         m_aabbox.resize(m_nose.box());
@@ -413,13 +414,13 @@ void mainloop() {
         } else if( event.pressed_and_clr( pixel::input_event_type_t::WINDOW_RESIZED ) ) {
             pixel::cart_coord.set_height(0, (float)walls.rows());
         } else if( event.pressed( pixel::input_event_type_t::P1_UP ) ) {
-            fritz.setVelo( 90_deg ); // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 )) || fritzBadMove;
+            fritz.setVelo( 90_deg ); // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 ));
         } else if( event.pressed( pixel::input_event_type_t::P1_DOWN ) ) {
-            fritz.setVelo(-90_deg ); // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 )) || fritzBadMove;
+            fritz.setVelo(-90_deg ); // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 ));
         } else if( event.pressed( pixel::input_event_type_t::P1_LEFT ) ) {
-            fritz.setVelo(180_deg ); // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 )) || fritzBadMove;
+            fritz.setVelo(180_deg ); // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 ));
         } else if( event.pressed( pixel::input_event_type_t::P1_RIGHT ) ) {
-            fritz.setVelo(  0_deg ); // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 )) || fritzBadMove;
+            fritz.setVelo(  0_deg ); // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 ));
         } else if( event.released_and_clr_mask( pixel::p1_cursor_mask ) ) {
             fritz.setVelo(  fritz.angle(), 0 );
         } else if( event.released_and_clr( pixel::input_event_type_t::P1_ACTION2 ) ) {
