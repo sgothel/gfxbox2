@@ -53,7 +53,7 @@ inline int get_ms_per_frame() noexcept {
 //
 
 /**
- * Generic relative direction.
+ * Generic direction.
  */
 enum class direction_t : int {
     RIGHT = 0,
