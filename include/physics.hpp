@@ -143,7 +143,7 @@ namespace physiks {
          * @param drop_height total height this ball will fall in [m]
          * @param debug_gfx
          */
-        static ball_ref_t create(const std::string& id_, const point_t& center_, const float r_m,
+        static ball_ref_t createWithG(const std::string& id_, const point_t& center_, const float r_m,
                const float velocity_, const float v_angle_rad,
                const float gravity, const float drop_height,
                bool make_do_reset = true, const bool debug_gfx = false) {
@@ -191,13 +191,32 @@ namespace physiks {
          * @param drop_height total height this ball will fall in [m]
          * @param debug_gfx
          */
-        static ball_ref_t create(const std::string& id_, const point_t& center_,
+        static ball_ref_t createZeroG(const std::string& id_, const point_t& center_,
                const float r_m, const float velocity_, const float v_angle_rad,
                const float velocity_max_,
                const std::vector<rect_ref_t>& playerpads,
                bool make_do_reset = true, const bool debug_gfx = false) {
             return std::make_shared<ball_t>(secret_t(42), id_, center_, r_m, velocity_, v_angle_rad,
                                             velocity_max_, playerpads,
+                                            make_do_reset, debug_gfx);
+        }
+        /**
+         * Public factory ctor for ball not exposed to gravity.
+         * @param id_
+         * @param center position in [m] within coordinate system 0/0 origin
+         * @param r_m
+         * @param velocity_
+         * @param v_angle_rad
+         * @param gravity
+         * @param drop_height total height this ball will fall in [m]
+         * @param debug_gfx
+         */
+        static ball_ref_t createZeroG(const std::string& id_, const point_t& center_,
+               const float r_m, const float velocity_, const float v_angle_rad,
+               const float velocity_max_,
+               bool make_do_reset = true, const bool debug_gfx = false) {
+            return std::make_shared<ball_t>(secret_t(42), id_, center_, r_m, velocity_, v_angle_rad,
+                                            velocity_max_, std::vector<rect_ref_t>(),
                                             make_do_reset, debug_gfx);
         }
 

@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
             log_printf(elapsed_ms, "XX %s\n", pixel::cart_coord.toString().c_str());
         }
 
-        std::shared_ptr<physiks::ball_t> ball_1 = physiks::ball_t::create(
+        std::shared_ptr<physiks::ball_t> ball_1 = physiks::ball_t::createWithG(
             "one",
             pixel::f2::point_t(-4.0f*ball_height, drop_height-ball_radius),
             ball_radius,
@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
             earth_accel,
             drop_height,
             debug_gfx);
-        std::shared_ptr<physiks::ball_t> ball_2 = physiks::ball_t::create(
+        std::shared_ptr<physiks::ball_t> ball_2 = physiks::ball_t::createWithG(
             "two",
             pixel::f2::point_t(+2.0f*ball_height, drop_height-ball_radius),
             ball_radius,
@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
             earth_accel,
             drop_height,
             debug_gfx);
-        std::shared_ptr<physiks::ball_t> ball_3 = physiks::ball_t::create(
+        std::shared_ptr<physiks::ball_t> ball_3 = physiks::ball_t::createWithG(
             "can",
             pixel::f2::point_t(pixel::cart_coord.min_x()+2*ball_height, pixel::cart_coord.min_y()+small_gap+thickness+ball_height),
             ball_radius,

@@ -234,7 +234,7 @@ class canon_t {
             log_printf(0, "XX peng velo %f\n", m_velocity);
             vec_t v = vec_t::from_length_angle(barrel_end_height*0.5f, m_barrel_end.dir_angle + PI_2);
             const point_t peng_start_center = m_barrel_end.m_br + v;
-            physiks::ball_ref_t p = physiks::ball_t::create("peng_"+std::to_string(peng_idn++),
+            physiks::ball_ref_t p = physiks::ball_t::createWithG("peng_"+std::to_string(peng_idn++),
                 peng_start_center, bullet_radius, m_velocity, m_barrel_end.dir_angle,
                 physiks::earth_accel, 0, debug_gfx, false);
             m_pengs_flying.push_back(p);
