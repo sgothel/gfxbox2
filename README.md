@@ -25,6 +25,7 @@ Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten
   * [Spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
   * [Canonball](https://jausoft.com/projects/gfxbox2/canonball.html)
   * [Tron](https://jausoft.com/projects/gfxbox2/tron.html)
+  * [Tic-tac-toe or 五子棋 (wu zi qi)](https://jausoft.com/projects/gfxbox2/tictactoe.html)
 * Game Classics / Homages
   * [Pong](https://jausoft.com/projects/gfxbox2/pong01.html)
   * [Space Invaders](https://jausoft.com/projects/gfxbox2/spaceinv01.html)

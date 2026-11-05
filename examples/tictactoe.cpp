@@ -377,10 +377,10 @@ class TicTacToe {
 			pixel::set_pixel_color(255-m_cursor_b /* r */, 255-m_cursor_b /* g */, m_cursor_b, 0 /* a */);
 			if (m_cursor_coldir>0 && m_cursor_b==255) {
 				m_cursor_coldir=-1;
-				printf("XXX r->l %d\n", m_cursor_b);
+				// printf("XXX r->l %d\n", m_cursor_b);
 			} else if (m_cursor_coldir<0 && m_cursor_b==0) {
 				m_cursor_coldir=1;
-				printf("XXX l->r %d\n", m_cursor_b);
+				// printf("XXX l->r %d\n", m_cursor_b);
 			}
 			const int col = (int)m_cursor_b + (int)m_cursor_coldir*8;
 			m_cursor_b = (uint8_t) std::max(0, std::min(255, col));
@@ -524,7 +524,7 @@ int main(int argc, char *argv[])
     game.resize(g_columns, g_rows);
     {
         const float origin_norm[] = { 0.0f, 1.0f };
-        if( !pixel::init_gfx_subsystem(argv[0], "sandbox01", window_width, window_height, origin_norm, true, true /* subsys primitives */) ) {
+        if( !pixel::init_gfx_subsystem(argv[0], "Tic-tac-toe or 五子棋 (wu zi qi)", window_width, window_height, origin_norm, true, true /* subsys primitives */) ) {
             return 1;
         }
 		// pixel::cart_coord.set_height(-spaceheight/2, spaceheight/2);
