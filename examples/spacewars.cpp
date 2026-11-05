@@ -899,9 +899,11 @@ class player_t : public idscore_t {
                                       << ", cross " << cross_point
                                       << ", r-out " << reflect_out << std::endl;
                             {
-                                pixel::f2::vec_t d = reflect_out; //  - ship2->p_center;
+                                pixel::f2::vec_t d = reflect_out/2; //  - ship2->p_center;
                                 ship2->move(d);
                                 ship2->velocity = ship2->velocity.length() * reflect_out.normalize();
+                                ship1->move(d);
+                                ship1->velocity = ship1->velocity.length() * reflect_out.normalize();
                                 std::cout << "XXX3.X: pr.c " << ship2->p_center
                                           << ", d " << d
                                           << ", v " << ship2->velocity << std::endl;
