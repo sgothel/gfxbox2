@@ -21,7 +21,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#include <numbers>
+
 #include <pixel/pixel4f.hpp>
 #include <pixel/pixel2f.hpp>
 #include <pixel/pixel2i.hpp>
@@ -33,6 +33,7 @@
 using namespace std;
 using namespace pixel::f2;
 using namespace jau;
+using pixel::PI;
 
 enum circle_t {
     filled,
@@ -117,7 +118,7 @@ static uint8_t unroll_colors[4][4] = {
 void draw_circle_unroll(const point_t& pm, float r, const float thickness, float off_pct_in) {
 
     const float off_pct = min(1.0f, off_pct_in); // Abzurollender Teil vom Umfang in Prozent <= 1
-    const float u_unit = 2.0f * std::numbers::pi_v<float>; // Umfang Einheitskreis
+    const float u_unit = 2.0f * PI; // Umfang Einheitskreis
     const float off = (r * u_unit) * off_pct; // Abzurollender Teil vom Kreisumfang
 
     // Male den Umfang als Linie,
@@ -188,16 +189,16 @@ void draw_sin_cos(const point_t& pm, const float r, const float alpha, const flo
 }
 
 double circumferenceInner(double r, double n){
-    const double alpha = 2.0 * std::numbers::pi_v<float> / n; // Den Mittelpunkt verbindet man mit 2 benachbarten Ecken,
+    const double alpha = 2.0 * PI / n; // Den Mittelpunkt verbindet man mit 2 benachbarten Ecken,
     // so bildet sich ein Dreieck und der Winkel aus dem Mittelpunkt ist alpha
-    double p0_x = r * cos(2.0 * std::numbers::pi_v<float> - alpha);
-    double p0_y = r * sin(2.0 * std::numbers::pi_v<float> - alpha);
+    double p0_x = r * cos(2.0 * PI - alpha);
+    double p0_y = r * sin(2.0 * PI - alpha);
     double p1_x = r;
     double p1_y = 0.0;
     double dx = p0_x - p1_x;
     double dy = p0_y - p1_y;
     return n * sqrt( dx*dx + dy*dy );
-    // point_t p0 = vec_t::from_length_angle(r, 2 * std::numbers::pi_v<float> - alpha);
+    // point_t p0 = vec_t::from_length_angle(r, 2 * PI - alpha);
     // point_t p1 = vec_t::from_length_angle(r, 0);
     // return n * (p0 - p1).length();
 }
@@ -211,10 +212,10 @@ double circumferenceInner(double r, double n){
  * @return
  */
 float draw_circumferenceInner(const point_t& pm, float r, int n){
-    const float alpha = 2 * std::numbers::pi_v<float> / n; // Den Mittelpunkt verbindet man mit 2 benachbarten Ecken,
+    const float alpha = 2 * PI / float(n); // Den Mittelpunkt verbindet man mit 2 benachbarten Ecken,
     // so bildet sich ein Dreieck und der Winkel aus dem Mittelpunkt ist alpha
     float res;
-    point_t p0 = pm + vec_t::from_length_angle(r, 2 * std::numbers::pi_v<float> - alpha); // 1. Anfangspunkt
+    point_t p0 = pm + vec_t::from_length_angle(r, 2 * PI - alpha); // 1. Anfangspunkt
     {
         point_t p1 = pm + vec_t::from_length_angle(r, 0); // 2. Anfangsbuch
         res = n * (p0 - p1).length(); // res ist der Umfang von dem Multi-Eck
@@ -228,9 +229,9 @@ float draw_circumferenceInner(const point_t& pm, float r, int n){
 }
 
 double circumferenceOutter(double r, double n){
-    // const float alpha = 2 * std::numbers::pi_v<float> / n;
+    // const float alpha = 2 * PI / n;
     // return n * tan(alpha / 2) * 2 * r;
-    return n * tan(std::numbers::pi_v<float> / n) * 2.0 * r; // Das ist der Umfang von dem Multi-Eck
+    return n * tan(PI / n) * 2.0 * r; // Das ist der Umfang von dem Multi-Eck
 }
 
 /**
@@ -242,7 +243,7 @@ double circumferenceOutter(double r, double n){
  * @return
  */
 float draw_circumferenceOutter(const point_t& pm, float r, int n){
-    const float alpha = 2 * std::numbers::pi_v<float> / float(n); // Den Mittelpunkt verbindet man mit 2 benachbarten Ecken,
+    const float alpha = 2 * PI / float(n); // Den Mittelpunkt verbindet man mit 2 benachbarten Ecken,
     // so bildet sich ein Dreieck und der Winkel aus dem Mittelpunkt ist alpha
     float res, l_2, l;
     {
@@ -252,9 +253,9 @@ float draw_circumferenceOutter(const point_t& pm, float r, int n){
     }
     point_t p1 = pm +
                  vec_t::from_length_angle(r, 0) +
-                 vec_t::from_length_angle(l_2, -std::numbers::pi_v<float>/2);
-    for(float i = 0.0f; i < 2 * std::numbers::pi_v<float>; i += alpha){ // i = jetzige Winkel wo wir grade malen
-        point_t p2 = p1 + vec_t::from_length_angle(l, i + std::numbers::pi_v<float>/2);
+                 vec_t::from_length_angle(l_2, -PI/2);
+    for(float i = 0.0f; i < 2 * PI; i += alpha){ // i = jetzige Winkel wo wir grade malen // NOLINT(bugprone-float-loop-counter)
+        point_t p2 = p1 + vec_t::from_length_angle(l, i + PI/2);
         lineseg_t::draw(p1, p2); // Eine Linie vom Multi-Eck
         p1 = p2;
     }
@@ -342,7 +343,7 @@ void draw_sin_cos_graph(const float r, const float alpha_max, const float angrad
         if( plotpos.x > pixel::cart_coord.width() ) {
             plotpos.set(0, plotpos.y);
         }
-        if( get_fract(alpha / (2 * std::numbers::pi_v<float>)) < angrad_inc/2.0f ) { // numeric_limits<float>::epsilon() ){
+        if( get_fract(alpha / (2 * PI)) < angrad_inc/2.0f ) { // numeric_limits<float>::epsilon() ){
             pixel::set_pixel_color(255, 0, 255, 255);
             point_t p0(plotpos.x, pixel::cart_coord.max_y());
             point_t p1(plotpos.x, pixel::cart_coord.min_y());
@@ -378,7 +379,7 @@ void mainloop() {
 
     static const int circles_per_plot = 2;
     const float ticks_per_circle = 12.0f * 60.0f; // one circle in 12s @ 60Hz, [s] * [1/s] = [1]
-    const float angrad_inc = (float)(3.0 * std::numbers::pi_v<float> ) / ticks_per_circle;
+    const float angrad_inc = (float)(3.0 * PI ) / ticks_per_circle;
     static float ang_rad = 0.0f, ang_grad = 0.0f;
     static float an = -0.35f;
     static float off_pct = an;
@@ -394,7 +395,7 @@ void mainloop() {
         double api = approxPi(decimalAccuracy, cornerCount);
         printf("DecimalAccuracy: %d, corners %ld\n", decimalAccuracy, cornerCount);
         printf("Our-PI-Approx: %20.20lf\n", api);
-        printf("Std-PI-Approx: %20.20lf\n", std::numbers::pi_v<float>);
+        printf("Std-PI-Approx: %20.20lf\n", PI);
     }
      */
 
@@ -491,8 +492,8 @@ void mainloop() {
     // rect_t(point_t(0, 0), max_radius, 100).draw(true);
     if( false ) {
         rect_t r1(point_t(0, 0), max_radius, max_radius);
-        r1.rotate(std::numbers::pi_v<float>/4.0f);
-        // r1.rotate(std::numbers::pi_v<float>);
+        r1.rotate(PI/4.0f);
+        // r1.rotate(PI);
         r1.draw(true);
     } else {
         float enter = pixel::cart_coord.height() / -35;
@@ -523,8 +524,8 @@ void mainloop() {
         break;
         case 1: {
             float radius = max_radius / 2.0f;
-            float Umfang = 2 * std::numbers::pi_v<float> * radius;
-            float PI = Umfang / (2 * radius);
+            float Umfang = 2 * PI * radius;
+            float PI_approx = Umfang / (2 * radius);
             draw_circle_unroll(point_t(pixel::cart_coord.min_x() + radius, 0), radius, 6, off_pct);
             point_t tp(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()/2.0f);
             texts.push_back( pixel::make_text(text_pos4, 0, text_color, "2*PI*r Ausgerollt") );
@@ -536,7 +537,7 @@ void mainloop() {
             texts.push_back( pixel::make_text(text_pos4, 0, text_color, "PI = u / 2 * r") );
             text_pos4.add(0, enter);
             texts.push_back( pixel::make_text(text_pos4, 0, text_color, "d = 2 * r") );
-            texts.push_back( pixel::make_text(text_pos2, 0, text_color, "PI = "+std::to_string(PI)) );
+            texts.push_back( pixel::make_text(text_pos2, 0, text_color, "PI = "+std::to_string(PI_approx)) );
             text_pos2.add(0, enter);
             texts.push_back( pixel::make_text(text_pos2, 0, text_color, "u = "+std::to_string(Umfang)) );
             text_pos2.add(0, enter);
@@ -598,11 +599,11 @@ void mainloop() {
             break;
         }
     }
-    if(ang_rad > circles_per_plot * 2 * std::numbers::pi_v<float>){
+    if(ang_rad > circles_per_plot * 2 * PI){
         ang_rad = 0.0f;
     }
     ang_grad = rad_to_adeg(ang_rad);
-    if(ang_rad > 2 * std::numbers::pi_v<float>) {
+    if(ang_rad > 2 * PI) {
         const int n = (int)( ang_grad / 360.0f );
         ang_grad -= n * 360.0f;
     }

@@ -32,6 +32,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <numbers>
 #include <ostream>
 
 #include "rpn_calc.hpp"

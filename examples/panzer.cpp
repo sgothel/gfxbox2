@@ -19,6 +19,8 @@
 #include <iostream>
 
 using namespace jau;
+using pixel::PI;
+using pixel::PI_2;
 
 int main(int argc, char *argv[])
 {
@@ -117,15 +119,15 @@ int main(int argc, char *argv[])
                 p1.changeSpeed(0.95f);
             } else if (event.pressed(pixel::input_event_type_t::P1_LEFT)) {
                 if (event.pressed(pixel::input_event_type_t::P1_ACTION1)) {
-                    p1.rotate_barrel(M_PI / 200);
+                    p1.rotate_barrel(PI / 200);
                 } else {
-                    p1.rotate(M_PI / 100);
+                    p1.rotate(PI / 100);
                 }
             } else if (event.pressed(pixel::input_event_type_t::P1_RIGHT)) {
                 if (event.pressed(pixel::input_event_type_t::P1_ACTION1)) {
-                    p1.rotate_barrel(-(M_PI / 200));
+                    p1.rotate_barrel(-(PI / 200));
                 } else {
-                    p1.rotate(-(M_PI / 100));
+                    p1.rotate(-(PI / 100));
                 }
             }
             if (event.pressed(pixel::input_event_type_t::P2_UP)) {
@@ -134,15 +136,15 @@ int main(int argc, char *argv[])
                 p2.changeSpeed(0.95f);
             } else if (event.pressed(pixel::input_event_type_t::P2_LEFT)) {
                 if (event.pressed(pixel::input_event_type_t::P2_ACTION1)) {
-                    p2.rotate_barrel((M_PI / 200));
+                    p2.rotate_barrel((PI / 200));
                 } else {
-                    p2.rotate((M_PI / 100));
+                    p2.rotate((PI / 100));
                 }
             } else if (event.pressed(pixel::input_event_type_t::P2_RIGHT)) {
                 if (event.pressed(pixel::input_event_type_t::P2_ACTION1)) {
-                    p2.rotate_barrel(-(M_PI / 200));
+                    p2.rotate_barrel(-(PI / 200));
                 } else {
-                    p2.rotate(-(M_PI / 100));
+                    p2.rotate(-(PI / 100));
                 }
             }
             p1.tick(dt);

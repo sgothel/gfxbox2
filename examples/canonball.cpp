@@ -24,6 +24,8 @@
 using namespace jau;
 using namespace pixel;
 using namespace pixel::f2;
+using pixel::PI;
+using pixel::PI_2;
 
 //float rho = physiks::rho_default;
 
@@ -105,8 +107,7 @@ class canon_t {
             m_barrel_start.move(m_center_half_circle);
             m_barrel_end.move(m_center_half_circle);
             rot_point = point_t(m_barrel_start.m_tl.x, m_barrel_start.m_tl.y - barrel_start_height * 0.5f);
-            m_platform = std::make_shared<circle_seg_t>(m_center_half_circle, radius, 0.0f,
-                                                        std::numbers::pi_v<float>);
+            m_platform = std::make_shared<circle_seg_t>(m_center_half_circle, radius, 0.0f, PI);
             agobjects().push_back(m_platform);
         }
 
@@ -231,7 +232,7 @@ class canon_t {
 
         void peng(){
             log_printf(0, "XX peng velo %f\n", m_velocity);
-            vec_t v = vec_t::from_length_angle(barrel_end_height*0.5f, m_barrel_end.dir_angle + (float)M_PI_2);
+            vec_t v = vec_t::from_length_angle(barrel_end_height*0.5f, m_barrel_end.dir_angle + PI_2);
             const point_t peng_start_center = m_barrel_end.m_br + v;
             physiks::ball_ref_t p = physiks::ball_t::create("peng_"+std::to_string(peng_idn++),
                 peng_start_center, bullet_radius, m_velocity, m_barrel_end.dir_angle,

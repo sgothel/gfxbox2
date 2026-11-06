@@ -34,6 +34,8 @@
 
 using namespace jau;
 using namespace jau::si_f32_literals;
+using pixel::PI;
+using pixel::PI_2;
 
 static pixel::input_event_t event;
 constexpr static int player_id_1 = 1;
@@ -356,7 +358,7 @@ class peng_t {
         if( armed() ) {
             m_fuse2 -= dt;
         }
-        m_peng.rotate(std::numbers::pi_v<float> * dt); // 180 degrees (180_deg)
+        m_peng.rotate(PI * dt); // 180 degrees (180_deg)
         m_fuse = std::max(0.0f, m_fuse - dt);
         return !sun->hit( m_peng.p_center ) &&
                !hits_fragment();
@@ -457,14 +459,14 @@ class spaceship_t : public pixel::f2::linestrip_t {
             }
             return hit;
         }
-    
+
         struct auto_fire_t {
             float fire_time = 0.0f;
             int fire_number = 0;
             bool fire_mines = false;
             bool released_after_start = false;
         };
-        
+
     public:
         pixel::f2::disk_t shield_body = pixel::f2::disk_t(p_center, shield_radius);
         pixel::f2::vec_t velocity; // [m/s]
@@ -511,14 +513,14 @@ class spaceship_t : public pixel::f2::linestrip_t {
             }
             --mine_inventory;
         }
-    
+
         void automatic_fire(const bool mine, const int number) {
             auto_fire.fire_mines = mine;
             auto_fire.fire_number = number;
             auto_fire.fire_time = time_distanceBySalve;
             auto_fire.released_after_start = false;
         }
-        
+
         void velo_up(const float dt, const si_power_f32 dv = vel_power) noexcept {
             pixel::f2::vec_t v = velocity;
             v += pixel::f2::vec_t::from_length_angle((shields_with_energy && m_shield ? dv*0.25f : dv)/total_mass()*dt, dir_angle);
@@ -618,9 +620,9 @@ class spaceship_t : public pixel::f2::linestrip_t {
             const float d = ( sun->body.center - p_center ).length();
             pixel::f2::vec_t g = sun->gravity_ships(p_center);
             const float v0 = std::sqrt( g.length() * d );
-            g.normalize().rotate(-M_PI_2) *= v0; // becomes velocity
-            if( g.angle(velocity) > M_PI_2 ) {
-                g.rotate(M_PI); // rotate to velocity direction
+            g.normalize().rotate(-PI_2) *= v0; // becomes velocity
+            if( g.angle(velocity) > PI_2 ) {
+                g.rotate(PI); // rotate to velocity direction
             }
             return g;
         }
@@ -971,7 +973,7 @@ class player_t : public idscore_t {
         float shield_time_or_energy() const noexcept { return nullptr != m_ship ? m_ship->shield_time_or_energie() : 0; }
 
         std::string shield_toString() const noexcept {
-            return shields_with_energy ? 
+            return shields_with_energy ?
                 to_string("%d", int(shield_time_or_energy()*10)) : to_string("%.1f s", shield_time_or_energy());
         }
 
@@ -1015,7 +1017,7 @@ class player_t : public idscore_t {
                 }
                 m_ship->draw();
             }
-            
+
         }
         void handle_event0(const float dt) noexcept {
             if( nullptr != m_ship && event.has_any_pn(id()) ) {

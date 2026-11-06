@@ -11,6 +11,9 @@
 #include <cstdio>
 #include <cmath>
 
+using pixel::PI;
+using pixel::PI_2;
+
 void mainloop() {
     static const pixel::f4::vec_t text_color(0.5f, 0.5f, 0.5f, 1.0f);
     static const float ax1 = pixel::cart_coord.min_x() + 50;
@@ -19,7 +22,7 @@ void mainloop() {
     static const int text_height = 24;
 
     static Tron::Motorrad p1(pixel::f2::point_t(ax1, ay1), 0);
-    static Tron::Motorrad p2(pixel::f2::point_t(ax2, ay1), M_PI);
+    static Tron::Motorrad p2(pixel::f2::point_t(ax2, ay1), PI);
     static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static int a1 = 0;
     static int a2 = 0;
@@ -58,9 +61,9 @@ void mainloop() {
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_DOWN) && p1.velo > 1.0f) {
                 p1.changeSpeed(0.90f);
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_LEFT) ) {
-                p1.rotate(M_PI_2);
+                p1.rotate(PI_2);
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P2_RIGHT) ) {
-                p1.rotate(-M_PI_2);
+                p1.rotate(-PI_2);
             }
         }
         if( event.has_any_p1() ) {
@@ -69,9 +72,9 @@ void mainloop() {
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_DOWN) && p2.velo > 1.0f) {
                 p2.changeSpeed(0.90f);
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_LEFT) ) {
-                p2.rotate(M_PI_2);
+                p2.rotate(PI_2);
             } else if( event.pressed_and_clr(pixel::input_event_type_t::P1_RIGHT) ) {
-                p2.rotate(-M_PI_2);
+                p2.rotate(-PI_2);
             }
         }
     }

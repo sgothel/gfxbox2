@@ -272,7 +272,7 @@ class CBody {
                 if(_id == cbodyid_t::oobj){
                     angle = 25_deg;
                 } else {
-                    angle = (f2::point_t(0, 0) - center2).angle() - (float)M_PI_2;
+                    angle = (f2::point_t(0, 0) - center2).angle() - PI_2;
                 }
                 f2::vec_t velo2 = f2::vec_t::from_length_angle(cbc.v, angle);
                 _velo = {velo2.x, velo2.y, 0};
@@ -306,7 +306,7 @@ class CBody {
 
     const f3::point_t& position() const noexcept { return _center; }
     const f3::point_t& velo() const noexcept { return _velo; }
-    
+
     // Returns gravity [m/s^2] acceleration body `b` towards body `a`
     // @param a attracting body
     // @param b attracted body towards body 'a'

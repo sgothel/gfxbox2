@@ -28,6 +28,7 @@
 #include <functional> // NOLINT(unused-includes): Used in other header
 #include <string>
 #include <vector>
+#include <numbers>
 
 #include <cmath>
 #include <cstdarg>
@@ -87,6 +88,18 @@ namespace pixel {
     typedef std::vector<uint32_t> pixel_buffer_t; // 32-bit pixel
     extern pixel_buffer_t fb_pixels;
     extern int font_height;
+
+    /// Alias for `π` or half-circle radians (180 degrees), i.e. std::numbers::pi_v<float>
+    constexpr float PI = std::numbers::pi_v<float>;
+
+    /// Alias for `π/2` or right-angle radians (90 degrees), i.e. std::numbers::pi_v<float>/2.0f
+    constexpr float PI_2 = std::numbers::pi_v<float>/2.0f;
+
+    /// Alias for `π/4` or half right-angle radians (45 degrees), i.e. std::numbers::pi_v<float>/4.0f
+    constexpr float PI_4 = std::numbers::pi_v<float>/4.0f;
+
+    /// Alias for `1/π` or inverse of `π`, i.e. T(1)/std::numbers::pi_v<T> or std::numbers::inv_pi_v<float>
+    constexpr float inv_PI = std::numbers::inv_pi_v<float>;
 
     enum class orientation_t {
         /** Collinear **/

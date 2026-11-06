@@ -98,8 +98,8 @@ blank [ \t\r]
 "step"      return infix_calc_yy::parser::make_STEP(loc);
 "mix"       return infix_calc_yy::parser::make_MIX(loc);
 
-{ureal}{pi} return infix_calc::make_UREAL (yytext, M_PI, loc);
-{ureal}[e]  return infix_calc::make_UREAL (yytext, M_E, loc);
+{ureal}{pi} return infix_calc::make_UREAL (yytext, std::numbers::pi_v<double>, loc);
+{ureal}[e]  return infix_calc::make_UREAL (yytext, std::numbers::e_v<double>, loc);
 {ureal}     return infix_calc::make_UREAL (yytext, 1.0, loc);
 
 {pi}        return infix_calc_yy::parser::make_UREAL(M_PI, loc);
