@@ -45,7 +45,7 @@ void draw_circle_seg(const point_t& pm, float r, const float thickness, float co
     float x;
     float y;
     float i = alpha1;
-    for(; i <= alpha2; i += 0.01){
+    for(; i <= alpha2; i += 0.01f){ // NOLINT(bugprone-float-loop-counter)
         x = cos(i) * r;
         y = sin(i) * r;
         point_t p0 = point_t(x, y);
@@ -63,8 +63,8 @@ void draw_circle(const point_t& pm, float r, float thickness, circle_t e){
     float y;
     float x;
     float r1 = r + thickness / 2;
-    for(y = r + thickness; y >= -r - thickness; --y){
-        for(x = -r - thickness; x <= r + thickness; ++x) {
+    for(y = r + thickness; y >= -r - thickness; --y){ // NOLINT(bugprone-float-loop-counter)
+        for(x = -r - thickness; x <= r + thickness; ++x) { // NOLINT(bugprone-float-loop-counter)
             float l = sqrt(x*x + y*y);
             switch(e){
             case circle_t::line:
@@ -125,7 +125,7 @@ void draw_circle_unroll(const point_t& pm, float r, const float thickness, float
     // wobei pro Durchmesser eine eigene Farbe gewaehlt wird, d.h. U/d visualisiert.
     point_t p0 = point_t(pm.x, pm.y - r);
     int count = 0;
-    for(float off_left=off; off_left > 0; off_left -= r * 2, ++count) {
+    for(float off_left=off; off_left > 0; off_left -= r * 2, ++count) { // NOLINT(bugprone-float-loop-counter)
         pixel::set_pixel_color(unroll_colors[count]); // Farbe pro Durchmesser
         float off_done = off - off_left; // Schon gemalter Anteil
         float off_now = min(off_left, r * 2); // Aktuelle Position
@@ -218,9 +218,9 @@ float draw_circumferenceInner(const point_t& pm, float r, int n){
     point_t p0 = pm + vec_t::from_length_angle(r, 2 * PI - alpha); // 1. Anfangspunkt
     {
         point_t p1 = pm + vec_t::from_length_angle(r, 0); // 2. Anfangsbuch
-        res = n * (p0 - p1).length(); // res ist der Umfang von dem Multi-Eck
+        res = float(n) * (p0 - p1).length(); // res ist der Umfang von dem Multi-Eck
     }
-    for(float i = 0.0f; i < 2 * std::numbers::pi_v<float>; i += alpha){ // i = jetzige Winkel wo wir grade malen
+    for(float i = 0.0f; i < 2 * PI; i += alpha){ // i = jetzige Winkel wo wir grade malen // NOLINT(bugprone-float-loop-counter)
         point_t p1 = pm + vec_t::from_length_angle(r, i);
         lineseg_t::draw(p0, p1); // Eine Linie vom Multi-Eck
         p0 = p1;
@@ -293,8 +293,8 @@ double approxPi(const int decimalAccuracy, long& cornerCount) {
     long corners = 4; // Ecken
     int matchingDecimals = 0;
     while( true ) {
-        const double ci = circumferenceInner(r, corners);
-        const double co = circumferenceOutter(r, corners);
+        const double ci = circumferenceInner(r, double(corners));
+        const double co = circumferenceOutter(r, double(corners));
         const double pi_i = ci/d;
         const double pi_o = co/d;
         matchingDecimals = equalDecDigits(pi_i, pi_o, decimalAccuracy+1);
@@ -338,7 +338,7 @@ void draw_sin_cos_graph(const float r, const float alpha_max, const float angrad
         pixel::set_pixel_color(0, 0, 0, 255);
         lineseg_t::draw(p0, p1); // Mittellinie
     }
-    for(float alpha = 0; alpha < alpha_max; alpha += angrad_inc) {
+    for(float alpha = 0; alpha < alpha_max; alpha += angrad_inc) { // NOLINT(bugprone-float-loop-counter)
         plotpos.add(plot_inc, 0);
         if( plotpos.x > pixel::cart_coord.width() ) {
             plotpos.set(0, plotpos.y);
@@ -511,13 +511,13 @@ void mainloop() {
             point_t text_pos(-200, pixel::cart_coord.max_y());
             int a = 6;
             texts.push_back( pixel::make_text(text_pos, 0, text_color, "INNHALTSVERZEICHNIS"));
-            text_pos.add(-230, enter * a);
+            text_pos.add(-230, enter * float(a));
             texts.push_back( pixel::make_text(text_pos, 0, text_color, "1. . . . . . . . . . . . . . . . . . . . ."
                     " . . . . . . . . . . . . . . . . . . . . 2*PI*r Ausgerollt"));
-            text_pos.add(0, enter * a);
+            text_pos.add(0, enter * float(a));
             texts.push_back( pixel::make_text(text_pos, 0, text_color, "2. . . . . . . . . . . . . . . . . . . . ."
                     "  . . . Einheitskreis 2*PI Sinus & Cosinus"));
-            text_pos.add(0, enter * a);
+            text_pos.add(0, enter * float(a));
             texts.push_back( pixel::make_text(text_pos, 0, text_color, "3. . . . . . . . . . . . . . . . . . . . ."
                     " . . . . . .PI Annaehrung nach Archimedes"));
         }
@@ -605,7 +605,7 @@ void mainloop() {
     ang_grad = rad_to_adeg(ang_rad);
     if(ang_rad > 2 * PI) {
         const int n = (int)( ang_grad / 360.0f );
-        ang_grad -= n * 360.0f;
+        ang_grad -= float(n) * 360.0f;
     }
 
     pixel::swap_pixel_fb(false);

@@ -1,18 +1,11 @@
 #define TRON_HPP_
 
-#include <cinttypes>
 #include <cmath>
 #include <cstdarg>
-#include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <functional>
-#include <limits>
-#include <memory>
 #include <string>
-#include <type_traits>
 #include <vector>
-#include <iostream>
 #include <cctype>
 
 #include <pixel/pixel4f.hpp>
@@ -35,7 +28,7 @@ public:
     pixel::f2::disk_t body;
 
     Motorrad(pixel::f2::point_t sp_, float a)
-    : sp(sp_), start_angle(a), body(head, 5) 
+    : sp(sp_), start_angle(a), body(head, 5)
     {
         reset();
     }
