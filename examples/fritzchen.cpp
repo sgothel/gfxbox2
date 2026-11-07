@@ -575,6 +575,13 @@ constexpr size_t max_balls = 10;
 Player fritzchen;
 Player erna;
 std::vector<physiks::ball_ref_t> balls;
+uint64_t t_start = 0; // [ms]
+uint64_t frame_count_total = 0;
+
+void reset_globals() {
+    t_start = 0;
+    frame_count_total = 0;
+}
 
 void mainloop() {
     static uint64_t t_last = getElapsedMillisecond();  // [ms]
@@ -584,6 +591,10 @@ void mainloop() {
     const uint64_t t1 = getElapsedMillisecond();      // [ms]
     const float dt = (float)(t1 - t_last) / 1000.0f;  // [s]
     t_last = t1;
+
+    if( 0 == frame_count_total ) {
+        t_start = jau::getElapsedMillisecond();
+    }
 
     while (pixel::handle_one_event(event)) {
 
@@ -644,11 +655,10 @@ void mainloop() {
     }
 
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-    pixel::texture_ref hud_text = pixel::make_text("td %s, fps %2.2f, %s, %s, ausdauer %2.2f, dir %c, pos %2.2f/%2.2f",
-            to_decstring(t1, ',', 9).c_str(), pixel::gpu_avg_fps(),
-            animating ? "animating" : "paused",
-            fritzchen.is_running() ? "run" : "walk",
-            fritzchen.ausdauer(), dir_to_char(fritzchen.dir()), fritzchen.pos().x, fritzchen.pos().y);
+    
+    pixel::texture_ref hud_text1 = pixel::make_text("%s s, fps %4.2f/%d - ausdauer %2.2f, %2.2f/%2.2f",
+            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), pixel::expected_fps(),
+            fritzchen.ausdauer(), fritzchen.pos().x, fritzchen.pos().y);
 
     if (animating) {
         fritzchen.tick(dt);
@@ -718,10 +728,11 @@ void mainloop() {
     }
 
     pixel::swap_pixel_fb(false);
-    if( nullptr != hud_text ) {
-        hud_text->draw_fbcoord(0, 0);
+    if( nullptr != hud_text1 ) {
+        hud_text1->draw_fbcoord(0, 0);
     }
     pixel::swap_gpu_buffer();
+    ++frame_count_total;
 }
 
 int main(int argc, char *argv[])
