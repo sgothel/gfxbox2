@@ -587,6 +587,7 @@ void mainloop() {
     static uint64_t t_last = getElapsedMillisecond();  // [ms]
     static pixel::input_event_t event;
     static bool animating = true;
+    constexpr static float text_height = 1.0f;
 
     const uint64_t t1 = getElapsedMillisecond();      // [ms]
     const float dt = (float)(t1 - t_last) / 1000.0f;  // [s]
@@ -655,10 +656,11 @@ void mainloop() {
     }
 
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-    
-    pixel::texture_ref hud_text1 = pixel::make_text("%s s, fps %4.2f/%d - ausdauer %2.2f, %2.2f/%2.2f",
-            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), pixel::expected_fps(),
-            fritzchen.ausdauer(), fritzchen.pos().x, fritzchen.pos().y);
+
+    static point_t text_tl = {0, maze.screen_dim.y};
+    std::vector<pixel::texture_ref> hud_texts = {pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f/%d",
+            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), pixel::expected_fps())};
+    hud_texts.push_back(pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "ausdauer %2.2f, %2.2f/%2.2f", fritzchen.ausdauer(), fritzchen.pos().x, fritzchen.pos().y));
 
     if (animating) {
         fritzchen.tick(dt);
@@ -728,8 +730,10 @@ void mainloop() {
     }
 
     pixel::swap_pixel_fb(false);
-    if( nullptr != hud_text1 ) {
-        hud_text1->draw_fbcoord(0, 0);
+    for(const pixel::texture_ref& hud_text : hud_texts) {
+        if( nullptr != hud_text ) {
+            hud_text->draw_fbcoord(pixel::cart_coord.to_fb_dx(maze.screen_dim.x/2) - hud_text->width/2, 0); // NOLINT
+        }
     }
     pixel::swap_gpu_buffer();
     ++frame_count_total;
