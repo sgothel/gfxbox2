@@ -50,19 +50,29 @@ static constexpr bool debug_gfx2 = false;
 
 enum class tile_t : int {
     EMPTY = 0,
-    WALL = 1,
-    GATE = 2,
-    PELLET = 3,
-    PELLET_POWER = 4,
-    CHERRY = 5,
-    STRAWBERRY = 6,
-    PEACH = 7,
-    APPLE = 8,
-    MELON = 9,
-    GALAXIAN = 10,
-    BELL = 11,
-    KEY = 12
+    WALL_JOINT = 1,
+    WALL_HORZ = 2,
+    WALL_VERT = 3,
+    PELLET_POWER = 20,
+    CHERRY = 80,
+    STRAWBERRY = 81,
+    PEACH = 82,
+    APPLE = 83,
+    MELON = 84,
+    GALAXIAN = 85,
+    BELL = 86,
+    KEY = 87
 };
+
+static char getChar(tile_t t) noexcept {
+    switch(t) {
+        case tile_t::EMPTY: return ' ';
+        case tile_t::WALL_HORZ: return '-';
+        case tile_t::WALL_VERT: return '|';
+        case tile_t::WALL_JOINT: return '+';
+        default: return '*';
+    }
+}
 
 enum class direction_t : int {
     RIGHT = 0,
@@ -89,193 +99,223 @@ constexpr char dir_to_char(direction_t dir) noexcept {
         default: return ' ';
     }
 }
+
 direction_t next_rnd_dir() noexcept {
     int r = (int)std::round(next_rnd() * float(4 - 0) + float(0)) % 4;
     return (direction_t)r;
 }
 
-enum class wall_t : int {
-    EMPTY = 0,
-    JOINT = 1,
-    HORZ = 2,
-    VERT = 3
-};
+class Maze {
+  public:
+    vec_t screen_dim;
+    vec_t field_offset;
+    vec_t field_dim;
+    DynArray2D<tile_t> tiles; ///< Orientation: 0/0 bottom-left, Dimension of screen_dim
+    point_t fritzchen_start, erna_start;
+    pixel::f2::aabbox_t box1; ///< Matching field bounding box
+    pixel::f2::aabbox_t box2; ///< Outer field bounding box
 
-static char getChar(wall_t t) noexcept {
-    switch(t) {
-        case wall_t::HORZ: return '-';
-        case wall_t::VERT: return '|';
-        case wall_t::JOINT: return '+';
-        default: return ' ';
+    bool hasWall(size_t x, size_t y) noexcept {
+        return x<tiles.columns() && y<tiles.rows() && tile_t::EMPTY != tiles[x, y];
     }
-}
 
-// Orientation: 0/0 bottom-left
-static DynArray2D<wall_t> walls;
-point_t fritzchen_start, erna_start;
-static pixel::f2::aabbox_t maze_box1, maze_box2;
-static std::vector<pixel::f2::lineseg_t> h_lines;
-static std::vector<pixel::f2::lineseg_t> v_lines;
+  private:
+    std::vector<pixel::f2::lineseg_t> h_lines;
+    std::vector<pixel::f2::lineseg_t> v_lines;
 
-bool mazeWalls(size_t x, size_t y) noexcept {
-    return x<walls.columns() && y<walls.rows() && wall_t::EMPTY != walls[x, y];
-}
 
-bool digest_fposition_line(const std::string& name, point_t& dest, const std::string& line) noexcept {
-    float x_pos = 0.0f, y_pos = 0.0f;
-    sscanf(line.c_str(), "%f %f", &x_pos, &y_pos);
-    dest.set(x_pos, y_pos);
-    if( DEBUG_ON ) {
-        jau::log_printf("maze: read %s position: %s\n", name.c_str(), dest.toString().c_str());
+    bool digest_point_line(const std::string& name, point_t& dest, const std::string& line) noexcept {
+        float x_pos = 0.0f, y_pos = 0.0f;
+        if (2 != sscanf(line.c_str(), "%f %f", &x_pos, &y_pos)) {
+            jau::log_printf("maze: error reading 2 floats '%s' from line: '%s'\n", name.c_str(), line.c_str());
+            return false;
+        }
+        dest.set(x_pos, y_pos);
+        if( DEBUG_ON ) {
+            jau::log_printf("maze: read '%s' position: %s\n", name.c_str(), dest.toString().c_str());
+        }
+        return true;
     }
-    return true;
-}
-
-void read_maze(const std::string& fname0) noexcept
-{
-    h_lines.clear();
-    v_lines.clear();
-    size_t width = 0, height = 0;
-    const std::string fname1 = pixel::resolve_asset(fname0);
-    if( !fname1.size() ) {
-        jau::log_printf("maze_t: Could locate file '%s' in asset dir '%s'\n", fname0.c_str(), pixel::asset_dir().c_str());
-        return;
+    bool digest_2points_line(const std::string& name, point_t& dest1, point_t& dest2, const std::string& line) noexcept {
+        float x1_pos = 0.0f, y1_pos = 0.0f;
+        float x2_pos = 0.0f, y2_pos = 0.0f;
+        if (4 != sscanf(line.c_str(), "%f %f %f %f", &x1_pos, &y1_pos, &x2_pos, &y2_pos)) {
+            jau::log_printf("maze: error reading 4 floats '%s' from line: '%s'\n", name.c_str(), line.c_str());
+            return false;
+        }
+        dest1.set(x1_pos, y1_pos);
+        dest2.set(x2_pos, y2_pos);
+        if( DEBUG_ON ) {
+            jau::log_printf("maze: read '%s' position: %s; %s\n", name.c_str(), dest1.toString().c_str(), dest2.toString().c_str());
+        }
+        return true;
     }
-    {
-        size_t field_line_iter = 0;
-        std::fstream file;
-        file.open(fname1, std::ios::in);
-        if( file.is_open() ) {
-            std::string line;
-            size_t linenum=0;
-            int y = 0;
-            while( std::getline(file, line) ) {
-                if( 0 == linenum ) {
-                    int w=-1, h=-1;
-                    int visual_width=-1, visual_height=-1;
-                    sscanf(line.c_str(), "%d %d %d %d", &w, &h, &visual_width, &visual_height);
-                    width = w;
-                    height = h;
-                    walls = DynArray2D<wall_t>(width, height);
-                    maze_box1.reset();
-                    maze_box1.resize(0.0f, 0.0f);
-                    maze_box1.resize((float)width, (float)height);
-                    maze_box2.reset();
-                    maze_box2.resize(-0.5f, -0.5f);
-                    maze_box2.resize((float)width+0.5f, (float)height+0.5f);
-                    walls.clear(wall_t::EMPTY);
-                    if( DEBUG_ON ) {
-                        jau::log_printf("maze: read dimension: %dx%d\n", width, height);
-                    }
-                } else if( 1 == linenum ) {
-                    digest_fposition_line("fritz pos", fritzchen_start, line);
-                } else if( 2 == linenum ) {
-                    digest_fposition_line("erna pos", erna_start, line);
-                } else if( field_line_iter < height ) {
-                    if( DEBUG_ON ) {
-                        jau::log_printf("maze: read line y = %d, len = %zd: %s\n", field_line_iter, line.length(), line.c_str());
-                    }
-                    const size_t maxlen = std::min(line.length(), width);
-                    for(size_t x=0; x<maxlen; ++x) {
-                        const char c = line[x];
-                        switch( c ) {
-                            case '_':
-                                [[fallthrough]];
-                            case ' ':
-                                break;
-                            case '|':
-                                walls[x, height-1-y] = wall_t::VERT;
-                                break;
-                            case '+':
-                                walls[x, height-1-y] = wall_t::JOINT;
-                                break;
-                            case '-':
-                                walls[x, height-1-y] = wall_t::HORZ;
-                                break;
-                            case '.':
-                                // original.add_tile(tile_t::PELLET);
-                                //printf(".");
-                                break;
-                            case '*':
-                                // original.add_tile(tile_t::PELLET_POWER);
-                                //printf("*");
-                                break;
-                            default:
-                                // jau::log_printf("maze error: unknown tile @ %d / %d: '%c'\n", x, field_line_iter, c);
-                                break;
-                        }
-                    }
-                    ++field_line_iter;
-                    ++y;
-                }
-                ++linenum;
-            }
-            file.close();
-        } else {
-            jau::log_printf("Could not open maze file: %s\n", fname0.c_str());
+
+  public:
+    bool read(const std::string& fname0) noexcept {
+        h_lines.clear();
+        v_lines.clear();
+        size_t width = 0, height = 0;
+        const std::string fname1 = pixel::resolve_asset(fname0);
+        if( !fname1.size() ) {
+            jau::log_printf("maze_t: Could locate file '%s' in asset dir '%s'\n", fname0.c_str(), pixel::asset_dir().c_str());
+            return false;
         }
         {
-            using pixel::f2::point_t;
-            for(size_t y = 0; y < walls.rows(); ++y) {
-                point_t left;
-                bool has_pre = false;
-                for(size_t x = 0; x < walls.columns(); ++x) {
-                    const wall_t t = walls[x, y];
-                    if(wall_t::JOINT == t) {
-                        if(!has_pre) {
-                            left = {(float)x, (float)y};
-                            has_pre = true;
-                        } else {
-                            point_t right = {(float)x, (float)y};
-                            h_lines.emplace_back(left, right);
+            size_t field_line_iter = 0;
+            std::fstream file;
+            file.open(fname1, std::ios::in);
+            if( file.is_open() ) {
+                std::string line;
+                size_t linenum=0;
+                int y = 0;
+                while( std::getline(file, line) ) {
+                    if( 0 == linenum ) {
+                        if (!digest_point_line("screen dim", screen_dim, line)) {
+                            return false;
+                        }
+                    } else if( 1 == linenum ) {
+                        if (!digest_2points_line("field dim", field_offset, field_dim, line)) {
+                            return false;
+                        }
+                        width = size_t(screen_dim.x);
+                        height = size_t(screen_dim.y);
+                        tiles = DynArray2D<tile_t>(width, height);
+                        box1.reset();
+                        box1.resize(field_offset);
+                        box1.resize(field_offset + field_dim);
+                        box2.reset();
+                        const vec_t half(0.5f, 0.5f);
+                        box2.resize(field_offset - half);
+                        box2.resize(field_offset + field_dim + half);
+                        tiles.clear(tile_t::EMPTY);
+                    } else if( 2 == linenum ) {
+                        if (!digest_point_line("fritz pos", fritzchen_start, line)) {
+                            return false;
+                        }
+                    } else if( 3 == linenum ) {
+                        if (!digest_point_line("erna pos", erna_start, line)) {
+                            return false;
+                        }
+                    } else if( field_line_iter < height ) {
+                        if( DEBUG_ON ) {
+                            jau::log_printf("maze: read line y = %d, len = %zd: %s\n", field_line_iter, line.length(), line.c_str());
+                        }
+                        const size_t maxlen = std::min(line.length(), width);
+                        for(size_t x=0; x<maxlen; ++x) {
+                            const char c = line[x];
+                            switch( c ) {
+                                case '_':
+                                    [[fallthrough]];
+                                case ' ':
+                                    break;
+                                case '|':
+                                    tiles[x, height-1-y] = tile_t::WALL_VERT;
+                                    break;
+                                case '+':
+                                    tiles[x, height-1-y] = tile_t::WALL_JOINT;
+                                    break;
+                                case '-':
+                                    tiles[x, height-1-y] = tile_t::WALL_HORZ;
+                                    break;
+                                case '.':
+                                    // original.add_tile(tile_t::PELLET);
+                                    //printf(".");
+                                    break;
+                                case '*':
+                                    // original.add_tile(tile_t::PELLET_POWER);
+                                    //printf("*");
+                                    break;
+                                default:
+                                    // jau::log_printf("maze error: unknown tile @ %d / %d: '%c'\n", x, field_line_iter, c);
+                                    break;
+                            }
+                        }
+                        ++field_line_iter;
+                        ++y;
+                    }
+                    ++linenum;
+                }
+                file.close();
+            } else {
+                jau::log_printf("Could not open maze file: %s\n", fname0.c_str());
+                return false;
+            }
+            {
+                using pixel::f2::point_t;
+                for(size_t y = 0; y < tiles.rows(); ++y) {
+                    point_t left;
+                    bool has_pre = false;
+                    for(size_t x = 0; x < tiles.columns(); ++x) {
+                        const tile_t t = tiles[x, y];
+                        if(tile_t::WALL_JOINT == t) {
+                            if(!has_pre) {
+                                left = {(float)x, (float)y};
+                                has_pre = true;
+                            } else {
+                                point_t right = {(float)x, (float)y};
+                                h_lines.emplace_back(left, right);
+                                has_pre = false;
+                            }
+                        } else if(tile_t::WALL_HORZ != t) {
                             has_pre = false;
                         }
-                    } else if(wall_t::HORZ != t) {
-                        has_pre = false;
                     }
                 }
-            }
-            for(size_t x = 0; x < walls.columns(); ++x) {
-                point_t bottom;
-                bool has_pre = false;
-                for(size_t y = 0; y < walls.rows(); ++y) {
-                    const wall_t t = walls[x, y];
-                    if(wall_t::JOINT == t) {
-                        if(!has_pre) {
-                            bottom = {(float)x, (float)y};
-                            has_pre = true;
-                        } else {
-                            point_t top = {(float)x, (float)y};
-                            v_lines.emplace_back(bottom, top);
+                for(size_t x = 0; x < tiles.columns(); ++x) {
+                    point_t bottom;
+                    bool has_pre = false;
+                    for(size_t y = 0; y < tiles.rows(); ++y) {
+                        const tile_t t = tiles[x, y];
+                        if(tile_t::WALL_JOINT == t) {
+                            if(!has_pre) {
+                                bottom = {(float)x, (float)y};
+                                has_pre = true;
+                            } else {
+                                point_t top = {(float)x, (float)y};
+                                v_lines.emplace_back(bottom, top);
+                                has_pre = false;
+                            }
+                        } else if(tile_t::WALL_VERT != t) {
                             has_pre = false;
                         }
-                    } else if(wall_t::VERT != t) {
-                        has_pre = false;
                     }
                 }
             }
         }
+        gobjects().clear();
+        for(const lineseg_t& line0 : h_lines) {
+            const lineseg_ref_t& line = std::make_shared<lineseg_t>(line0);
+            gobjects().push_back(line);
+        }
+        for(const lineseg_t& line0 : v_lines) {
+            const lineseg_ref_t line = std::make_shared<lineseg_t>(line0);
+            gobjects().push_back(line);
+        }
+        return true;
     }
-}
 
-void kreis(pixel::f2::point_t m, float r) {
-    using pixel::f2::point_t;
-    point_t p0 {m.x - r, m.y - r};
-    point_t p1 {m.x + r, m.y + r};
-    for (float y = p0.y; y <= p1.y; ++y) { // NOLINT
-        for (float x = p0.x; x <= p1.x; ++x) { // NOLINT
-            float a = m.y - y;
-            float b = m.x - x;
-            float c = sqrtf(a * a + b * b);
-            if (c <= r) {
-                point_t p = { x, y};
-                p.draw();
-            }
+    void draw() const noexcept {
+        for (const auto &l : h_lines) { l.draw(); }
+        for (const auto &l : v_lines) { l.draw(); }
+    }
+
+    void draw_grid(pixel::f4::vec_t color) {
+        pixel::set_pixel_color(color);
+        // const float dxy = 0.5f;
+        const float dxy = 0;
+        for (float x = box1.bl.x; x < box1.tr.x; x+=1.0f) { // NOLINT
+            lineseg_t::draw(point_t(x - dxy, box1.bl.y - dxy), point_t(x + dxy, box1.tr.y + dxy));
+        }
+        for (float y = box1.bl.y; y < box1.tr.y; y+=1.0f) { // NOLINT
+            lineseg_t::draw(point_t(box1.bl.x - dxy, y - dxy), point_t(box1.tr.x + dxy, y + dxy));
         }
     }
-}
 
-class Person {
+};
+Maze maze;
+
+class Player {
   private:
     constexpr static si_length_f32 height = 1.2f;
     constexpr static si_length_f32 width = 1.8f;
@@ -285,10 +325,10 @@ class Person {
     constexpr static float max_ausdauer = 10;
     constexpr static float recovery_time = 10; // [s] of max_ausdauer
     constexpr static float recovery_per_second = max_ausdauer / recovery_time; // [ausdauer/s]
-    constexpr static direction_t start_dir = direction_t::UP;
+    constexpr static direction_t start_dir = direction_t::LEFT;
     // constexpr static si_length_f32 step_width = height/2;
     constexpr static si_length_f32 nose_length = height/6;
-    constexpr static si_velo_f32 def_velocity = 3.0f; // [m/s]
+    constexpr static si_velo_f32 def_velocity = 7.0f; // [m/s]
 
     point_t m_start;
     disk_t m_head;
@@ -300,14 +340,28 @@ class Person {
     direction_t m_dir;
     float m_ausdauer;
     bool m_run;
+    float m_last_dt = 1.0f/60.0f;
 
   private:
-    bool colision(vec_t){
-        // if(man.pos==maze2.pos){
-        {
-        }
-        return false;
+    static int round_center(float &f, float &d) noexcept {
+        const float r = std::round(f);
+        d = r - f;
+        f = r;
+        return int(r);
     }
+
+    void move(const vec_t d) noexcept {
+        m_head.move(d);
+        m_shoulders.move(d);
+        m_nose.move(d);
+        m_aabbox.move(d);
+        m_center = m_aabbox.center();
+    }
+
+    void rotateTo(const si_angle_f32 rad) noexcept {
+        rotate(rad - dir_to_angle(m_dir));
+    }
+
     void rotate(si_angle_f32 rad) noexcept {
         m_shoulders.rotate(rad);
         m_nose.rotate(rad, m_head.center);
@@ -321,27 +375,33 @@ class Person {
 
   public:
 
-    Person(const point_t position)
-    : m_start(position), m_head(position, height / 2), m_aabbox(), m_dir(start_dir),
+    Player(const point_t position)
+    : m_start(position), m_head(position, height / 2), m_aabbox(), m_dir(direction_t::UP),
       m_ausdauer(max_ausdauer), m_run(false)
     {
+        // build in direction_t::UP
         const point_t tl = point_t(position.x - width/2, position.y + shoulder_height/2);
         m_shoulders = rect_t(tl, width, shoulder_height);
         m_nose = lineseg_t(m_head.center+vec_t(0, m_head.radius), m_head.center+vec_t(0, m_head.radius + nose_length));
         m_aabbox.resize(m_head.box());
         m_aabbox.resize(m_shoulders.box());
         m_center = m_aabbox.center();
+        // rotate to start-direction
+        rotateTo(dir_to_angle(start_dir));
+        m_dir = start_dir;
+        // move to start-position
         move(m_start - pos());
         // gobjects().push_back(std::make_shared<disk_t>(m_head));
         // gobjects().push_back(std::make_shared<rect_t>(m_shoulders));
         // gobjects().push_back(std::make_shared<lineseg_t>(m_nose));
     }
 
-    Person() = default;
+    Player() = default;
 
     const point_t& pos() const noexcept { return m_center; }
     const point_t& nasenpos() const noexcept { return m_nose.p1; }
     direction_t dir() const noexcept { return m_dir; }
+    const vec_t &velocity() const noexcept { return m_velocity; }
     bool is_running() const noexcept { return m_run; }
     float ausdauer() const noexcept { return m_ausdauer; }
 
@@ -350,18 +410,23 @@ class Person {
         m_ausdauer = max_ausdauer;
         m_run = false;
         rotateTo(dir_to_angle(start_dir));
+        m_dir = start_dir;
         move(m_start - pos());
     }
 
-    void setVelo(const vec_t &v) noexcept { m_velocity = v; }
-    void setVelo(direction_t dir, const float speed=def_velocity) noexcept {
+    bool setDir(direction_t dir, const float speed=def_velocity) noexcept {
+        if (!test_step(dir, speed)) {
+            return false;
+        }
         si_angle_f32 angle = dir_to_angle(dir);
         rotateTo(angle);
         m_velocity = vec_t::from_length_angle(speed, angle);
         m_dir = dir;
+        return true;
     }
 
     bool tick(const float dt) noexcept { // override {
+        m_last_dt = dt;
         // pixel::f2::vec_t g = sun->gravity_ships(p_center);
         // velocity += g * dt; // [m/s^2] * [s] = [m/s]
         vec_t d = m_velocity * dt; // [m/s] * [s] = [m]
@@ -379,6 +444,7 @@ class Person {
             return true;
         }
         if (!step(m_dir, d)) {
+            m_velocity = vec_t();
             return false;
         }
         move(d);
@@ -386,35 +452,45 @@ class Person {
     }
     void setRun(bool v) { m_run = v; }
 
-    bool step(const direction_t dir, vec_t &d) noexcept {
+    bool test_step(const direction_t dir, const float speed=def_velocity) const noexcept {
+        si_angle_f32 angle = dir_to_angle(dir);
+        vec_t velocity = vec_t::from_length_angle(speed, angle);
+        vec_t d = velocity * m_last_dt; // [m/s] * [s] = [m]
+        if(m_run && m_ausdauer > 0 ) {
+            d = ( float(m_run) + 1.0f ) * m_velocity * m_last_dt; // [m/s] * [s] = [m]
+        }
+        return step(dir, d);
+    }
+
+    bool step(const direction_t dir, vec_t &d) const noexcept {
         vec_t pos2 = pos() + d;
         float x1 = pos().x;
         float y1 = pos().y;
         float x2 = pos2.x;
         float y2 = pos2.y;
-        if (x2 <= maze_box1.bl.x) {
-            x2 = maze_box1.tr.x-1;
+        if (x2 <= maze.box1.bl.x) {
+            x2 = maze.box1.tr.x-1;
             d.x = x2 - x1;
-        } else if(x2 >= maze_box1.tr.x) {
-            x2 = maze_box1.bl.x;
+        } else if(x2 >= maze.box1.tr.x) {
+            x2 = maze.box1.bl.x;
             d.x = x2 - x1;
         }
-        if (y2 <= maze_box1.bl.y) {
-            y2 = maze_box1.tr.y-1;
+        if (y2 <= maze.box1.bl.y) {
+            y2 = maze.box1.tr.y-1;
             d.y = y2 - y1;
-        } else if(y2 >= maze_box1.tr.y) {
-            y2 = maze_box1.bl.y;
+        } else if(y2 >= maze.box1.tr.y) {
+            y2 = maze.box1.bl.y;
             d.y = y2 - y1;
         }
         size_t xi2=0, yi2=0; // forward tile position
         bool hit = false;
         switch(dir) {
             case direction_t::DOWN:
-                xi2 = (size_t)(x2+0.5f); // NOLINT
+                xi2 = round_center(x2, d.x);
                 yi2 = (size_t)(y2);      // NOLINT
-                if (mazeWalls(xi2, yi2)) {
+                if (maze.hasWall(xi2, yi2)) {
                     const float frac = y1 - std::trunc(y1);
-                    if( 0.0 < frac && frac < 0.5f) {
+                    if( 0.0f < frac && frac < 0.5f) {
                         d.y = -frac;
                     } else {
                         hit = true;
@@ -422,9 +498,9 @@ class Person {
                 }
                 break;
             case direction_t::LEFT:
+                yi2 = round_center(y2, d.y);
                 xi2 = (size_t)(x2);           // NOLINT
-                yi2 = (size_t)(y2+0.5f);      // NOLINT
-                if (mazeWalls(xi2, yi2)) {
+                if (maze.hasWall(xi2, yi2)) {
                     const float frac = x1 - std::trunc(x1);
                     if( 0.0 < frac && frac < 0.5f) {
                         d.x = -frac;
@@ -434,9 +510,9 @@ class Person {
                 }
                 break;
             case direction_t::RIGHT:
+                yi2 = round_center(y2, d.y);
                 xi2 = (size_t)(x2+1.0f);      // NOLINT
-                yi2 = (size_t)(y2+0.5f);      // NOLINT
-                if (mazeWalls(xi2, yi2)) {
+                if (maze.hasWall(xi2, yi2)) {
                     const float frac = x1 - std::trunc(x1);
                     if( 0.5 < frac && frac < 1.0f) {
                         d.x = 1-frac;
@@ -447,9 +523,9 @@ class Person {
                 break;
             case direction_t::UP:
             default:
-                xi2 = (size_t)(x2+0.5f);      // NOLINT
+                xi2 = round_center(x2, d.x);
                 yi2 = (size_t)(y2+1.0f);      // NOLINT
-                if (mazeWalls(xi2, yi2)) {
+                if (maze.hasWall(xi2, yi2)) {
                     const float frac = y1 - std::trunc(y1);
                     if( 0.5 < frac && frac < 1.0f) {
                         d.y = 1-frac;
@@ -459,27 +535,14 @@ class Person {
                 }
                 break;
         }
-        if (hit) {
-            m_velocity = vec_t();
+        if (DEBUG_ON && hit) {
             printf("XXX: %2.2f/%2.2f -> %zu / %zu; pos %s, pos2 %s; aabbox %s, center %s\n",
                 x2, y2, xi2, yi2, pos().toString().c_str(), pos2.toString().c_str(),
                 m_aabbox.toString().c_str(), m_aabbox.center().toString().c_str());
-            return false;
         }
-        return true;
+        return !hit;
     }
 
-    void move(const vec_t d) noexcept {
-        m_head.move(d);
-        m_shoulders.move(d);
-        m_nose.move(d);
-        m_aabbox.move(d);
-        m_center = m_aabbox.center();
-    }
-
-    void rotateTo(const si_angle_f32 rad) noexcept {
-        rotate(rad - dir_to_angle(m_dir));
-    }
     void draw() noexcept {
         m_head.draw(false);
         m_shoulders.draw(false);
@@ -494,21 +557,9 @@ class Person {
     }
 };
 constexpr size_t max_balls = 10;
-Person fritzchen;
-Person erna;
+Player fritzchen;
+Player erna;
 std::vector<physiks::ball_ref_t> balls;
-
-void draw_grid(pixel::f4::vec_t color) {
-    pixel::set_pixel_color(color);
-    // const float dxy = 0.5f;
-    const float dxy = 0;
-    for (float x = maze_box1.bl.x; x < maze_box1.tr.x; x+=1.0f) { // NOLINT
-        lineseg_t::draw(point_t(x - dxy, maze_box1.bl.y - dxy), point_t(x + dxy, maze_box1.tr.y + dxy));
-    }
-    for (float y = maze_box1.bl.y; y < maze_box1.tr.y; y+=1.0f) { // NOLINT
-        lineseg_t::draw(point_t(maze_box1.bl.x - dxy, y - dxy), point_t(maze_box1.tr.x + dxy, y + dxy));
-    }
-}
 
 void mainloop() {
     static uint64_t t_last = getElapsedMillisecond();  // [ms]
@@ -529,21 +580,21 @@ void mainloop() {
             exit(0);
 #endif
         } else if (event.pressed_and_clr(pixel::input_event_type_t::WINDOW_RESIZED)) {
-            pixel::cart_coord.set_height(0, (float)walls.rows());
+            pixel::cart_coord.set_height(0, maze.screen_dim.y);
         } else if (event.pressed(pixel::input_event_type_t::P1_UP)) {
-            fritzchen.setVelo(direction_t::UP);  // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 ));
+            fritzchen.setDir(direction_t::UP);
         } else if (event.pressed(pixel::input_event_type_t::P1_DOWN)) {
-            fritzchen.setVelo(direction_t::DOWN);  // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 ));
+            fritzchen.setDir(direction_t::DOWN);
         } else if (event.pressed(pixel::input_event_type_t::P1_LEFT)) {
-            fritzchen.setVelo(direction_t::LEFT);  // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 ));
+            fritzchen.setDir(direction_t::LEFT);
         } else if (event.pressed(pixel::input_event_type_t::P1_RIGHT)) {
-            fritzchen.setVelo(direction_t::RIGHT);  // , dt, event.pressed( pixel::input_event_type_t::P1_ACTION1 ));
+            fritzchen.setDir(direction_t::RIGHT);
         } else if (event.pressed(pixel::input_event_type_t::RESET)) {
             fritzchen.reset();
             erna.reset();
             balls.clear();
         } else if (event.released_and_clr_mask(pixel::p1_cursor_mask)) {
-            fritzchen.setVelo(fritzchen.dir(), 0);
+            fritzchen.setDir(fritzchen.dir(), 0);
             //fritz.setRun(false);
         }
         if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) && balls.size() < max_balls) {
@@ -584,6 +635,7 @@ void mainloop() {
     if (animating) {
         fritzchen.tick(dt);
         if(!erna.tick(dt)) {
+            printf("EEE: collision: dir %c\n", dir_to_char(erna.dir()));
             direction_t new_dir;
             #if 0
             switch(erna.dir()) {
@@ -602,19 +654,22 @@ void mainloop() {
                     break;
             }
             #else
-                new_dir = next_rnd_dir();
+                do {
+                    new_dir = next_rnd_dir();
+                } while (!erna.test_step(new_dir));
             #endif
-            erna.setVelo(new_dir);
+            printf("EEE: new_dir: dir %c\n", dir_to_char(new_dir));
+            erna.setDir(new_dir);
         }
         for(const auto& i : balls) {
             i->tick(dt);
         }
         for(auto i = balls.begin(); i < balls.end();) {
             physiks::ball_ref_t &b = *i;
-            if (!b->box().inside(maze_box2)) {
+            if (!b->box().inside(maze.box2)) {
                 // delete i
                 balls.erase(i);
-                std::cout << "maze-box: " << maze_box2.toString() << "\n";
+                std::cout << "maze-box: " << maze.box2.toString() << "\n";
                 std::cout << "ball-box: " << b->box().toString() << "\n";
             } else if (b->velocity.length() < 3) {
                 // delete i
@@ -630,13 +685,11 @@ void mainloop() {
     pixel::clear_pixel_fb(255, 255, 255, 255);
 
     if (debug_gfx1) {
-        draw_grid(pixel::f4::vec_t(0, 255, 255, 255));
+        maze.draw_grid(pixel::f4::vec_t(0, 255, 255, 255));
     }
 
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-    for (auto &l : h_lines) { l.draw(); }
-    pixel::set_pixel_color(255 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-    for (auto &l : v_lines) { l.draw(); }
+    maze.draw();
 
     pixel::set_pixel_color(    255 /* r */,   0 /* g */, 255 /* b */, 255 /* a */);
     erna.draw();
@@ -645,7 +698,6 @@ void mainloop() {
     for(auto &i : balls) {
         i->draw(true);
     }
-    // kreis({0, 0}, pixel::cart_coord.height()/4.0f);
 
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text ) {
@@ -654,10 +706,9 @@ void mainloop() {
     pixel::swap_gpu_buffer();
 }
 
-rect_ref_t screen = std::make_shared<rect_t>(point_t(pixel::cart_coord.min_x(), pixel::cart_coord.max_y()), pixel::cart_coord.height(), pixel::cart_coord.width());
 int main(int argc, char *argv[])
 {
-    std::string maze_name = "fritzchen/maze3.txt";
+    std::string maze_name = "fritzchen/maze4.txt";
     int window_width = 1920, window_height = 1080;
     #if defined(__EMSCRIPTEN__)
         window_width = 1024, window_height = 576; // 16:9
@@ -682,14 +733,19 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
-    read_maze(maze_name);
+    if (!maze.read(maze_name)) {
+        return -1;
+    }
     {
-        printf("Wall bitmap %zux%zu:\n", walls.columns(), walls.rows());
-        printf("Maze box1 %s:\n", maze_box1.toString().c_str());
-        printf("Maze box2 %s:\n", maze_box2.toString().c_str());
-        for(size_t y=walls.rows(); y-->0; ) {
-            for(size_t x=0; x<walls.columns(); ++x) {
-                printf("%c", getChar(walls[x,y]));
+        printf("Maze Screen-Dim %s:\n", maze.screen_dim.toString().c_str());
+        printf("Maze Field-Pos  %s:\n", maze.field_offset.toString().c_str());
+        printf("Maze Field-Dim  %s:\n", maze.field_dim.toString().c_str());
+        printf("Maze tiles      %zux%zu:\n", maze.tiles.columns(), maze.tiles.rows());
+        printf("Maze box1       %s:\n", maze.box1.toString().c_str());
+        printf("Maze box2       %s:\n", maze.box2.toString().c_str());
+        for(size_t y=maze.tiles.rows(); y-->0; ) {
+            for(size_t x=0; x<maze.tiles.columns(); ++x) {
+                printf("%c", getChar(maze.tiles[x,y]));
             }
             printf("\n");
         }
@@ -705,20 +761,11 @@ int main(int argc, char *argv[])
         printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]\n", w, h, r01, a);
     }
 
-    pixel::cart_coord.set_height(0, (float)walls.rows());
-    fritzchen = Person(fritzchen_start);
-    erna = Person(erna_start);
-    erna.setVelo(direction_t::UP);
-    for(const lineseg_t& line0 : h_lines) {
-        const lineseg_ref_t& line = std::make_shared<lineseg_t>(line0);
-        gobjects().push_back(line);
-    }
-    for(const lineseg_t& line0 : v_lines) {
-        const lineseg_ref_t line = std::make_shared<lineseg_t>(line0);
-        gobjects().push_back(line);
-    }
+    pixel::cart_coord.set_height(0, maze.screen_dim.y);
+    fritzchen = Player(maze.fritzchen_start);
+    erna = Player(maze.erna_start);
+    erna.setDir(direction_t::LEFT);
 
-    gobjects().push_back(screen);
     #if defined(__EMSCRIPTEN__)
         emscripten_set_main_loop(mainloop, 0, 1);
     #else
@@ -732,10 +779,12 @@ int main(int argc, char *argv[])
  * - run (ausdauer etc)
  * - ball reparieren
  * - n baelle erlauben (-> vector)
- * - evt bewegung einschraenken (-> pacman)
+ * - bewegung einschraenken (-> pacman)
+ * - abbiegen (-> pacman)
  *
  * TODO - Erna
- * - abbiegen
+ * - ball logik -> Person
+ * - ball geschwindigkeit erhoehen zu maximum in 1s (-> canonball)
  * - weglaufen
  * - jagen
  */
