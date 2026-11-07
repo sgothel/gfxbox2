@@ -595,7 +595,7 @@ void mainloop() {
             exit(0);
 #endif
         } else if (event.pressed_and_clr(pixel::input_event_type_t::WINDOW_RESIZED)) {
-            pixel::cart_coord.set_height(0, maze.screen_dim.y);
+            pixel::cart_coord.set_fitting(0.0f, 0.0f, maze.screen_dim.x, maze.screen_dim.y);
         } else if (event.pressed(pixel::input_event_type_t::RESET)) {
             fritzchen.reset();
             erna.reset();
@@ -727,7 +727,8 @@ void mainloop() {
 int main(int argc, char *argv[])
 {
     std::string maze_name = "fritzchen/maze4.txt";
-    int window_width = 1920, window_height = 1080;
+    int window_width = 640, window_height = 720;
+    // int window_width = 1920, window_height = 1080;
     #if defined(__EMSCRIPTEN__)
         window_width = 1024, window_height = 576; // 16:9
     #endif
@@ -779,7 +780,7 @@ int main(int argc, char *argv[])
         printf("-w %f [x]\n-h %f [y]\n-r1 %f [y/x]\n-r2 %f [x/y]\n", w, h, r01, a);
     }
 
-    pixel::cart_coord.set_height(0, maze.screen_dim.y);
+    pixel::cart_coord.set_fitting(0.0f, 0.0f, maze.screen_dim.x, maze.screen_dim.y);
     fritzchen = Player(maze.fritzchen_start);
     erna = Player(maze.erna_start);
     erna.setDir(direction_t::LEFT);
