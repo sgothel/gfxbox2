@@ -330,7 +330,9 @@ class Player {
     constexpr static si_length_f32 nose_length = height/6;
     constexpr static si_velo_f32 def_velocity = 7.0f; // [m/s]
     constexpr static size_t max_balls = 10;
-
+    constexpr static const float ball_radius = 20_cm;
+    constexpr static const float ball_velocity_min = 11_m_s; // [m/s]
+    constexpr static const float ball_velocity_max = 25_m_s; //
     point_t m_start;
     disk_t m_head;
     rect_t m_shoulders;
@@ -343,9 +345,9 @@ class Player {
     float m_ausdauer;
     bool m_run;
     float m_last_dt = 1.0f/60.0f;
+    float m_ball_velo_s = ball_velocity_min;
     std::vector<physiks::ball_ref_t> m_balls;
 
-  private:
     static int round_center(float &f, float &d) noexcept {
         const float r = std::round(f);
         d = r - f;
@@ -442,19 +444,30 @@ class Player {
         return true;
     }
 
+    float ball_velo() const noexcept { return m_ball_velo_s; }
+    bool add_ball_velocity(const float pct) {
+        m_ball_velo_s += ball_velocity_max * pct;
+        if(m_ball_velo_s > ball_velocity_max){
+            m_ball_velo_s = ball_velocity_max;
+            return false;
+        }
+        return true;
+    }
+
     bool throwBall() {
         if (m_balls.size() >= max_balls) {
             return false;
         }
         m_balls.push_back( physiks::ball_t::createZeroG("ballFritz",
             nasenpos(),
-            20_cm, // radius
-            15_m_s, // velocity (scalar)
+            ball_radius, // radius
+            m_ball_velo_s, // velocity (scalar)
             dir_to_angle(dir()) + jau::adeg_to_rad(45), // angle/direction of velocity: Fritz + 45deg
-            15_m_s, // max velocity (scalar)
+            m_ball_velo_s, // max velocity (scalar)
             false /* reset */) );
         m_balls.back()->boost_factor = 1;
         m_balls.back()->break_factor = 1;
+        m_ball_velo_s = ball_velocity_min;
         return true;
     }
 
@@ -669,8 +682,21 @@ void mainloop() {
             animating = true;
         }
     }
+    pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+
+    static point_t text_tl = {0, maze.screen_dim.y};
+    std::vector<pixel::texture_ref> hud_texts = {
+        pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f/%d",
+            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), pixel::expected_fps()),
+        pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "run-e %2.2f, throw-e %2.2f, %2.2f/%2.2f",
+            fritzchen.ausdauer(), fritzchen.ball_velo(), fritzchen.pos().x, fritzchen.pos().y)
+    };
+
     if (animating) {
         // static/memorized cursor event
+        if (event.pressed(pixel::input_event_type_t::P2_ACTION2)) {
+            fritzchen.add_ball_velocity(dt);
+        }
         if( event.pressed_mask(pixel::p1_cursor_mask)) {
             if (event.pressed(pixel::input_event_type_t::P1_UP)) {
                 fritzchen.setDir(direction_t::UP);
@@ -825,9 +851,9 @@ int main(int argc, char *argv[])
  * - bewegung einschraenken (-> pacman)
  * - abbiegen (-> pacman)
  * - ball logik -> Player
+ * - ball geschwindigkeit erhoehen zu maximum in 1s (-> canonball)
  *
  * TODO - Erna
- * - ball geschwindigkeit erhoehen zu maximum in 1s (-> canonball)
  * - weglaufen
  * - jagen
  */
