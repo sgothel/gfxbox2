@@ -336,7 +336,8 @@ class Player {
     lineseg_t m_nose;
     aabbox_t m_aabbox;
     point_t m_center;
-    vec_t m_velocity; // [m/s]
+    vec_t m_velocity_v; // [m/s]
+    float m_velocity_s; // [m/s]
     direction_t m_dir;
     float m_ausdauer;
     bool m_run;
@@ -365,7 +366,7 @@ class Player {
     void rotate(si_angle_f32 rad) noexcept {
         m_shoulders.rotate(rad);
         m_nose.rotate(rad, m_head.center);
-        m_velocity.rotate(rad);
+        m_velocity_v.rotate(rad);
         // m_aabbox.rotate(rad);
         m_aabbox.reset();
         m_aabbox.resize(m_head.box());
@@ -376,7 +377,8 @@ class Player {
   public:
 
     Player(const point_t position)
-    : m_start(position), m_head(position, height / 2), m_aabbox(), m_dir(direction_t::UP),
+    : m_start(position), m_head(position, height / 2), m_aabbox(),
+      m_velocity_v(), m_velocity_s(0), m_dir(direction_t::UP),
       m_ausdauer(max_ausdauer), m_run(false)
     {
         // build in direction_t::UP
@@ -401,12 +403,14 @@ class Player {
     const point_t& pos() const noexcept { return m_center; }
     const point_t& nasenpos() const noexcept { return m_nose.p1; }
     direction_t dir() const noexcept { return m_dir; }
-    const vec_t &velocity() const noexcept { return m_velocity; }
+    const vec_t &velo_v() const noexcept { return m_velocity_v; }
+    const float &velo_s() const noexcept { return m_velocity_s; }
     bool is_running() const noexcept { return m_run; }
     float ausdauer() const noexcept { return m_ausdauer; }
 
     void reset() noexcept {
-        m_velocity = vec_t();
+        m_velocity_v = vec_t();
+        m_velocity_s = 0;
         m_ausdauer = max_ausdauer;
         m_run = false;
         rotateTo(dir_to_angle(start_dir));
@@ -414,13 +418,23 @@ class Player {
         move(m_start - pos());
     }
 
+    void setVelo(const float speed) noexcept {
+        si_angle_f32 angle = dir_to_angle(m_dir);
+        m_velocity_v = vec_t::from_length_angle(speed, angle);
+        m_velocity_s = speed;
+    }
+
     bool setDir(direction_t dir, const float speed=def_velocity) noexcept {
+        if( dir == m_dir && jau::equals(m_velocity_s, speed)) {
+            return true;
+        }
         if (!test_step(dir, speed)) {
             return false;
         }
         si_angle_f32 angle = dir_to_angle(dir);
         rotateTo(angle);
-        m_velocity = vec_t::from_length_angle(speed, angle);
+        m_velocity_v = vec_t::from_length_angle(speed, angle);
+        m_velocity_s = speed;
         m_dir = dir;
         return true;
     }
@@ -429,11 +443,11 @@ class Player {
         m_last_dt = dt;
         // pixel::f2::vec_t g = sun->gravity_ships(p_center);
         // velocity += g * dt; // [m/s^2] * [s] = [m/s]
-        vec_t d = m_velocity * dt; // [m/s] * [s] = [m]
+        vec_t d = m_velocity_v * dt; // [m/s] * [s] = [m]
         if(m_run) {
             m_ausdauer -= 2.0f*recovery_per_second * dt;
             if( m_ausdauer > 0 ) {
-                d = ( float(m_run) + 1.0f ) * m_velocity * dt; // [m/s] * [s] = [m]
+                d = ( float(m_run) + 1.0f ) * m_velocity_v * dt; // [m/s] * [s] = [m]
             } else {
                 m_ausdauer = 0;
             }
@@ -444,7 +458,8 @@ class Player {
             return true;
         }
         if (!step(m_dir, d)) {
-            m_velocity = vec_t();
+            m_velocity_v = vec_t();
+            m_velocity_s = 0;
             return false;
         }
         move(d);
@@ -457,7 +472,7 @@ class Player {
         vec_t velocity = vec_t::from_length_angle(speed, angle);
         vec_t d = velocity * m_last_dt; // [m/s] * [s] = [m]
         if(m_run && m_ausdauer > 0 ) {
-            d = ( float(m_run) + 1.0f ) * m_velocity * m_last_dt; // [m/s] * [s] = [m]
+            d = ( float(m_run) + 1.0f ) * m_velocity_v * m_last_dt; // [m/s] * [s] = [m]
         }
         return step(dir, d);
     }
@@ -581,21 +596,10 @@ void mainloop() {
 #endif
         } else if (event.pressed_and_clr(pixel::input_event_type_t::WINDOW_RESIZED)) {
             pixel::cart_coord.set_height(0, maze.screen_dim.y);
-        } else if (event.pressed(pixel::input_event_type_t::P1_UP)) {
-            fritzchen.setDir(direction_t::UP);
-        } else if (event.pressed(pixel::input_event_type_t::P1_DOWN)) {
-            fritzchen.setDir(direction_t::DOWN);
-        } else if (event.pressed(pixel::input_event_type_t::P1_LEFT)) {
-            fritzchen.setDir(direction_t::LEFT);
-        } else if (event.pressed(pixel::input_event_type_t::P1_RIGHT)) {
-            fritzchen.setDir(direction_t::RIGHT);
         } else if (event.pressed(pixel::input_event_type_t::RESET)) {
             fritzchen.reset();
             erna.reset();
             balls.clear();
-        } else if (event.released_and_clr_mask(pixel::p1_cursor_mask)) {
-            fritzchen.setDir(fritzchen.dir(), 0);
-            //fritz.setRun(false);
         }
         if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) && balls.size() < max_balls) {
             balls.push_back( physiks::ball_t::createZeroG("ballFritz",
@@ -622,8 +626,22 @@ void mainloop() {
             animating = true;
         }
     }
-
-    [[maybe_unused]] constexpr int lala = 1U << 2U;
+    if (animating) {
+        // static/memorized cursor event
+        if( event.pressed_mask(pixel::p1_cursor_mask)) {
+            if (event.pressed(pixel::input_event_type_t::P1_UP)) {
+                fritzchen.setDir(direction_t::UP);
+            } else if (event.pressed(pixel::input_event_type_t::P1_DOWN)) {
+                fritzchen.setDir(direction_t::DOWN);
+            } else if (event.pressed(pixel::input_event_type_t::P1_LEFT)) {
+                fritzchen.setDir(direction_t::LEFT);
+            } else if (event.pressed(pixel::input_event_type_t::P1_RIGHT)) {
+                fritzchen.setDir(direction_t::RIGHT);
+            }
+        } else {
+            fritzchen.setVelo(0);
+        }
+    }
 
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
     pixel::texture_ref hud_text = pixel::make_text("td %s, fps %2.2f, %s, %s, ausdauer %2.2f, dir %c, pos %2.2f/%2.2f",
