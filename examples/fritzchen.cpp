@@ -631,6 +631,37 @@ Player erna;
 uint64_t t_start = 0; // [ms]
 uint64_t frame_count_total = 0;
 
+void erna_ai_tick(float dt) {
+    if(!erna.tick(dt)) {
+        printf("EEE: collision: dir %c\n", dir_to_char(erna.dir()));
+        direction_t new_dir;
+        #if 0
+        switch(erna.dir()) {
+            case direction_t::DOWN: * - ball geschwindigkeit erhoehen zu maximum in 1s (-> canonball)
+
+                new_dir = direction_t::RIGHT;
+                break;
+            case direction_t::RIGHT:
+                new_dir = direction_t::UP;
+                break;
+            case direction_t::UP:
+                new_dir = direction_t::LEFT;
+                break;
+            case direction_t::LEFT:
+            default:
+                new_dir = direction_t::DOWN;
+                break;
+        }
+        #else
+            do {
+                new_dir = next_rnd_dir();
+            } while (!erna.test_step(new_dir));
+        #endif
+        printf("EEE: new_dir: dir %c\n", dir_to_char(new_dir));
+        erna.setDir(new_dir);
+    }
+}
+
 void reset_globals() {
     t_start = 0;
     frame_count_total = 0;
@@ -710,44 +741,8 @@ void mainloop() {
         } else {
             fritzchen.setVelo(0);
         }
-    }
-
-    pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-
-    static point_t text_tl = {0, maze.screen_dim.y};
-    std::vector<pixel::texture_ref> hud_texts = {pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f/%d",
-            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), pixel::expected_fps())};
-    hud_texts.push_back(pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "ausdauer %2.2f, %2.2f/%2.2f", fritzchen.ausdauer(), fritzchen.pos().x, fritzchen.pos().y));
-
-    if (animating) {
         fritzchen.tick(dt);
-        if(!erna.tick(dt)) {
-            printf("EEE: collision: dir %c\n", dir_to_char(erna.dir()));
-            direction_t new_dir;
-            #if 0
-            switch(erna.dir()) {
-                case direction_t::DOWN:
-                    new_dir = direction_t::RIGHT;
-                    break;
-                case direction_t::RIGHT:
-                    new_dir = direction_t::UP;
-                    break;
-                case direction_t::UP:
-                    new_dir = direction_t::LEFT;
-                    break;
-                case direction_t::LEFT:
-                default:
-                    new_dir = direction_t::DOWN;
-                    break;
-            }
-            #else
-                do {
-                    new_dir = next_rnd_dir();
-                } while (!erna.test_step(new_dir));
-            #endif
-            printf("EEE: new_dir: dir %c\n", dir_to_char(new_dir));
-            erna.setDir(new_dir);
-        }
+        erna_ai_tick(dt);
     }
 
     // white background
