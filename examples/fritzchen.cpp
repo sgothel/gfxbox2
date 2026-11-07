@@ -329,6 +329,7 @@ class Player {
     // constexpr static si_length_f32 step_width = height/2;
     constexpr static si_length_f32 nose_length = height/6;
     constexpr static si_velo_f32 def_velocity = 7.0f; // [m/s]
+    constexpr static size_t max_balls = 10;
 
     point_t m_start;
     disk_t m_head;
@@ -342,6 +343,7 @@ class Player {
     float m_ausdauer;
     bool m_run;
     float m_last_dt = 1.0f/60.0f;
+    std::vector<physiks::ball_ref_t> m_balls;
 
   private:
     static int round_center(float &f, float &d) noexcept {
@@ -416,6 +418,7 @@ class Player {
         rotateTo(dir_to_angle(start_dir));
         m_dir = start_dir;
         move(m_start - pos());
+        m_balls.clear();
     }
 
     void setVelo(const float speed) noexcept {
@@ -439,8 +442,44 @@ class Player {
         return true;
     }
 
+    bool throwBall() {
+        if (m_balls.size() >= max_balls) {
+            return false;
+        }
+        m_balls.push_back( physiks::ball_t::createZeroG("ballFritz",
+            nasenpos(),
+            20_cm, // radius
+            15_m_s, // velocity (scalar)
+            dir_to_angle(dir()) + jau::adeg_to_rad(45), // angle/direction of velocity: Fritz + 45deg
+            15_m_s, // max velocity (scalar)
+            false /* reset */) );
+        m_balls.back()->boost_factor = 1;
+        m_balls.back()->break_factor = 1;
+        return true;
+    }
+
     bool tick(const float dt) noexcept { // override {
         m_last_dt = dt;
+
+        for(const auto& i : m_balls) {
+            i->tick(dt);
+        }
+        for(auto i = m_balls.begin(); i < m_balls.end();) {
+            physiks::ball_ref_t &b = *i;
+            if (!b->box().inside(maze.box2)) {
+                // delete i
+                m_balls.erase(i);
+                std::cout << "maze-box: " << maze.box2.toString() << "\n";
+                std::cout << "ball-box: " << b->box().toString() << "\n";
+            } else if (b->velocity.length() < 3) {
+                // delete i
+                m_balls.erase(i);
+                std::cout << "ball-velo: " << b->velocity.toString() << "\n";
+            } else {
+                ++i;
+            }
+        }
+
         // pixel::f2::vec_t g = sun->gravity_ships(p_center);
         // velocity += g * dt; // [m/s^2] * [s] = [m/s]
         vec_t d = m_velocity_v * dt; // [m/s] * [s] = [m]
@@ -569,12 +608,13 @@ class Player {
             point_t tl = { m_aabbox.tr.x, m_aabbox.bl.y };
             lineseg_t::draw(br, tl);
         }
+        for(auto &i : m_balls) {
+            i->draw(true);
+        }
     }
 };
-constexpr size_t max_balls = 10;
 Player fritzchen;
 Player erna;
-std::vector<physiks::ball_ref_t> balls;
 uint64_t t_start = 0; // [ms]
 uint64_t frame_count_total = 0;
 
@@ -610,18 +650,9 @@ void mainloop() {
         } else if (event.pressed(pixel::input_event_type_t::RESET)) {
             fritzchen.reset();
             erna.reset();
-            balls.clear();
         }
-        if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION2) && balls.size() < max_balls) {
-            balls.push_back( physiks::ball_t::createZeroG("ballFritz",
-                fritzchen.nasenpos(),
-                20_cm, // radius
-                15_m_s, // velocity (scalar)
-                dir_to_angle(fritzchen.dir()) + jau::adeg_to_rad(45), // angle/direction of velocity: Fritz + 45deg
-                15_m_s, // max velocity (scalar)
-                false /* reset */) );
-            balls.back()->boost_factor = 1;
-            balls.back()->break_factor = 1;
+        if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION2)) {
+            fritzchen.throwBall();
         }
         if (event.pressed(pixel::input_event_type_t::P2_ACTION3)) {
             fritzchen.setRun(true);
@@ -655,7 +686,7 @@ void mainloop() {
     }
 
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
-    
+
     pixel::texture_ref hud_text1 = pixel::make_text("%s s, fps %4.2f/%d - ausdauer %2.2f, %2.2f/%2.2f",
             to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), pixel::expected_fps(),
             fritzchen.ausdauer(), fritzchen.pos().x, fritzchen.pos().y);
@@ -689,33 +720,14 @@ void mainloop() {
             printf("EEE: new_dir: dir %c\n", dir_to_char(new_dir));
             erna.setDir(new_dir);
         }
-        for(const auto& i : balls) {
-            i->tick(dt);
-        }
-        for(auto i = balls.begin(); i < balls.end();) {
-            physiks::ball_ref_t &b = *i;
-            if (!b->box().inside(maze.box2)) {
-                // delete i
-                balls.erase(i);
-                std::cout << "maze-box: " << maze.box2.toString() << "\n";
-                std::cout << "ball-box: " << b->box().toString() << "\n";
-            } else if (b->velocity.length() < 3) {
-                // delete i
-                balls.erase(i);
-                std::cout << "ball-velo: " << b->velocity.toString() << "\n";
-            } else {
-                ++i;
-            }
-        }
     }
 
     // white background
     pixel::clear_pixel_fb(255, 255, 255, 255);
 
     if (debug_gfx1) {
-        maze.draw_grid(pixel::f4::vec_t(0, 255, 255, 255));
+        maze.draw_grid(pixel::f4::vec_t(127, 127, 127, 255));
     }
-
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
     maze.draw();
 
@@ -723,9 +735,6 @@ void mainloop() {
     erna.draw();
     pixel::set_pixel_color(    0 /* r */,   0 /* g */, 255 /* b */, 255 /* a */);
     fritzchen.draw();
-    for(auto &i : balls) {
-        i->draw(true);
-    }
 
     pixel::swap_pixel_fb(false);
     if( nullptr != hud_text1 ) {
@@ -811,9 +820,9 @@ int main(int argc, char *argv[])
  * - n baelle erlauben (-> vector)
  * - bewegung einschraenken (-> pacman)
  * - abbiegen (-> pacman)
+ * - ball logik -> Player
  *
  * TODO - Erna
- * - ball logik -> Person
  * - ball geschwindigkeit erhoehen zu maximum in 1s (-> canonball)
  * - weglaufen
  * - jagen
