@@ -57,6 +57,7 @@ Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten
 
 
 Installing build dependencies on Debian (11 or better):
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 apt install git
 apt install build-essential g++ gcc libc-dev libpthread-stubs0-dev
@@ -78,6 +79,7 @@ At time of writing (Debian 12), it is recommended to install
 from [its upstream source](https://emscripten.org/docs/getting_started/downloads.html).
 
 At a later time (more recent Debian > 12 deployment) the Debian default may be functional:
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 apt install emscripten
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -86,6 +88,7 @@ apt install emscripten
 The following is covered with [a convenient build script](https://jausoft.com/cgit/cs_class/gfxbox2.git/tree/scripts/build.sh).
 
 For a generic build use:
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 CPU_COUNT=`getconf _NPROCESSORS_ONLN`
 git clone --recurse-submodule git://jausoft.com/srv/scm/cs_class/gfxbox2.git
@@ -100,16 +103,19 @@ Our cmake configure has a number of options, *cmake-gui* or *ccmake* can show
 you all the options. The interesting ones are detailed below:
 
 Changing install path from /usr/local to /usr
+
 ~~~~~~~~~~~~~
 -DCMAKE_INSTALL_PREFIX=/usr
 ~~~~~~~~~~~~~
 
 Building debug build:
+
 ~~~~~~~~~~~~~
 -DDEBUG=ON
 ~~~~~~~~~~~~~
 
 Building with clang and clang-tidy `lint` validation
+
 ~~~~~~~~~~~~~
 -DCMAKE_C_COMPILER=/usr/bin/clang
 -DCMAKE_CXX_COMPILER=/usr/bin/clang++
@@ -117,6 +123,7 @@ Building with clang and clang-tidy `lint` validation
 ~~~~~~~~~~~~~
 
 To build documentation run:
+
 ~~~~~~~~~~~~~
 make doc
 ~~~~~~~~~~~~~
@@ -149,10 +156,12 @@ IDE integration configuration files are provided for
 
 For VSCodium one might copy the [example root-workspace file](https://jausoft.com/cgit/cs_class/gfxbox2.git/tree/.vscode/gfxbox2.code-workspace_example)
 to the parent folder of this project (*note the filename change*) and adjust the `path` to your filesystem.
+
 ~~~~~~~~~~~~~
 cp .vscode/gfxbox2.code-workspace_example ../gfxbox2.code-workspace
 vi ../gfxbox2.code-workspace
 ~~~~~~~~~~~~~
+
 Then you can open it via `File . Open Workspace from File...` menu item.
 - All listed extensions are referenced in this workspace file to be installed via the IDE
 - The [local settings.json](.vscode/settings.json) has `clang-tidy` enabled

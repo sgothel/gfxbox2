@@ -65,12 +65,14 @@ C++17 and better where the [SDL2 library](https://www.libsdl.org/) is supported.
 The project requires make, g++ >= 8.3 and the libsdl2 for building.
 
 Installing build dependencies on Debian (11 or better):
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 apt install git build-essential g++ gcc libc-dev libpthread-stubs0-dev make
 apt install libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-mixer-dev
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 For a generic build use:
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 git clone https://jausoft.com/cgit/cs_class/pacman.git
 cd pacman
@@ -169,6 +171,7 @@ running along the bottom longest line from collision to collision.
 For each level we measured the slower first walk eating pellets and the second walk faster without pellets.
 
 Level 1: Fields/s deviation on longest line measured 7.955 f/s to 8.000 f/s or 0.5635%
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 bin/pacman -no_ghosts -show_fps -level 1
 
@@ -178,6 +181,7 @@ bin/pacman -no_ghosts -show_fps -level 1
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Level 5: Fields/s deviation on longest line measured 8.772 f/s to 8.700 f/s or 0.8267%
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 bin/pacman -no_ghosts -show_fps -level 5
 
