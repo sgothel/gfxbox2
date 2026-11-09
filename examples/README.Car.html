@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>README.Car.md</title>
+  <style>
+        div#header, header
+            {
+
+            border-bottom: 1px solid #aaa;
+            margin-bottom: 0.5em;
+            }
+
+        .title
+            {
+            text-align: center;
+            }
+
+        .author, .date
+            {
+            text-align: center;
+            }
+
+        div#TOC, nav#TOC
+            {
+
+            border-bottom: 1px solid #aaa;
+            margin-bottom: 0.5em;
+            }
+
+        nav#TOC {
+          margin-bottom: var(--line-height);
+
+          padding-bottom: 0.5rem;
+        }
+
+        nav#TOC input {
+          display: none;
+        }
+
+        nav#TOC label {
+          color: var(--color-link);
+          cursor: pointer;
+        }
+
+        nav#TOC > ul {
+          display: none;
+        }
+
+        nav#TOC > input:checked + ul {
+          display: block;
+        }
+
+        @media print
+            {
+            div#TOC, nav#TOC
+                {
+
+                display: none;
+                }
+            }
+
+        div.content
+            {
+                color: #111111;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+
+        div#cgit a
+            {
+                color: #1212a0;
+            }
+
+        div#cgit a.sourceLine
+            {
+                color: #111111;
+            }
+
+        h1, h2, h3, h4, h5, h6
+        {
+            font-family: "Helvetica Neue", Helvetica, "Liberation Sans", Calibri, Arial, sans-serif;
+
+            page-break-after: avoid;
+
+            margin: 20px 0 10px;
+            padding: 0;
+        }
+
+        h2 {
+            border-bottom: 1px solid #ccc;
+        }
+
+        div div
+            {
+
+            }
+
+        section section
+            {
+            margin-left: 2em;
+            }
+
+        p {}
+
+        blockquote
+            {
+            font-style: italic;
+            }
+
+        li
+            {
+            }
+
+        li > p
+            {
+            margin-top: 1em;
+            }
+
+        ul
+            {
+            }
+
+        ul li
+            {
+            }
+
+        ol
+            {
+            }
+
+        ol li
+            {
+            }
+
+        hr {}
+
+        sub
+            {
+            }
+
+        sup
+            {
+            }
+
+        em
+            {
+            }
+
+        em > em
+            {
+            font-style: normal;
+            }
+
+        strong
+            {
+            }
+
+        a
+            {
+
+            text-decoration: none;
+            }
+
+        @media screen
+            {
+            a:hover
+                {
+
+                text-decoration: underline;
+                }
+            }
+
+        @media print
+            {
+            a {
+
+                color: black;
+                background: transparent;
+                }
+
+            a[href^="http://"]:after, a[href^="https://"]:after
+                {
+
+                content: " (" attr(href) ") ";
+                font-size: 90%;
+                }
+            }
+
+        img
+            {
+
+            vertical-align: middle;
+            }
+
+        div.figure
+            {
+
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+            font-style: italic;
+            }
+
+        p.caption
+            {
+
+            }
+
+        pre, code
+            {
+            background-color: #f8f8f8;
+
+            white-space: pre-wrap;
+            white-space: -moz-pre-wrap !important;
+            white-space: -pre-wrap;
+            white-space: -o-pre-wrap;
+            word-wrap: break-word;
+
+            }
+
+        pre
+            {
+
+            padding: 0.5em;
+            border-radius: 5px;
+
+            background-color: #f8f8f8;
+            border: 1px solid #ccc;
+            font-size: 13px;
+            line-height: 19px;
+            overflow: auto;
+            padding: 6px 10px;
+
+            margin-left: 0.5em;
+            margin-right: 0.5em;
+            }
+
+        @media screen
+            {
+            pre
+                {
+
+                white-space: pre;
+                overflow: auto;
+
+                border: 1px dotted #777;
+                }
+            }
+
+        code
+            {
+            }
+
+        p > code, li > code
+            {
+
+            padding-left: 2px;
+            padding-right: 2px;
+            }
+
+        li > p code
+            {
+
+            padding: 2px;
+            }
+
+        span.math
+            {
+
+            }
+
+        div.math
+            {
+            }
+
+        span.LaTeX
+            {
+            }
+
+        eq
+            {
+            }
+
+        table
+            {
+            border-collapse: collapse;
+            border-spacing: 0;
+
+            margin-left: auto;
+            margin-right: auto;
+            }
+
+        thead
+            {
+            border-bottom: 1pt solid #000;
+            background-color: #eee;
+            }
+
+        tr.header
+            {
+            }
+
+        tbody
+            {
+            }
+
+        tr {
+            }
+        tr.odd:hover, tr.even:hover
+            {
+            background-color: #eee;
+            }
+
+        tr.odd {}
+        tr.even {}
+
+        td, th
+            {
+            vertical-align: top;
+            vertical-align: baseline;
+            padding-left: 0.5em;
+            padding-right: 0.5em;
+            padding-top: 0.2em;
+            padding-bottom: 0.2em;
+            }
+        th
+            {
+            font-weight: bold;
+            }
+
+        tfoot
+            {
+            }
+
+        caption
+            {
+            caption-side: top;
+            border: none;
+            font-size: 0.9em;
+            font-style: italic;
+            text-align: center;
+            margin-bottom: 0.3em;
+            padding-bottom: 0.2em;
+            }
+
+        dl
+            {
+            border-top: 2pt solid black;
+            padding-top: 0.5em;
+            border-bottom: 2pt solid black;
+            }
+
+        dt
+            {
+            font-weight: bold;
+            }
+
+        dd+dt
+            {
+            border-top: 1pt solid black;
+            padding-top: 0.5em;
+            }
+
+        dd
+            {
+            margin-bottom: 0.5em;
+            }
+
+        dd+dd
+            {
+            border-top: 1px solid black;
+            }
+
+        a.footnote, a.footnoteRef {
+            font-size: small;
+            vertical-align: text-top;
+        }
+
+        a[href^="#fnref"], a.reversefootnote
+            {
+            }
+
+        @media print
+            {
+            a[href^="#fnref"], a.reversefootnote
+                {
+
+                display: none;
+                }
+            }
+
+        div.footnotes
+            {
+            }
+
+        div.footnotes li[id^="fn"]
+            {
+            }
+
+        @media print
+            {
+            .noprint
+                {
+                display:none;
+                }
+            }
+      </style>
+</head>
+<body>
+<nav id="TOC" role="doc-toc">
+    <strong>Contents</strong><label for="contents">⊕</label>
+  <input type="checkbox" id="contents">
+  <ul>
+  <li><a href="#car" id="toc-car">Car</a>
+  <ul>
+  <li><a href="#keys" id="toc-keys">Keys</a></li>
+  <li><a href="#rules" id="toc-rules">Rules</a>
+  <ul>
+  <li><a href="#speed" id="toc-speed">Speed</a></li>
+  <li><a href="#fuel" id="toc-fuel">Fuel</a></li>
+  <li><a href="#stability" id="toc-stability">Stability</a></li>
+  <li><a href="#lifes" id="toc-lifes">Lifes</a></li>
+  <li><a href="#tunnel" id="toc-tunnel">Tunnel</a></li>
+  <li><a href="#money" id="toc-money">Money</a></li>
+  <li><a href="#mode-park" id="toc-mode-park">Mode: Park</a></li>
+  <li><a href="#police-car" id="toc-police-car">Police car</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+</nav>
+<h1 id="car">Car</h1>
+<p>Car is a game for two players. Each player has to drive a car.</p>
+<h2 id="keys">Keys</h2>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Player 1</th>
+<th style="text-align: left;">Player 2</th>
+<th style="text-align: left;">Function</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Curser-Up</td>
+<td style="text-align: left;">W</td>
+<td style="text-align: left;">Forward-Acceleration</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Curser-Down</td>
+<td style="text-align: left;">S</td>
+<td style="text-align: left;">Backward-Acceleration</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Curser-Left</td>
+<td style="text-align: left;">A</td>
+<td style="text-align: left;">Left-Turn</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Curser-Right</td>
+<td style="text-align: left;">D</td>
+<td style="text-align: left;">Right-Turn</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RShift</td>
+<td style="text-align: left;">LShift</td>
+<td style="text-align: left;">Brake</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Return</td>
+<td style="text-align: left;">LCtr</td>
+<td style="text-align: left;">begin/end tunnel</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">RAlt</td>
+<td style="text-align: left;">LAlt</td>
+<td style="text-align: left;">begin/end to fuel^</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">RAlt</td>
+<td style="text-align: left;">LAlt</td>
+<td style="text-align: left;">begin/end to repair^^</td>
+</tr>
+</tbody>
+</table>
+<p>^ only at the fuel station; ^^ only at the repair station;</p>
+<h2 id="rules">Rules</h2>
+<h3 id="speed">Speed</h3>
+<h4 id="global-speed-limit">Global Speed Limit</h4>
+<p>Don’t violate the speed limit, otherwise the car will be hunted of
+one police car after 10 sec driving 10% above the limit. The speed limit
+changes every minute.</p>
+<h4 id="speed-status-smiley">Speed Status: Smiley</h4>
+<ul>
+<li>If the car velocity is under the speed limit the face will become:
+<code>:-)</code>.</li>
+<li>If your car’s velocity exceeds the speed limit but is still within
+the 10% tolerance, the face will become <code>:-|</code>.</li>
+<li>If the car velocity exceeds the speed limit and tolerance the face
+will become <code>:-(</code>.</li>
+</ul>
+<h4 id="car-speed">Car Speed</h4>
+<ul>
+<li><p>If the car stands for 30 sec, it loses a life.</p></li>
+<li><p>The car has a maximum velocity (at beginning 240 km/h).</p></li>
+<li><p>If the car is faster than the maximum velocity, the car loses
+stability.</p></li>
+<li><p>The car maximum speed is relative to the stability:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">m_state.stability</span> = std::min<span class="er">(</span><span class="kw">(</span><span class="ex">m_state.stability</span> / max_stability<span class="kw">)</span> <span class="ex">*</span> 500_km_h, 240_km_h<span class="kw">)</span></span></code></pre></div>
+<ul>
+<li>The car maximum velocity has the maximum worth 240 km/h.</li>
+<li>The car maximum velocity is the smaller worth of stability /
+max_stability * 500 km/h and 240 km/h. That`s why, the car maximum
+velocity is the stability in procent (max is 100%, min 0%) multiplicated
+with 500 km/h, but if this worth is over 240 km/h, the smaller worth is
+240 km/h, else the other worth.</li>
+</ul></li>
+</ul>
+<h3 id="fuel">Fuel</h3>
+<ul>
+<li>the car has to go to the gas station to maintain its fuel, if the
+fuel is short</li>
+<li>if the car refules, the player loses money (per liter, the car loses
+the fuel price)</li>
+<li>if the tank is empty and the car stands for 10 seconds, it loses a
+life.</li>
+<li>if the tank is empty, the car can fill the tank up with his fuel
+can, which have, if it is full, 5 liter.</li>
+<li>if the car is refueling and it drives out of the gas station, it
+stops to refueling</li>
+<li>if the fuel can have less fuel than the maximum and the car is
+refueling, the fuel can will be refuels at first</li>
+<li>at beginning, the fuel can and the tank are full</li>
+<li>the gas station is marked with a <code>T</code></li>
+</ul>
+<h3 id="stability">Stability</h3>
+<ul>
+<li><p>if the car intersects with an other thing (e.g. the other car),
+the stability falls</p></li>
+<li><p>if the stability equals zero, the car lose one life</p></li>
+<li><p>the car can go to the repair station to repair itself</p></li>
+<li><p>if the car will be repair, the player loses money</p></li>
+<li><p>if the car wants to repair super much, that the stability is over
+the maximum stability, the car gets a life, and the stability will set
+on zero</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="kw">(</span><span class="ex">m_state.stability</span> <span class="op">&gt;</span> max_stability<span class="kw">){</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>    <span class="ex">++m_state.life</span><span class="kw">;</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">m_state.stability</span> = m_state.stability <span class="at">-</span> max_stability<span class="kw">;</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div></li>
+<li><p>a car can brake one second per brake-period, else the car lose
+stability.</p></li>
+<li><p>the repair station is marked with a <code>R</code></p></li>
+</ul>
+<h3 id="lifes">Lifes</h3>
+<ul>
+<li>at the start every player has three cars or the lifes will be
+commited of the arguments with -lifes [<a
+href="https://en.cppreference.com/cpp/types/integer">uint8_t</a>]</li>
+<li>if the lifes under zero, the car is exploded
+<code>bool is_car_exploded(){ return m_state.life &lt;= 0; }</code>
+<ul>
+<li>and if the car is exploded it won’t be draw</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="ex">void</span> draw<span class="er">(</span><span class="kw">){</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>    <span class="ex">...</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span><span class="kw">(</span><span class="fu">is_car_exploded()</span><span class="kw">){</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span><span class="kw">;</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="kw">}</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="ex">...</span></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div></li>
+<li>the number of lifes will be decreased if the stability is zero(look
+at Stability) or you aren’t on the perking place after parking mode (see
+at Mode: Park)</li>
+</ul>
+<h3 id="tunnel">Tunnel</h3>
+<ul>
+<li>one car can makes tunnels for 10 minute</li>
+<li>if the car makes a tunnel, the car gets money</li>
+<li>if a car drives on a tunnel (a circel with it index under it) the
+car is in the tunnel: Than you see, that the car does not moves and the
+car is gray. If you accelerate, the car drives through the tunnel, but
+you do not see it. The car will go out of the tunnel(at the other circle
+with same index) with the angle you see it and you can rotate the car
+while it is in a tunnel. If you drives backwards, the car comes at the
+same position out as it went in.</li>
+<li>a car only can make a tunnel begin/end on the green rectangles</li>
+</ul>
+<h3 id="money">Money</h3>
+<ul>
+<li>you lose money while refueling and repairing.</li>
+<li>you lose money if a police car catch you (see police car).</li>
+</ul>
+<h3 id="mode-park">Mode: Park</h3>
+<ul>
+<li>speed limit will be equals 50 km/h.</li>
+<li>the car have to go to the parking place.</li>
+<li>at the end of the mode, the car must be on it parking place, else it
+lose a life.</li>
+</ul>
+<h3 id="police-car">Police car</h3>
+<ul>
+<li><p>a police car hunts a car, if the car collide on a house (black
+rectangles) or if the car drove 10 sec over 110% of the speed limit
+(100% + 10% &lt;- tolerance).</p></li>
+<li><p>the police car remebers the punishment, of the car:</p>
+<ul>
+<li>if the car drove too fast:</li>
+</ul>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="ex">const</span> float punish = <span class="er">(</span><span class="ex">std::abs</span><span class="er">(</span><span class="ex">m_velocity</span><span class="kw">)</span> <span class="ex">-</span> max_velo<span class="kw">)</span><span class="ex">*10</span><span class="kw">;</span></span></code></pre></div>
+<ul>
+<li>so the punish is the difference of absolut velocity and speed
+limit.</li>
+<li>if the car collide with a house:</li>
+</ul>
+<div class="sourceCode" id="cb5"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="ex">const</span> float punish = std::abs<span class="er">(</span><span class="ex">m_velocity</span> <span class="pp">*</span> 15<span class="kw">);</span></span></code></pre></div>
+<ul>
+<li>so the punish is the absolute velocity multiplicated with 15.</li>
+</ul></li>
+<li><p>the police car drives under the speed limit, exept:</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="kw">(</span><span class="ex">m_target-</span><span class="op">&gt;</span>m_punish <span class="op">&lt;</span> 1000<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="ex">addToVelocity</span><span class="er">(</span><span class="ex">std::min</span><span class="er">(</span><span class="ex">{accel,</span> m_state.max_car_velo <span class="at">-</span> m_velocity, max_velo<span class="pp">*</span>0.9f <span class="at">-</span> m_velocity}<span class="kw">)</span><span class="ex">,</span> dt<span class="kw">);</span></span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span> <span class="cf">else</span> <span class="cf">if</span><span class="kw">(</span><span class="ex">m_target-</span><span class="op">&gt;</span>m_punish <span class="op">&lt;</span> 5000<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="ex">addToVelocity</span><span class="er">(</span><span class="ex">std::min</span><span class="er">(</span><span class="ex">{accel,</span> m_state.max_car_velo <span class="at">-</span> m_velocity, max_velo<span class="pp">*</span>2.0f <span class="at">-</span> m_velocity}<span class="kw">)</span><span class="ex">,</span> dt<span class="kw">);</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span> <span class="cf">else</span> <span class="kw">{</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">addToVelocity</span><span class="er">(</span><span class="ex">std::min</span><span class="er">(</span><span class="ex">accel,</span> m_state.max_car_velo <span class="at">-</span> m_velocity<span class="kw">)</span><span class="ex">,</span> dt<span class="kw">);</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div>
+<ul>
+<li>if the total punish of the target (of the police car hunted car) is
+over 1000$ and under 5000$, the police car will drive under 2 * speed
+limit.</li>
+<li>if the total punish of the target is over 5000$, the police car has
+only the speed limit maximum velocity of it.</li>
+<li>but in all cases, the police car will drive not over its maximum
+velocity.</li>
+</ul></li>
+<li><p>if a car collide with a house, three police cars comes:</p>
+<ul>
+<li>one car has its target befor the targetted car</li>
+<li>another car has its target exactly on the targetted car</li>
+<li>the third car has its target behind the targetted car</li>
+</ul>
+<div class="sourceCode" id="cb7"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="ex">point_t</span> get_target_point<span class="er">(</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>    <span class="ex">switch</span> <span class="er">(</span><span class="ex">m_id</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>        <span class="cf">case</span> car_id_3: {</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>            return m_target-&gt;m_rect_body.p_center;</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>        case car_id_4: {</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>            return m_target-&gt;m_rect_body.p_center + vec_t::from_length_angle( 10_m, m_target-&gt;m_angle);</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>        case car_id_5: {</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>            return m_target-&gt;m_rect_body.p_center + vec_t::from_length_angle(-10_m, m_target-&gt;m_angle);</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>        }</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>        default: break;</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>    return {0, 0};</span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+<ul>
+<li>a example:</li>
+</ul>
+<p><img src="../resources/car/CarScreenShot01.png"
+style="width:50.0%" /></p>
+<ul>
+<li><p>the red lines shows the difference (center to target
+point)</p></li>
+<li><p>the green lines shows the velocity vector of police car</p></li>
+<li><p>another example:</p></li>
+</ul>
+<p><img src="../resources/car/CarScreenShot02.png"
+style="width:50.0%" /></p>
+<ul>
+<li>here have two police car the same target point (exactly on the
+car)</li>
+</ul></li>
+<li><p>(perspective of a police car) if no police car with the next id
+has less than the threefold difference to the targetted car as I or I
+reached my target point, I get the next id</p>
+<div class="sourceCode" id="cb8"><pre
+class="sourceCode sh"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="ex">const</span> int next_id = m_id <span class="op">&lt;</span> car_id_5 <span class="pp">?</span> m_id + 1 : car_id_3<span class="kw">;</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="kw">(</span><span class="ex">m_id</span> <span class="op">&gt;</span> car_id_3<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span><span class="kw">(</span><span class="ex">m_aabbox.contains</span><span class="er">(</span><span class="ex">target_point</span><span class="kw">)</span> <span class="kw">&amp;&amp;</span> <span class="ex">!m_target-</span><span class="op">&gt;</span>m_state.digging_tunnel <span class="kw">&amp;&amp;</span> <span class="ex">!m_target-</span><span class="op">&gt;</span>m_state.inTunnel<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span><span class="kw">(</span><span class="ex">debug_prt</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>            <span class="bu">printf</span><span class="er">(</span><span class="st">&quot;Car %d -&gt; %d!\n&quot;</span><span class="ex">,</span> m_id, next_id<span class="kw">);</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>        <span class="kw">}</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>        <span class="ex">m_id</span> = next_id<span class="kw">;</span></span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>        <span class="cf">return</span> <span class="fu">true</span><span class="kw">;</span></span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="kw">}</span></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="ex">bool</span> go_one_id_over = true<span class="kw">;</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span><span class="kw">(</span><span class="ex">const</span> Car_ref<span class="kw">&amp;</span> <span class="ex">AI_car</span> : AI_cars<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span><span class="kw">(</span><span class="ex">AI_car</span> <span class="kw">&amp;&amp;</span> <span class="ex">m_target</span> == AI_car-<span class="op">&gt;</span>m_target <span class="kw">&amp;&amp;</span> <span class="kw">((</span><span class="ex">AI_car-</span><span class="op">&gt;</span>m_id == next_id<span class="kw">)</span> <span class="kw">||</span> <span class="ex">std::abs</span><span class="er">((</span><span class="va">AI_car</span><span class="op">-&gt;</span><span class="va">m_rect_body</span>.<span class="va">p_center</span> <span class="op">-</span> <span class="va">m_target</span><span class="op">-&gt;</span><span class="va">m_rect_body</span>.<span class="va">p_center</span><span class="kw">)</span><span class="fu">.length()</span><span class="kw">)</span> <span class="ex">*</span> 3 <span class="op">&lt;</span></span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>            <span class="ex">std::abs</span><span class="er">((</span><span class="va">m_rect_body</span>.<span class="va">p_center</span> <span class="op">-</span> <span class="va">m_target</span><span class="op">-&gt;</span><span class="va">m_rect_body</span>.<span class="va">p_center</span><span class="kw">)</span><span class="fu">.length()</span><span class="kw">)))</span> <span class="kw">{</span></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>            <span class="ex">go_one_id_over</span> = false<span class="kw">;</span></span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>            <span class="cf">break</span><span class="kw">;</span></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>        <span class="kw">}</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>    <span class="kw">}</span></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span><span class="kw">(</span><span class="ex">go_one_id_over</span><span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>        <span class="ex">m_id</span> = next_id<span class="kw">;</span></span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="kw">}</span></span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div></li>
+<li><p>(perspective of a police car) if the penalty is over 100, I
+divide it through 3 and call a new police car to catch the targetted car
+with the next id</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="ex">const</span> int next_id = m_id <span class="op">&lt;</span> car_id_5 <span class="pp">?</span> m_id + 1 : car_id_3<span class="kw">;</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="kw">(</span><span class="ex">m_punish</span> <span class="op">&gt;</span> 100<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="ex">m_punish</span> /= 3<span class="kw">;</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="ex">make_police_car</span><span class="er">(</span><span class="ex">next_id,</span> m_punish<span class="pp">*</span>2, m_target<span class="kw">);</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div>
+<ul>
+<li>and the penalty of the new police car is than the double of my
+penalty</li>
+</ul></li>
+</ul>
+</body>
+</html>
