@@ -465,6 +465,11 @@ namespace pixel::f2 {
             bl.rotate(rad, center());
         }
 
+        constexpr void rotate(const float rad, const point_t p) noexcept {
+            tr.rotate(rad, p);
+            bl.rotate(rad, p);
+        }
+
         /**
          * Resize the AABBox to encapsulate the passed coordinates.
          * @param x x-axis coordinate value

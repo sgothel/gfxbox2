@@ -98,6 +98,9 @@ namespace pixel {
     /// Alias for `π/4` or half right-angle radians (45 degrees), i.e. std::numbers::pi_v<float>/4.0f
     constexpr float PI_4 = std::numbers::pi_v<float>/4.0f;
 
+    /// Alias for `π*2` or whole-circle radians (360 degrees), i.e. std::numbers::pi_v<float>*2.0f
+    constexpr float TWO_PI = std::numbers::pi_v<float>*2.0f;
+
     /// Alias for `1/π` or inverse of `π`, i.e. T(1)/std::numbers::pi_v<T> or std::numbers::inv_pi_v<float>
     constexpr float inv_PI = std::numbers::inv_pi_v<float>;
 
