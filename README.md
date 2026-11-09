@@ -42,7 +42,7 @@ Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten
   - gcc >= 10
   - clang >= 15
 - [SDL2 library](https://www.libsdl.org/)
-- [emscripten >= 3.1.59](https://emscripten.org/) **optional** for WebAssembly (Wasm)
+- [emscripten >= 7.0.0](https://emscripten.org/) **optional** for WebAssembly (Wasm)
 - Example funcdraw
     - Parser generator
         - [bison >= 3.2](https://www.gnu.org/software/bison/manual/)
@@ -75,8 +75,31 @@ For Debian you can use this [clang alternatives setup script](https://jausoft.co
 
 #### WebAssembly (via emscripten)
 At time of writing (Debian 12), it is recommended to install
-[emscripten >= 3.1.59](https://emscripten.org/) for WebAssembly (Wasm)
+[emscripten >= 7.0.0](https://emscripten.org/) for WebAssembly (Wasm)
 from [its upstream source](https://emscripten.org/docs/getting_started/downloads.html).
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
+# Start from home directory
+cd $HOME
+
+# Get the emsdk repo
+git clone https://github.com/emscripten-core/emsdk.git
+
+# Enter that directory
+cd emsdk
+
+# Fetch the latest version of the emsdk (not needed the first time you clone)
+git pull
+
+# Download and install the latest SDK tools.
+./emsdk install latest
+
+# Make the "latest" SDK "active" for the current user. (writes .emscripten file)
+./emsdk activate latest
+
+# Activate PATH and other environment variables in the current terminal
+source ./emsdk_env.sh
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 At a later time (more recent Debian > 12 deployment) the Debian default may be functional:
 

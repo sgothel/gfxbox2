@@ -11,6 +11,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <atomic>
 
 
 #include "rpn_calc.hpp"
