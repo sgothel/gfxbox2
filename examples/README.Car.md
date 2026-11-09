@@ -52,7 +52,7 @@ the smaller worth is 240 km/h, else the other worth.
 - if the car is refueling and it drives out of the gas station, it stops to refueling
 - if the fuel can have less fuel than the maximum and the car is refueling, the fuel can will be refuels at first
 - at beginning, the fuel can and the tank are full
-- the gas station is marked with a `T`
+- the gas station is marked with a `F`
   
 ### Stability
 - if the car intersects with an other thing (e.g. the other car), the stability falls

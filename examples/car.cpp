@@ -1003,12 +1003,12 @@ void mainloop() {
             text_list.push_back(make_text2(tl_text, 2, text_color, text_height,
                 "%.2f km/h", max_velo * 3.6f));
         }
-        text_list.push_back(pixel::make_text2(tankstelle.m_tl, 0, text_color, text_height * 2, "T"));
-        text_list.push_back(pixel::make_text2(werkstatt.m_tl, 0, text_color, text_height * 2, "W"));
+        text_list.push_back(pixel::make_text2(tankstelle.m_tl, 0, text_color, text_height * 2, "F"));
+        text_list.push_back(pixel::make_text2(werkstatt.m_tl, 0, text_color, text_height * 2, "R"));
     }
     // white background
-    set_pixel_color(0, 0, 0, 255);
     clear_pixel_fb(255, 255, 255, 255);
+    set_pixel_color(0, 0, 0, 255);
     if(animating) {
         fuel_price.dtime -= dt;
         if(fuel_price.dtime <= 0) {
