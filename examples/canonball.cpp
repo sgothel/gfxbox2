@@ -318,8 +318,8 @@ void mainloop() {
 
     float fps = gpu_avg_fps();
     hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
-                    "fps %f, td %d [ms], energie %f, adeg %3.3f, points %d, ball %d",
-                    fps, t1, player.velocity(), player.adeg(), player.score(), player.ball());
+                    "fps %2.2f, td %" PRIu64 "s, energie %f, adeg %3.3f, points %d, ball %d",
+                    fps, t1/1000, player.velocity(), player.adeg(), player.score(), player.ball());
 
 
     // white background

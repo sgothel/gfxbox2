@@ -90,7 +90,7 @@ class Tunnel {
 
     bool m_d2Setted;
     si_length_f32 m_length;
-    size_t m_id;
+    uint8_t m_id;
 
   public:
     disk_t d1;
@@ -105,12 +105,12 @@ class Tunnel {
 
     bool addToLength(const si_length_f32 l) { if (!m_d2Setted) { m_length += l; return true; } return false; }
     const si_length_f32& length() const noexcept { return m_length; }
-    size_t id() const noexcept { return m_id; }
+    uint8_t id() const noexcept { return m_id; }
 
     void setD2(point_t c) {
         d2 = disk_t(c, d1.radius);
         m_d2Setted = true;
-        printf("Tunnel[%zu]: length %f, from %s to %s\n", m_id, m_length, d1.center.toString().c_str(), d2.center.toString().c_str());
+        printf("Tunnel[%d]: length %f, from %s to %s\n", m_id, m_length, d1.center.toString().c_str(), d2.center.toString().c_str());
     }
 
     void draw() const noexcept {
@@ -498,7 +498,7 @@ class Car {
         }
         return {0, 0};
     }
-    
+
     bool police_going(const float dt, const si_accel_f32 accel = 40_m_s2) {
         if(!m_target) {
             return true;
@@ -982,26 +982,26 @@ void mainloop() {
     }
     {
         text_list.push_back(pixel::make_text2(tl_text, 0, text_color, text_height,
-        "td %s, fps %2.2f, d_time %2d, car1(velo %3.2f km/h, %s, "
-        "fuse %.2f s, stability %.2f%, tank %.2fl, tunnel %.2f, max velo %.2fkm/h, money %.2f$, "
-        "life %d, total punish %.2f$), ",
-                to_decstring(t1/1000, ',', 9).c_str(), gpu_avg_fps(), car1.velocity() * 3.6f,
-                (int)velo_limit.dtime, car1.state().velo_smily.data(), // NOLINT(bugprone-suspicious-stringview-data-usage)
+            "td %s, fps %2.2f, d_time %2d, car1(velo %3.2f km/h, %s, "
+            "fuse %.2f s, stability %.2f pct, tank %.2fl, tunnel %.2f, max velo %.2fkm/h, money %.2f$, "
+            "life %d, total punish %.2f$), ",
+                to_decstring(t1/1000, ',', 9).c_str(), gpu_avg_fps(), (int)velo_limit.dtime, car1.velocity() * 3.6f,
+                car1.state().velo_smily.data(), // NOLINT(bugprone-suspicious-stringview-data-usage)
                 car1.state().fuse01,
                 car1.state().stability, car1.state().tank*1000, car1.state().tunnel_digging_time,
                 car1.state().max_car_velo * 3.6f, car1.state().money, car1.state().life, car1.punish()));
         text_list.push_back(pixel::make_text2(tl_text, 1, text_color, text_height,
-        "car2(velo %.2f km/h, %s, fuse %.2f s, stability %.2f%, tank %.2fl, "
-        "tunnel %.2f, max velo %.2fkm/h, money %.2f$, life %d, total punish %.2f$), dtime %d, fuel price %.3f$/l",
+            "car2(velo %.2f km/h, %s, fuse %.2f s, stability %.2f pct, tank %.2fl, "
+            "tunnel %.2f, max velo %.2fkm/h, money %.2f$, life %d, total punish %.2f$), dtime %d, fuel price %.3f$/l",
                 car2.velocity() * 3.6f, car2.state().velo_smily.data(), // NOLINT(bugprone-suspicious-stringview-data-usage)
                 car2.state().fuse01, car2.state().stability, car2.state().tank * 1000, car2.state().tunnel_digging_time,
                 car2.state().max_car_velo * 3.6f, car2.state().money, car2.state().life, car2.punish(), (int)fuel_price.dtime, dollar_per_liter * 1_l));
         if(parken){
             text_list.push_back(make_text2(tl_text, 2, text_color, text_height,
-            "park, %.2f km/h", max_velo * 3.6f));
+                "park, %.2f km/h", max_velo * 3.6f));
         } else {
             text_list.push_back(make_text2(tl_text, 2, text_color, text_height,
-            "%.2f km/h", max_velo * 3.6f));
+                "%.2f km/h", max_velo * 3.6f));
         }
         text_list.push_back(pixel::make_text2(tankstelle.m_tl, 0, text_color, text_height * 2, "T"));
         text_list.push_back(pixel::make_text2(werkstatt.m_tl, 0, text_color, text_height * 2, "W"));

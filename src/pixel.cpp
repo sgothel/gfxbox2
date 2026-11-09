@@ -350,7 +350,7 @@ pixel::texture_ref pixel::make_text(const pixel::f2::point_t& tl, const int line
                                     const pixel::f4::vec_t& color, const int font_height_usr,
                                     const std::string& text) noexcept {
     pixel::set_pixel_color4f(color.x, color.y, color.z, color.w);
-    pixel::texture_ref tex = pixel::make_text(text.c_str());
+    pixel::texture_ref tex = pixel::make_text("%s", text.c_str());
     tex->dest_sx = (float)font_height_usr / (float)font_height;
     tex->dest_sy = (float)font_height_usr / (float)font_height;
     tex->dest_x = pixel::cart_coord.to_fb_x(tl.x);
@@ -758,14 +758,16 @@ int pixel::HighScore::resetTextEntries(int lineno, int edit) {
         //printf("AJKSKDJFDKJAJSKDFJJDKAJSDKFJOHJO1234567890\n");
         pixel::HighScore::Entry e = table[i];
         if(edit == ssize_t(i)){ // NOLINT
-            textEntries.push_back(pixel::make_text(tl_text, lineno+int(i+1), m_text_color, 30, 
-            "%2.2d%s    : %d", i+1, zeichen(int(i)+1), e.score));
+            textEntries.push_back(pixel::make_text(tl_text, lineno+int(i+1), m_text_color, 30,
+            "%2.2zu%s    : %u", i+1, zeichen(int(i)+1).data(), // NOLINT(bugprone-suspicious-stringview-data-usage)
+            e.score));
             pos = lineno+int(i+1);
         } else {
-            textEntries.push_back(pixel::make_text(tl_text, lineno+int(i+1), m_text_color, 30, 
-            "%2.2d%s %3.3s: %d", i+1, zeichen(int(i)+1), e.name.c_str(), e.score));       
+            textEntries.push_back(pixel::make_text(tl_text, lineno+int(i+1), m_text_color, 30,
+            "%2.2zu%s %3.3s: %u", i+1, zeichen(int(i)+1).data(), // NOLINT(bugprone-suspicious-stringview-data-usage)
+            e.name.c_str(), e.score));
         }
-        //printf("ALSALALALALALALAJSJDFJDJJDJDJDJDJJDDJDJ %s\n", e.name.c_str()); 
+        //printf("ALSALALALALALALAJSJDFJDJJDJDJDJDJJDDJDJ %s\n", e.name.c_str());
     }
     return pos;
 }
@@ -798,14 +800,15 @@ bool pixel::HighScore::enterEntry(Entry& p, pixel::input_event_t& event){
     for(size_t i = 0; i < table.size(); ++i){
         //printf("AJKSKDJFDKJAJSKDFJJDKAJSDKFJOHJO1234567890\n");
         pixel::HighScore::Entry e = table[i];
-        textEntries.push_back(pixel::make_text(tl_text, int(i+1)+t, m_text_color, 30, 
-        "%d%s %s: %dP", i+1, zeichen(int(i)+1).c_str(), e.name.c_str(), e.score));       
-        //printf("ALSALALALALALALAJSJDFJDJJDJDJDJDJJDDJDJ %s\n", e.name.c_str()); 
+        textEntries.push_back(pixel::make_text(tl_text, int(i+1)+t, m_text_color, 30,
+        "%d%s %s: %dP", i+1, zeichen(int(i)+1).c_str(), e.name.c_str(), e.score));
+        //printf("ALSALALALALALALAJSJDFJDJJDJDJDJDJJDDJDJ %s\n", e.name.c_str());
     }
     */
     resetTextEntries(t);
-    textEntries.push_back(pixel::make_text(tl_text, t, f4::vec_t(255, 0, 0, 255), 30, 
-    "%d%s %s: %dP <-", idx+1, zeichen(int(idx)+1), p.name.c_str(), p.score));
+    textEntries.push_back(pixel::make_text(tl_text, t, f4::vec_t(255, 0, 0, 255), 30,
+        "%zu%s %s: %uP <-", idx+1, zeichen(int(idx)+1).data(), // NOLINT(bugprone-suspicious-stringview-data-usage)
+        p.name.c_str(), p.score));
     //addScore(p);
     //textEntries[idx]-
     if( event.pressed_and_clr( pixel::input_event_type_t::P1_RIGHT ) ) {

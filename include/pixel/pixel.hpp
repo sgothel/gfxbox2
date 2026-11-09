@@ -815,17 +815,19 @@ namespace pixel {
 
     texture_ref make_text(const std::string& text) noexcept;
 
+    __attribute__((format (printf,1,2)))
     texture_ref make_text(const char* format, ...) noexcept;
-
 
     texture_ref make_text(const pixel::f2::point_t& tl, const int lineno,
                           const pixel::f4::vec_t& color, const int font_height_usr,
                           const std::string& text) noexcept;
 
+    __attribute__((format (printf,5,6)))
     texture_ref make_text(const pixel::f2::point_t& tl, const int lineno,
                           const pixel::f4::vec_t& color, const int font_height_usr,
                           const char* format, ...) noexcept;
 
+    __attribute__((format (printf,5,6)))
     texture_ref make_text2(const pixel::f2::point_t& tl, const int lineno,
                           const pixel::f4::vec_t& color, const float font_height_usr,
                           const char* format, ...) noexcept;
