@@ -1,5 +1,4 @@
-#include <algorithm>
-#include <bits/types/siginfo_t.h>
+
 #include <csignal>
 #include <cstdarg>
 #include <cstddef>
@@ -19,7 +18,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_ttf.h>
-#include <linux/stat.h>
 #include <jau/float_si_types.hpp>
 #include <string>
 #include <string_view>
@@ -76,7 +74,9 @@ float abs_max(const Tp& a, const Tp& b) {
 
 void printerr(const char* format, ...) {
     va_list args;
+    va_start (args, format);
     std::cerr << jau::to_string(format, args);
+    va_end (args);
 }
 
 static rect_t tankstelle;
@@ -861,6 +861,12 @@ struct d_times_t {
     si_time_f32 dtime_max;
     si_time_f32 dtime;
 };
+
+static int fps = 60;
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE void set_forces_fps(int new_fps) noexcept { fps = new_fps; }
+}
+
 void mainloop() {
     static Car car1(car_id_1);
     static Car car2(car_id_2);
@@ -888,7 +894,7 @@ void mainloop() {
     bool animating = !event.paused();
     while(handle_one_event(event)){
         if( event.pressed_and_clr( input_event_type_t::WINDOW_CLOSE_REQ ) ) {
-            printf("Exit Application, td %lu\n", t1 / 1000);
+            printf("Exit Application, td %" PRIu64 "\n", t1 / 1000);
             #if defined(__EMSCRIPTEN__)
                 emscripten_cancel_main_loop();
             #else
@@ -1102,7 +1108,7 @@ void mainloop() {
         tex->draw_fbcoord(0, 0);
     }
     text_list.clear();
-    swap_gpu_buffer();
+    swap_gpu_buffer(fps);
 }
 
 int main(int argc, char *argv[])
