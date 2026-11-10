@@ -199,7 +199,7 @@ class Maze {
                         }
                     } else if( field_line_iter < height ) {
                         if( DEBUG_ON ) {
-                            jau::log_printf("maze: read line y = %d, len = %zd: %s\n", field_line_iter, line.length(), line.c_str());
+                            jau::log_printf("maze: read line y = %zu, len = %zu: %s\n", field_line_iter, line.length(), line.c_str());
                         }
                         const size_t maxlen = std::min(line.length(), width);
                         for(size_t x=0; x<maxlen; ++x) {

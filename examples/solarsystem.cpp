@@ -579,7 +579,6 @@ void mainloop() {
                     world_t0.to_iso8601_string(true).c_str(),
                     ref_cbody_t0.to_iso8601_string(true).c_str(),
                     mode,
-                    ref_cbody_t0.to_iso8601_string(true).c_str(),
                     a.to_iso8601_string(true).c_str(),
                     b.to_iso8601_string(true).c_str() );
             }

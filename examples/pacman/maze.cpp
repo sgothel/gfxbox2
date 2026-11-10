@@ -633,7 +633,7 @@ maze_t::maze_t(const std::string& fname0) noexcept
                 texture_file = line;
             } else if( field_line_iter < original.height() ) {
                 if( DEBUG_ON ) {
-                    jau::log_printf("maze: read line y = %d, len = %zd: %s\n", field_line_iter, line.length(), line.c_str());
+                    jau::log_printf("maze: read line y = %d, len = %zu: %s\n", field_line_iter, line.length(), line.c_str());
                 }
                 if( line.length() == (size_t)original.width() ) {
                     for(int x=0; x<original.width(); ++x) {

@@ -243,7 +243,7 @@ static bool load_textures() {
     tex_saucer.push_back( pixel::add_sub_texture(all_images, 0, y_off, 16, 7) );
 
     // row-1
-    log_printf(0, "XX alien1: %d textures\n", tex_alien1.size());
+    log_printf(0, "XX alien1: %zu textures\n", tex_alien1.size());
     for(const pixel::texture_ref& t : tex_alien1) {
         log_printf(0, "XX alien1: %s\n", t->toString().c_str());
     }
@@ -251,28 +251,28 @@ static bool load_textures() {
     log_printf(0, "XX redX:   %s\n", tex_redX[0]->toString().c_str());
 
     // row-2
-    log_printf(0, "XX alien2: %d textures\n", tex_alien2.size());
+    log_printf(0, "XX alien2: %zu textures\n", tex_alien2.size());
     for(const pixel::texture_ref& t : tex_alien2) {
         log_printf(0, "XX alien2: %s\n", t->toString().c_str());
     }
 
     // row-3
-    log_printf(0, "XX alien3: %d textures\n", tex_alien3.size());
+    log_printf(0, "XX alien3: %zu textures\n", tex_alien3.size());
     for(const pixel::texture_ref& t : tex_alien3) {
         log_printf(0, "XX alien3: %s\n", t->toString().c_str());
     }
-    log_printf(0, "XX ashot1: %d textures\n", tex_ashot1.size());
+    log_printf(0, "XX ashot1: %zu textures\n", tex_ashot1.size());
     for(const pixel::texture_ref& t : tex_ashot1) {
         log_printf(0, "XX ashot1: %s\n", t->toString().c_str());
     }
-    log_printf(0, "XX ashot2: %d textures\n", tex_ashot2.size());
+    log_printf(0, "XX ashot2: %zu textures\n", tex_ashot2.size());
     for(const pixel::texture_ref& t : tex_ashot2) {
         log_printf(0, "XX ashot2: %s\n", t->toString().c_str());
     }
 
     // row-4
     log_printf(0, "XX base: %s\n", tex_base[0]->toString().c_str());
-    log_printf(0, "XX baseX: %d textures\n", tex_baseX.size());
+    log_printf(0, "XX baseX: %zu textures\n", tex_baseX.size());
     for(const pixel::texture_ref& t : tex_baseX) {
         log_printf(0, "XX baseX: %s\n", t->toString().c_str());
     }
@@ -648,7 +648,9 @@ class bunker_t : public gobject_t {
             const uint32_t x1 = std::max<uint32_t>(0, floor_to_uint32(box.bl.x)+1-o);
             const uint32_t x2 = std::min<uint32_t>(width, ceil_to_uint32(box.tr.x)-1+o);
             for(uint32_t x=x1; x<x2; ++x) {
-                uint32_t * const target_pixel = std::bit_cast<uint32_t *>(m_bunk->pixels() + static_cast<size_t>((m_bunk->height - y - 1) * m_bunk->stride) + static_cast<size_t>(x * m_bunk->bpp));
+                uint32_t * const target_pixel =
+                    std::bit_cast<uint32_t *> // NOLINT(bugprone-bitwise-pointer-cast): pixels is aligned!
+                        (m_bunk->pixels() + static_cast<size_t>((m_bunk->height - y - 1) * m_bunk->stride) + static_cast<size_t>(x * m_bunk->bpp));
                 *target_pixel = abgr;
             }
         }

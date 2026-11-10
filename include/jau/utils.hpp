@@ -148,7 +148,9 @@ namespace jau {
         return (T)std::round(next_rnd() * float(max - min) + float(min));
     }
 
+    __attribute__((format (printf,1,2)))
     std::string to_string(const char* format, ...) noexcept;
+
     std::string to_stringva(const char* format, va_list args) noexcept;
 
     inline bool is_ascii_code(int c) noexcept {
@@ -238,7 +240,10 @@ namespace jau {
     /** Sleep for the givn milliseconds. */
     void milli_sleep(uint64_t td) noexcept;
 
+    __attribute__((format (printf,2,3)))
     void log_printf(const uint64_t elapsed_ms, const char * format, ...) noexcept;
+
+    __attribute__((format (printf,1,2)))
     void log_printf(const char * format, ...) noexcept;
 
     //

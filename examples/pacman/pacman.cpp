@@ -187,13 +187,13 @@ void pacman_t::set_speed(const float pct, const bool force) noexcept {
     pos_.set_aligned_dir(keyframei_);
     reset_stats();
     if( log_modes() ) {
-        jau::log_printf("pacman set_speed: %5.2f -> %5.2f: sync_each_frames %zd, %s\n", old, current_speed_pct, sync_next_frame_cntr.counter(), keyframei_.toString().c_str());
+        jau::log_printf("pacman set_speed: %5.2f -> %5.2f: sync_each_frames %zu, %s\n", old, current_speed_pct, sync_next_frame_cntr.counter(), keyframei_.toString().c_str());
     }
 }
 
 void pacman_t::print_stats() noexcept {
     const acoord_t::stats_t &stats = pos_.get_stats();
-    if( perf_frame_count_walked >= (uint64_t) keyframei_.frames_per_second() ) {
+    if( perf_frame_count_walked >= (uint64_t) keyframei_.frames_per_second() ) { // NOLINT(modernize-use-integer-sign-comparison)
         const uint64_t t1 = jau::getCurrentMilliseconds();
         const uint64_t td = t1-perf_fields_walked_t0;
         const float fields_per_seconds = get_fps(perf_fields_walked_t0, t1, stats.fields_walked_f);
@@ -201,7 +201,7 @@ void pacman_t::print_stats() noexcept {
         const float fields_per_seconds_diff_pct = ( std::abs(fields_per_seconds_req - fields_per_seconds ) / fields_per_seconds_req ) * 100.0f;
         const float fps_draw = get_fps(perf_fields_walked_t0, t1, float(perf_frame_count_walked));
         const float fps_tick = get_fps(perf_fields_walked_t0, t1, float(perf_frame_count_walked - sync_next_frame_cntr.events()));
-        jau::log_printf("pacman stats: speed %.2f%, td %" PRIu64 "ms, fields[%.2f walked, actual %.3f/s, requested %.3f/s, diff %.4f%], fps[draw %.2f/s, tick %.2f/s], frames[draw %" PRIu64 ", synced %d], %s, %s\n",
+        jau::log_printf("pacman stats: speed %.2f%%, td %" PRIu64 "ms, fields[%.2f walked, actual %.3f/s, requested %.3f/s, diff %.4f%%], fps[draw %.2f/s, tick %.2f/s], frames[draw %" PRIu64 ", synced %zu], %s, %s\n",
                 current_speed_pct, td,
                 stats.fields_walked_f, fields_per_seconds, fields_per_seconds_req, fields_per_seconds_diff_pct,
                 fps_draw, fps_tick, perf_frame_count_walked, sync_next_frame_cntr.events(),

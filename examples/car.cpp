@@ -72,13 +72,6 @@ float abs_max(const Tp& a, const Tp& b) {
     return std::abs(a) > std::abs(b) ? a : b;
 }
 
-void printerr(const char* format, ...) {
-    va_list args;
-    va_start (args, format);
-    std::cerr << jau::to_string(format, args);
-    va_end (args);
-}
-
 static rect_t tankstelle;
 static rect_t werkstatt;
 
@@ -131,7 +124,7 @@ class Tunnel {
     }
 
     std::string toString() {
-        return to_string("tunnel[%zu]: length %f, from %s to %s",
+        return to_string("tunnel[%hhu]: length %f, from %s to %s",
             m_id, m_length, d1.center.toString().c_str(), d2.center.toString().c_str());
     }
 };
@@ -246,7 +239,7 @@ class Car {
     }
 
     std::string toString() const {
-        return jau::to_string("Car[id %d, this %p, target %p, punish %.2f$]", m_id, this, m_target, m_punish);
+        return jau::to_string("Car[id %d, this %p, target %p, punish %.2f$]", m_id, (void*)this, (void*)m_target, m_punish);
     }
     Car(const Car& o) noexcept = default;
     Car& operator=(const Car& o) noexcept = default;
@@ -1065,13 +1058,13 @@ void mainloop() {
         if(!car1.is_car_exploded()){
             car1.tick(dt, car2.state().digging_tunnel);
         } else {
-            printerr("GAME OVER: car 1 is exploded!\n");
+            jau::log_printf("GAME OVER: car 1 is exploded!\n");
             exit(1);
         }
         if(!car2.is_car_exploded()){
             car2.tick(dt, car1.state().digging_tunnel);
         } else {
-            printerr("GAME OVER: car 2 is exploded!\n");
+            jau::log_printf("GAME OVER: car 2 is exploded!\n");
             exit(2);
         }
         const size_t pre_ai_sz=AI_cars.size();

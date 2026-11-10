@@ -134,7 +134,8 @@ bool ghost_t::set_speed(const float pct, const bool force) noexcept {
     pos_.set_aligned_dir(keyframei_);
     sync_next_frame_cntr.reset( keyframei_.sync_frame_count(), true /* auto_reload */);
     if( log_modes() ) {
-        jau::log_printf("%s set_speed: %5.2f -> %5.2f: sync_each_frames %zd, %s\n", to_string(id_).c_str(), old, current_speed_pct, sync_next_frame_cntr.counter(), keyframei_.toString().c_str());
+        jau::log_printf("%s set_speed: %5.2f -> %5.2f: sync_each_frames %zu, %s\n",
+            to_string(id_).c_str(), old, current_speed_pct, sync_next_frame_cntr.counter(), keyframei_.toString().c_str());
     }
     return true;
 }
@@ -360,10 +361,15 @@ void ghost_t::set_next_dir(const bool collision, const bool is_center) noexcept 
                 !dir_pos[U].step(direction_t::UP, one_step, collisiontest) || not_up };
 
         if( log_moves() ) {
-            jau::log_printf(std::string(to_string(id_)+" set_next_dir: curr "+to_string(cur_dir)+" -> "+to_string(dir_next)+"\n").c_str());
-            jau::log_printf(std::string(to_string(id_)+": p "+pos_.toShortString()+" -> "+test_pos.toShortString()+" (pos_next "+pos_next.toShortString()+")\n").c_str());
-            jau::log_printf(std::string(to_string(id_)+": u "+dir_pos[U].toIntString()+", l "+dir_pos[L].toIntString()+", d "+dir_pos[D].toIntString()+", r "+dir_pos[R].toIntString()+", target "+target_.toShortString()+"\n").c_str());
-            jau::log_printf(std::string(to_string(id_)+": collisions not_up "+std::to_string(not_up)+", a "+std::to_string(ahead_coll)+", u "+std::to_string(dir_coll[U])+", l "+std::to_string(dir_coll[L])+", d "+std::to_string(dir_coll[D])+", r "+std::to_string(dir_coll[R])+"\n").c_str());
+            jau::log_printf("%s: set_next_dir: curr %s -> %s\n", to_string(id_).c_str(),
+                to_string(cur_dir).c_str(), to_string(dir_next).c_str());
+            jau::log_printf("%s: p %s -> %s (pos_next %s)\n", to_string(id_).c_str(),
+                pos_.toShortString().c_str(), test_pos.toShortString().c_str(), pos_next.toShortString().c_str());
+            jau::log_printf("%s: u %s, l %s, d %s, r %s, target %s\n", to_string(id_).c_str(),
+                dir_pos[U].toIntString().c_str(), dir_pos[L].toIntString().c_str(),
+                dir_pos[D].toIntString().c_str(), dir_pos[R].toIntString().c_str(), target_.toShortString().c_str());
+            jau::log_printf("%s: collisions not_up %d, a %d, u %d, l %d, d %d, r %d\n", to_string(id_).c_str(),
+                not_up, ahead_coll, dir_coll[U], dir_coll[L], dir_coll[D], dir_coll[R]);
         }
 
         if( dir_coll[ ::number(left_dir) ] && dir_coll[ ::number(right_dir) ] ) {
@@ -406,7 +412,7 @@ void ghost_t::set_next_dir(const bool collision, const bool is_center) noexcept 
             dir_dist[ ::number(inv_dir) ] += d_half;
 
             if( log_moves() ) {
-                jau::log_printf(std::string(to_string(id_)+": distances u "+std::to_string(dir_dist[U])+", l "+std::to_string(dir_dist[L])+", d "+std::to_string(dir_dist[D])+", r "+std::to_string(dir_dist[R])+"\n").c_str());
+                jau::log_printf("%s: distances u %f, l %f, d %f, r %f\n", to_string(id_).c_str(), dir_dist[U], dir_dist[L], dir_dist[D], dir_dist[R]);
             }
 
             // Check for a clear short path: Reversal has been punished and collision dir_dist set to 'max * 10'
@@ -931,7 +937,7 @@ std::string ghost_t::pellet_counter_string() noexcept {
     for(const ghost_ref& g : ghosts()) {
         str += to_string(g->id_)+"[on "+std::to_string(g->pellet_counter_active_)+", ctr "+std::to_string(g->pellet_counter_)+"], ";
     }
-    str += "]";
+    str += ']';
     return str;
 }
 

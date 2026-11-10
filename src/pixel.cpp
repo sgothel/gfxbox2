@@ -176,7 +176,7 @@ size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const std::str
             }
             storage.push_back( std::make_shared<texture_t>(all->handle(), x, y, w, h, all->bpp, all->format, false /* owner*/) );
             if( DEBUG_TEX ) {
-                log_printf("add_sub_textures: tex %zd: %d/%d %dx%d of %dx%d: %s of %s\n",
+                log_printf("add_sub_textures: tex %zu: %u/%u %ux%u of %ux%u: %s of %s\n",
                     storage.size() - 1, x, y, w, h, all->width, all->height,
                     storage[ storage.size() - 1 ]->toString().c_str(),
                     all->toString().c_str());
@@ -201,7 +201,7 @@ size_t pixel::add_sub_textures(std::vector<texture_ref>& storage, const texture_
             storage.push_back( std::make_shared<texture_t>() );
         }
         if( DEBUG_TEX ) {
-            log_printf("add_sub_textures: tex %zd: %d/%d %dx%d of %dx%d: %s of %s\n",
+            log_printf("add_sub_textures: tex %zu: %u/%u %ux%u of %ux%u: %s of %s\n",
                 storage.size() - 1, x, y, w, h, parent->width, parent->height,
                 storage[ storage.size() - 1 ]->toString().c_str(),
                 parent->toString().c_str());
@@ -221,7 +221,7 @@ pixel::texture_ref pixel::add_sub_texture(const texture_ref& parent, uint32_t x_
             res = std::make_shared<texture_t>();
         }
         if( DEBUG_TEX ) {
-            log_printf("add_sub_texture: tex %d/%d %dx%d of %dx%d: %s of %s\n",
+            log_printf("add_sub_texture: tex %u/%u %ux%u of %ux%u: %s of %s\n",
                 x, y, w, h, parent->width, parent->height, res->toString().c_str(), parent->toString().c_str());
         }
     }

@@ -1244,7 +1244,7 @@ void mainloop() {
             if( cloak_enabled ) {
                 c = to_string(", %6.2f / %6.2f", p2.center().x, p2.center().y);
             }
-            sp2 = to_string(", S2 %4d (%4d pengs, %2d mines, %s shield, %4.2f m/s)",
+            sp2 = to_string(", S2 %4d (%4d pengs, %2d mines, %s shield, %4.2f m/s%s)",
                 p2.score(), p2.peng_inventory(), p2.mine_inventory(), p2.shield_toString().c_str(), p2.velocity(), c.c_str());
         }
         if(2 < player_count) {
@@ -1252,7 +1252,7 @@ void mainloop() {
             if( cloak_enabled ) {
                 c = to_string(", %6.2f / %6.2f", p3.center().x, p3.center().y);
             }
-            sp3 = to_string(", S3 %4d (%4d pengs, %2d mines, %s shield, %4.2f m/s)",
+            sp3 = to_string(", S3 %4d (%4d pengs, %2d mines, %s shield, %4.2f m/s%s)",
                 p3.score(), p3.peng_inventory(), p3.mine_inventory(), p3.shield_toString().c_str(), p3.velocity(), c.c_str());
         }
         hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %2.2f, %s%s%s",

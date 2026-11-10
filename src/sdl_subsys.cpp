@@ -415,7 +415,7 @@ pixel::bitmap_t::bitmap_t(const uint32_t width_, const uint32_t height_) noexcep
         stride = surface->pitch;
         format = surface->format->format;
     } else {
-        log_printf("bitmap_t: Error creating RGBA %dx%d: %s\n", width_, height_, SDL_GetError());
+        log_printf("bitmap_t: Error creating RGBA %ux%u: %s\n", width_, height_, SDL_GetError());
     }
 }
 
@@ -423,7 +423,7 @@ pixel::bitmap_t::bitmap_t(const bitmap_t& o, int /*unused*/) noexcept
 : m_handle(nullptr), m_pixels(nullptr), width(0), height(0), bpp(0), stride(0), format(0)
 {
     if( !o.m_pixels ) {
-        log_printf("bitmap_t: Cloning empty surface: %s, %s\n", o.toString().c_str());
+        log_printf("bitmap_t: Cloning empty surface: %s\n", o.toString().c_str());
         return;
     }
     SDL_Surface *surface = SDL_CreateRGBSurfaceWithFormat(0, (int)o.width, (int)o.height, (int)o.bpp*8, o.format);
@@ -501,7 +501,7 @@ pixel::texture_t::texture_t(const bitmap_ref& bmap) noexcept
         bpp = SDL_BYTESPERPIXEL(format_);
         format = format_;
         if( DEBUG_TEX ) {
-            log_printf("texture_t: Loaded fmt %s, %d x %d\n", format_str(format), width, height);
+            log_printf("texture_t: Loaded fmt %s, %u x %u\n", format_str(format), width, height);
         }
     }
     m_owner = true;
@@ -530,7 +530,7 @@ pixel::texture_t::texture_t(const std::string& fname0) noexcept
         bpp = SDL_BYTESPERPIXEL(format_);
         format = format_;
         if( DEBUG_TEX ) {
-            log_printf("texture_t: Loaded fmt %s, %d x %d\n", format_str(format), width, height);
+            log_printf("texture_t: Loaded fmt %s, %u x %u\n", format_str(format), width, height);
         }
     }
     m_owner = true;
@@ -669,7 +669,7 @@ void pixel::subsys_draw_line(int thickness, int x1, int y1, int x2, int y2) noex
     }
     const int err = SDL_RenderDrawLines(sdl_rend, points.data(), int(points.size()));
     if( false ) {
-        log_printf("Poly-Line thick_p %d, %d lines, d %.4f/%.4f, err %d, %s\n", thickness, points.size()/2, d_x, d_y, err, SDL_GetError());
+        log_printf("Poly-Line thick_p %d, %zu lines, d %.4f/%.4f, err %d, %s\n", thickness, points.size()/2, d_x, d_y, err, SDL_GetError());
     }
 }
 
@@ -855,6 +855,8 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
                     case SDL_WINDOWEVENT_SIZE_CHANGED:
                         printf("Window SizeChanged: %d x %d\n", sdl_event.window.data1, sdl_event.window.data2);
                         break;
+                    default:
+                        break; // NOP
                 }
                 break;
 
@@ -884,6 +886,8 @@ bool pixel::handle_one_event(input_event_t& event) noexcept {
                     }
                   }
                   break;
+            default:
+                break; // NOP
         }
         return true;
     } else {
