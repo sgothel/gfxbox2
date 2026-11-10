@@ -138,6 +138,7 @@ typedef std::shared_ptr<Car> Car_ref;
 std::vector<Car_ref> AI_cars;
 std::vector<rect_t> houses;
 
+void increaseLifes(const int add_lifes);
 class Car {
   private:
     constexpr static std::string_view m_start_bdv = ":-)";
@@ -243,6 +244,7 @@ class Car {
     }
     Car(const Car& o) noexcept = default;
     Car& operator=(const Car& o) noexcept = default;
+    Car() noexcept = default;
 
     void reset(bool all){
         m_velocity = m_start_velocity;
@@ -811,7 +813,6 @@ class Car {
             return;
         }
 
-        set_pixel_color4f(0, 0, 0, 0);
         if(!m_target) {
             m_parking_ground.draw(false);
         }
@@ -828,6 +829,12 @@ class Car {
                 make_l_move(1).draw();
             }
             set_pixel_color4f(0, 0, 1, 1);
+        } else {
+            if(debug_gfx) {
+                set_pixel_color4f(1, 0, 1, 1);
+                make_l_move(1).draw();
+            }
+            set_pixel_color4f(0, 0, 0, 0);
         }
         m_rect_body.draw(false);
         circle_seg_body.draw();
@@ -843,10 +850,14 @@ class Car {
         point_t p1 = {x, y};
         return p1 + p;
     }
+    
+    void set_lifes(const uint8_t new_life_number) {
+        m_state.life += (new_life_number - lifes);
+    }
 };
 
-// static Car car1(car_id_1);
-// static Car car2(car_id_2);
+static Car car1;
+static Car car2;
 
 const float space_height = 100_m;
 
@@ -855,14 +866,17 @@ struct d_times_t {
     si_time_f32 dtime;
 };
 
-static int fps = 60;
 extern "C" {
-    EMSCRIPTEN_KEEPALIVE void set_forces_fps(int new_fps) noexcept { fps = new_fps; }
+    EMSCRIPTEN_KEEPALIVE void set_lifes(int new_lifes) noexcept {
+        car1.set_lifes(new_lifes);
+        car2.set_lifes(new_lifes);
+        lifes = new_lifes;
+    }
+    EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool new_debug_gfx) noexcept { debug_gfx = new_debug_gfx; }
+    EMSCRIPTEN_KEEPALIVE void set_debug_prt(bool new_debug_prt) noexcept { debug_prt = new_debug_prt; }
 }
 
 void mainloop() {
-    static Car car1(car_id_1);
-    static Car car2(car_id_2);
     static const f4::vec_t text_color = {0, 0, 0, 0};
     static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static input_event_t event;
@@ -1101,7 +1115,7 @@ void mainloop() {
         tex->draw_fbcoord(0, 0);
     }
     text_list.clear();
-    swap_gpu_buffer(fps);
+    swap_gpu_buffer();
 }
 
 int main(int argc, char *argv[])
@@ -1162,6 +1176,9 @@ int main(int argc, char *argv[])
     tankstelle = {{cart_coord.min_x(), 0}, 4_m, 5_m};
     werkstatt = {{cart_coord.max_x() - 4_m, 0}, 4_m, 5_m};
 
+    car1 = Car(car_id_1);
+    car2 = Car(car_id_2);
+    
     //make_bahnhoefe();
     #if defined(__EMSCRIPTEN__)
         emscripten_set_main_loop(mainloop, 0, 1);

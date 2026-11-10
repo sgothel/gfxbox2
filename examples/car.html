@@ -98,7 +98,7 @@
 
 <span id='controls'>
   <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
-  <span><input type="number" id="SetFPS" min="0" max="60" step="10" value="60" style="width: 3em;" onchange="set_forced_fps(this.value)"/>fps</span>
+  <span><input type="number" id="SetFPS" min="5" max="60" step="5" value="60" style="width: 4em;" onchange="setForcedFPS(this.value)"/>fps</span>
   <span><input type="number" id="SetLifes" min="1" max="255" step="1" value="3" style="width: 5em;" onchange="setLifes(this.value)"/>lifes</span>
   <span><input type="checkbox" id="set_debug_gfx" onclick="setDebugGFX(this.checked)">debug_gfx</span>
   <span><input type="checkbox" id="set_debug_prt" onclick="setDebugPRT(this.checked)">debug_prt</span>
@@ -161,6 +161,9 @@
         onRuntimeInitialized: function() {
             wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
+            wasm_set_lifes = Module.cwrap('set_lifes', 'null', ['number']);
+            wasm_set_debug_gfx = Module.cwrap('set_debug_gfx', 'null', ['boolean']);
+            wasm_set_debug_prt = Module.cwrap('set_debug_prt', 'null', ['boolean']);
             maximizeCanvas(0.98);
         },
         preRun: [],
@@ -227,6 +230,22 @@
       function setForcedFPS(v) {
           if( null != wasm_set_forced_fps ) {
               wasm_set_forced_fps(v);
+          }
+      }
+
+      function setLifes(v) {
+          if( null != wasm_set_lifes ) {
+              wasm_set_lifes(v);
+          }
+      }
+      function setDebugGFX(v) {
+          if( null != wasm_set_debug_gfx ) {
+              wasm_set_debug_gfx(v);
+          }
+      }
+      function setDebugPRT(v) {
+          if( null != wasm_set_debug_prt ) {
+              wasm_set_debug_prt(v);
           }
       }
       function maximizeCanvas(scale) {
