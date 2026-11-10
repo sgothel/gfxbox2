@@ -466,7 +466,7 @@ class Player {
             m_ball_velo_s, // max velocity (scalar)
             false /* reset */) );
         m_balls.back()->boost_factor = 1;
-        m_balls.back()->break_factor = 1;
+        m_balls.back()->brake_factor = 1;
         m_ball_velo_s = ball_velocity_min;
         return true;
     }

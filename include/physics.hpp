@@ -80,7 +80,7 @@ namespace physiks {
         float medium_accel = -0.08f; // [m/s*s]
         float min_velocity;
         float boost_factor = 1.5f;
-        float break_factor = 0.9f;
+        float brake_factor = 0.9f;
 
       private:
         std::vector<rect_ref_t> player_pads;
@@ -255,8 +255,8 @@ namespace physiks {
                 if( v_abs < min_velocity && boost_factor>1 ) {
                     velocity *= boost_factor;
                     medium_accel = std::abs(medium_accel); // medium speedup
-                } else if( v_abs >= velocity_max && break_factor < 1) {
-                    velocity *= break_factor; // break
+                } else if( v_abs >= velocity_max && brake_factor < 1) {
+                    velocity *= brake_factor; // break
                     medium_accel = -1.0f*std::abs(medium_accel); // medium slowdown
                 }
             }
