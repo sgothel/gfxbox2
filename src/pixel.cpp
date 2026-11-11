@@ -346,6 +346,27 @@ pixel::texture_ref pixel::make_text2(const pixel::f2::point_t& tl, const int lin
     return make_text(tl, lineno, color, cart_coord.to_fb_dy(font_height_usr), s);
 }
 
+pixel::texture_ref pixel::make_text_centered(const pixel::f2::vec_t& d, const int lineno,
+                                    const pixel::f4::vec_t& color, const float font_height_usr,
+                                    const char* format, ...) noexcept {
+    va_list args;
+    va_start (args, format);
+    std::string s = to_stringva(format, args);
+    va_end (args);
+    return make_text(f2::point_t(-(s.size() * (font_height_usr / 2))/2, font_height_usr/2)+d, // NOLINT
+        lineno, color, cart_coord.to_fb_dy(font_height_usr), s);
+}
+
+pixel::texture_ref pixel::make_text_centered2(const float dx, const float dy, const int lineno,
+                                    const pixel::f4::vec_t& color, const float font_height_usr,
+                                    const char* format, ...) noexcept {
+    va_list args;
+    va_start (args, format);
+    std::string s = to_stringva(format, args);
+    va_end (args);
+    return make_text_centered(f2::point_t(dx, dy), lineno, color, font_height_usr, "%s", s.c_str());
+}
+
 pixel::texture_ref pixel::make_text(const pixel::f2::point_t& tl, const int lineno,
                                     const pixel::f4::vec_t& color, const int font_height_usr,
                                     const std::string& text) noexcept {

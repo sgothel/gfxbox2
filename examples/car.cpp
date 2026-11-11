@@ -1072,8 +1072,10 @@ void mainloop() noexcept {
             text_list.push_back(make_text2(tl_text, 2, text_color, text_height,
                 "%.2f km/h", max_velo * 3.6f));
         }
-        text_list.push_back(pixel::make_text2(tankstelle.m_tl, 0, text_color, text_height * 2, "F"));
-        text_list.push_back(pixel::make_text2(werkstatt.m_tl, 0, text_color, text_height * 2, "R"));
+        text_list.push_back(pixel::make_text_centered(tankstelle.p_center, 0, day ? f4::vec_t(0, 0, 0, 0) : f4::vec_t(0.8f, 0.8f, 0.8f, 0.8f), 
+            text_height * 2, "F"));
+        text_list.push_back(pixel::make_text_centered(werkstatt.p_center, 0, day ? f4::vec_t(0, 0, 0, 0) : f4::vec_t(0.8f, 0.8f, 0.8f, 0.8f), 
+            text_height * 2, "R"));
     }
     // white background
     if(day) {
@@ -1144,14 +1146,16 @@ void mainloop() noexcept {
         if(!car1.is_car_exploded()){
             car1.tick(dt, car2.state().digging_tunnel, AI_cars);
         } else {
-            jau::log_printf("GAME OVER: car 1 is exploded!\n");
-            exit(1);
+            game_over_text = make_text_centered(point_t(0, 0), 0, {1, 0, 0, 1}, text_height*2, 
+                "GAME OVER: car 1 is exploded!");
+            event.set_paused(true);
         }
         if(!car2.is_car_exploded()){
             car2.tick(dt, car1.state().digging_tunnel, AI_cars);
         } else {
-            jau::log_printf("GAME OVER: car 2 is exploded!\n");
-            exit(2);
+            game_over_text = make_text_centered(point_t(0, 0), 0, {1, 0, 0, 1}, text_height*2, 
+                "GAME OVER: car 2 is exploded!");
+            event.set_paused(true);
         }
         {
             const size_t pre_ai_sz=AI_cars.size();
@@ -1196,6 +1200,9 @@ void mainloop() noexcept {
         tex->draw_fbcoord(0, 0);
     }
     text_list.clear();
+    if(game_over_text) {
+        game_over_text->draw_fbcoord(0, 0);
+    }
     swap_gpu_buffer();
 }
 

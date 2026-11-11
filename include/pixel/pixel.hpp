@@ -832,6 +832,16 @@ namespace pixel {
                           const pixel::f4::vec_t& color, const float font_height_usr,
                           const char* format, ...) noexcept;
 
+    __attribute__((format (printf,5,6)))
+    texture_ref make_text_centered(const pixel::f2::vec_t& d, const int lineno,
+                          const pixel::f4::vec_t& color, const float font_height_usr,
+                          const char* format, ...) noexcept;
+
+    __attribute__((format (printf,6,7)))
+    texture_ref make_text_centered2(const float dx, const float dy, const int lineno,
+                          const pixel::f4::vec_t& color, const float font_height_usr,
+                          const char* format, ...) noexcept;
+
     inline texture_ref make_text(const pixel::f2::point_t& tl, const int lineno,
                           const pixel::f4::vec_t& color,
                           const std::string& text) noexcept {
