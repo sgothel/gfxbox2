@@ -324,8 +324,9 @@ class Car {
         return m_state.life > 0 && !m_state.digging_tunnel && m_aabbox.intersects(o);
     }
 
+    bool in_tunnel () { return m_state.inTunnel || m_state.digging_tunnel; }
     bool intersection(Car &o, const float dt) noexcept {
-        if(!intersects(o)) {
+        if(!intersects(o) && !in_tunnel() && !o.in_tunnel()) {
             return false;
         }
         const float pre_car1_velo = velocity();
