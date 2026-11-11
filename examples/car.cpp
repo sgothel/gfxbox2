@@ -483,10 +483,10 @@ class Car {
         m_state.last_grab_tunnel = m_state.digging_tunnel;
     }
 
-    void make_police_car(const int id, const float punish, Car* target) const noexcept {
-        AI_cars.push_back(std::make_shared<Car>(id, target, punish));
+    void make_police_car(const int id, const float punish, Car* target, std::vector<Car_ref> &police_cars) const noexcept {
+        police_cars.push_back(std::make_shared<Car>(id, target, punish));
         if(debug_prt) {
-            printf("AI_cars: %zu: %s\n", AI_cars.size(), AI_cars.back()->toString().c_str());
+            printf("Police cars: %zu: %s\n", police_cars.size(), police_cars.back()->toString().c_str());
         }
     }
 
@@ -607,7 +607,7 @@ class Car {
         return true;
     }
 
-    bool police_strategy(const float dt, const si_accel_f32 accel) noexcept {
+    bool police_strategy(const float dt, std::vector<Car_ref> &police_cars, const si_accel_f32 accel) noexcept {
         if(m_target && intersects(*m_target) && (m_target->m_state.inTunnel == m_state.inTunnel && m_state.tunnelLength == m_target->m_state.tunnelLength) && !m_target->m_state.digging_tunnel) {
             m_target->m_state.money -= m_punish;
             m_target->m_punish -= m_punish;
@@ -623,7 +623,7 @@ class Car {
         const int next_id = m_id < car_id_5 ? m_id + 1 : car_id_3;
         if(m_punish > 100) {
             m_punish /= 3;
-            make_police_car(next_id, m_punish*2, m_target);
+            make_police_car(next_id, m_punish*2, m_target, police_cars);
         }
         if(m_id > car_id_3) {
             if(m_aabbox.contains(target_point) && !m_target->m_state.digging_tunnel && !m_target->m_state.inTunnel) {
@@ -648,9 +648,9 @@ class Car {
         return true;
     }
 
-    bool tick(const float dt, const bool otherPlayerIsDigging, const si_accel_f32 accel = 40_m_s2){
+    bool tick(const float dt, const bool otherPlayerIsDigging, std::vector<Car_ref> &police_cars, const si_accel_f32 accel = 40_m_s2){
         if(m_target) {
-            if(!police_strategy(dt, accel)){
+            if(!police_strategy(dt, police_cars, accel)){
                 return false;
             }
         }
@@ -712,9 +712,9 @@ class Car {
                             m_punish += punish;
                             printf("Car %d: collision with house!!! Reflection angle: %.2f° Punishment: %.2f$ Total: %.2f$\n",
                                 m_id, rad_to_adeg(coll_out.angle()), m_velocity*15, m_punish);
-                            make_police_car(car_id_3, punish/3, this);
-                            make_police_car(car_id_4, punish/3, this);
-                            make_police_car(car_id_5, punish/3, this);
+                            make_police_car(car_id_3, punish/3, this, police_cars);
+                            make_police_car(car_id_4, punish/3, this, police_cars);
+                            make_police_car(car_id_5, punish/3, this, police_cars);
                         }
                         if(debug_gfx) {
                             set_pixel_color(255,   0, 255, 255);
@@ -743,7 +743,7 @@ class Car {
         }
         if(m_state.fuse01 < 0){
             const float punish = (std::abs(m_velocity) - max_velo)*10;
-            make_police_car(car_id_3, punish, this);
+            make_police_car(car_id_3, punish, this, police_cars);
             m_state.fuse01 = 10;
             m_punish += punish;
         }
@@ -1142,26 +1142,34 @@ void mainloop() noexcept {
             car2.set_repairing(false);
         }
         if(!car1.is_car_exploded()){
-            car1.tick(dt, car2.state().digging_tunnel);
+            car1.tick(dt, car2.state().digging_tunnel, AI_cars);
         } else {
             jau::log_printf("GAME OVER: car 1 is exploded!\n");
             exit(1);
         }
         if(!car2.is_car_exploded()){
-            car2.tick(dt, car1.state().digging_tunnel);
+            car2.tick(dt, car1.state().digging_tunnel, AI_cars);
         } else {
             jau::log_printf("GAME OVER: car 2 is exploded!\n");
             exit(2);
         }
-        const size_t pre_ai_sz=AI_cars.size();
-        for(size_t i = AI_cars.size(); i-->0;) {
-            auto &AI_car = AI_cars[i];
-            if(!AI_car->tick(dt, false)){
-                AI_cars.erase(AI_cars.begin()+ssize_t(i));
+        {
+            const size_t pre_ai_sz=AI_cars.size();
+            std::vector<Car_ref> new_AI_cars;
+            for(auto it = AI_cars.begin(); it != AI_cars.end(); ) {
+                auto &AI_car = *it;
+                if(!AI_car->tick(dt, false, new_AI_cars)){
+                    AI_cars.erase(it);
+                } else {
+                    ++it;
+                }
             }
-        }
-        if(debug_prt && AI_cars.size() != pre_ai_sz) {
-            printf("XXX.X: AI_cars %zu -> %zu\n", pre_ai_sz, AI_cars.size());
+            for(const Car_ref & new_AI_car : new_AI_cars) {
+                AI_cars.push_back(new_AI_car);
+            }
+            if(debug_prt && AI_cars.size() != pre_ai_sz) {
+                printf("XXX.X: AI_cars %zu -> %zu\n", pre_ai_sz, AI_cars.size());
+            }
         }
     }
     car1.draw();
