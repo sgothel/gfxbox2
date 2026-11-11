@@ -9,6 +9,8 @@ bname=`basename $0 .sh`
 logfile=$rootdir/$bname-wasm.log
 rm -f $logfile
 
+killall mini_httpd
+
 CPU_COUNT=`getconf _NPROCESSORS_ONLN`
 
 # run 'dpkg-reconfigure locales' enable 'en_US.UTF-8'
