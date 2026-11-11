@@ -443,7 +443,7 @@ void pixel::f2::rect_t::draw(const bool filled) const noexcept {
             printf("unit_per_pixel real %s\n", vunit_per_pixel.toString().c_str());
         }
         vunit_per_pixel.normalize();
-        float unit_per_pixel = vunit_per_pixel.length();
+        float unit_per_pixel = pixel::cart_coord.from_fb_dy(1);
         /**
          * Problem mit rotation, wo step breite und linien-loop zu luecken fuehrt!
          */
