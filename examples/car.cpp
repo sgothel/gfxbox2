@@ -212,7 +212,7 @@ class Car {
     float m_punish = 0;
     State m_state;
 
-    void reset_aabbox() {
+    void update_aabbox() noexcept {
         m_aabbox.reset();
         m_aabbox.resize(circle_seg_body.box());
         m_aabbox.resize(m_rect_body.box());
@@ -222,7 +222,7 @@ class Car {
     }
 
     bool intersects(const geom_t &o) noexcept {
-        reset_aabbox();
+        update_aabbox();
         return m_state.life > 0 && !m_state.digging_tunnel && m_aabbox.intersects(o);
     }
 
@@ -230,7 +230,7 @@ class Car {
         return intersects(o.m_aabbox);
     }
   public:
-    Car(const int id, Car* target = nullptr, const float punish = 0)
+    Car(const int id, Car* target = nullptr, const float punish = 0) noexcept
     : m_id(id), m_target(target) {
         reset(true);
         m_punish = punish;
@@ -246,7 +246,7 @@ class Car {
     Car& operator=(const Car& o) noexcept = default;
     Car() noexcept = default;
 
-    void reset(bool all){
+    void reset(bool all) noexcept {
         m_velocity = m_start_velocity;
         m_angle = m_start_angle;
         m_length = 25_dm;
@@ -309,7 +309,7 @@ class Car {
     }
 
     bool intersects(const rect_t &o) noexcept {
-        reset_aabbox();
+        update_aabbox();
         return m_state.life > 0 && !m_state.digging_tunnel && m_aabbox.intersects(o);
     }
 
@@ -327,7 +327,7 @@ class Car {
         return true;
     }
 
-    void addToVelocity(const si_accel_f32 m_pro_s2, const si_time_f32 dt, bool amBremsen = false){
+    void addToVelocity(const si_accel_f32 m_pro_s2, const si_time_f32 dt, bool amBremsen = false) noexcept {
         if(m_state.life <= 0){
             return;
         }
@@ -383,7 +383,7 @@ class Car {
     const rect_t& parking_ground() noexcept { return m_parking_ground; }
     void increase_brake_time(const si_time_f32 dt) noexcept { m_state.brake_time += dt; }
 
-    void rotate(const float rad){
+    void rotate(const float rad) noexcept {
         if(m_state.life <= 0){
             return;
         }
@@ -401,13 +401,13 @@ class Car {
         }
     }
 
-    void move(vec_t vec, bool overScreen=true){
-        m_rect_body.move(vec);
+    void move(const vec_t d, bool overScreen=true) noexcept {
+        m_rect_body.move(d);
         for(rect_t &wheel : wheels){
-            wheel.move(vec);
+            wheel.move(d);
         }
-        circle_seg_body.move(vec);
-        m_aabbox.move(vec);
+        circle_seg_body.move(d);
+        m_aabbox.move(d);
         if(overScreen) {
             if( m_rect_body.p_center.x < pixel::cart_coord.min_x() ) {
                 move({cart_coord.max_x()-m_rect_body.p_center.x, 0.0f}, false);
@@ -424,7 +424,7 @@ class Car {
         }
     }
 
-    void grabTunnel(const float dt, const bool otherPlayerIsDigging) {
+    void grabTunnel(const float dt, const bool otherPlayerIsDigging) noexcept {
         if(m_state.digging_tunnel){
             if(!m_state.last_grab_tunnel){
                 bool b = false;
@@ -467,7 +467,7 @@ class Car {
         m_state.last_grab_tunnel = m_state.digging_tunnel;
     }
 
-    void make_police_car(const int id, const float punish, Car* target) {
+    void make_police_car(const int id, const float punish, Car* target) const noexcept {
         AI_cars.push_back(std::make_shared<Car>(id, target, punish));
         if(debug_prt) {
             printf("AI_cars: %zu: %s\n", AI_cars.size(), AI_cars.back()->toString().c_str());
@@ -494,7 +494,7 @@ class Car {
         return {0, 0};
     }
 
-    bool police_going(const float dt, const si_accel_f32 accel = 40_m_s2) {
+    bool police_going(const float dt, const si_accel_f32 accel = 40_m_s2) noexcept {
         if(!m_target) {
             return true;
         }
@@ -591,13 +591,13 @@ class Car {
         return true;
     }
 
-    bool police_strategy(const float dt, const si_accel_f32 accel) {
+    bool police_strategy(const float dt, const si_accel_f32 accel) noexcept {
         if(m_target && intersects(*m_target) && (m_target->m_state.inTunnel == m_state.inTunnel && m_state.tunnelLength == m_target->m_state.tunnelLength) && !m_target->m_state.digging_tunnel) {
             m_target->m_state.money -= m_punish;
             m_target->m_punish -= m_punish;
             return false;
         }
-        reset_aabbox();
+        update_aabbox();
         point_t target_point = get_target_point();
         if(!police_going(dt, accel)) {
             return false;
@@ -851,7 +851,7 @@ class Car {
         return p1 + p;
     }
     
-    void set_lifes(const uint8_t new_life_number) {
+    void set_lifes(const uint8_t new_life_number) noexcept {
         m_state.life += (new_life_number - lifes);
     }
 };
@@ -876,8 +876,8 @@ extern "C" {
     EMSCRIPTEN_KEEPALIVE void set_debug_prt(bool new_debug_prt) noexcept { debug_prt = new_debug_prt; }
 }
 
-void mainloop() {
     static const f4::vec_t text_color = {0, 0, 0, 0};
+void mainloop() noexcept {
     static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static input_event_t event;
     static std::vector<texture_ref> text_list;
@@ -1118,8 +1118,7 @@ void mainloop() {
     swap_gpu_buffer();
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) noexcept {
     unsigned int window_width = 1920, window_height = 1000;
     #if defined(__EMSCRIPTEN__)
         win_width = 1024, win_height = 576; // 16:9
