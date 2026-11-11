@@ -100,6 +100,9 @@
   <!-- span><input type="button" value="Fullscreen" onclick="Module.requestFullscreen(true, true)"> <- pointerLock, resize -></span -->
   <span><input type="number" id="SetFPS" min="5" max="60" step="5" value="60" style="width: 4em;" onchange="setForcedFPS(this.value)"/>fps</span>
   <span><input type="number" id="SetLifes" min="1" max="255" step="1" value="3" style="width: 5em;" onchange="setLifes(this.value)"/>lifes</span>
+  <span><input type="number" id="SetDay" min="1" max="600" step="10" value="300" style="width: 5em;" onchange="setDay(this.value)"/>day, </span>
+  <span><input type="number" id="SetVelLim" min="1" max="600" step="10" value="60" style="width: 5em;" onchange="setVel(this.value)"/>velo llmit and </span>
+  <span><input type="number" id="SetFuelPric" min="1" max="600" step="10" value="51" style="width: 5em;" onchange="setFul(this.value)"/>fuel price period</span>
   <span><input type="checkbox" id="set_debug_gfx" onclick="setDebugGFX(this.checked)">debug_gfx</span>
   <span><input type="checkbox" id="set_debug_prt" onclick="setDebugPRT(this.checked)">debug_prt</span>
 </span>
@@ -162,6 +165,9 @@
             wasm_set_forced_fps = Module.cwrap('set_forced_fps', 'null', ['number'])
             wasm_set_window_size = Module.cwrap('set_window_size', 'null', ['number', 'number']);
             wasm_set_lifes = Module.cwrap('set_lifes', 'null', ['number']);
+            wasm_set_day = Module.cwrap('set_day_period', 'null', ['number']);
+            wasm_set_vel = Module.cwrap('set_velo_period', 'null', ['number']);
+            wasm_set_ful = Module.cwrap('set_fuel_period', 'null', ['number']);
             wasm_set_debug_gfx = Module.cwrap('set_debug_gfx', 'null', ['boolean']);
             wasm_set_debug_prt = Module.cwrap('set_debug_prt', 'null', ['boolean']);
             maximizeCanvas(0.98);
@@ -236,6 +242,21 @@
       function setLifes(v) {
           if( null != wasm_set_lifes ) {
               wasm_set_lifes(v);
+          }
+      }
+      function setDay(v) {
+          if( null != wasm_set_day ) {
+              wasm_set_day(v);
+          }
+      }
+      function setVel(v) {
+          if( null != wasm_set_vel ) {
+              wasm_set_vel(v);
+          }
+      }
+      function setFul(v) {
+          if( null != wasm_set_ful ) {
+              wasm_set_ful(v);
           }
       }
       function setDebugGFX(v) {

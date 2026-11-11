@@ -49,6 +49,7 @@ constexpr static float angle_step = PI;
 static bool debug_gfx = false;
 static bool debug_prt = false;
 static float dollar_per_liter = 0;
+static bool day = true;
 
 float normalize(const float f) {
     return f / abs(f);
@@ -107,18 +108,24 @@ class Tunnel {
     }
 
     void draw() const noexcept {
+        const f4::vec_t color = day ? f4::vec_t(0, 0, 0, 0) : f4::vec_t(0.5f, 0.5f, 0.5f, 0.5f);
+        if(day) {
+            set_pixel_color(color);
+        } else {
+            set_pixel_color(color);
+        }
         d1.draw(false);
         if(m_d2Setted) {
             d2.draw(false);
         }
         {
             point_t tl_tex = d1.box().bl;
-            pixel::texture_ref tex = make_text2(tl_tex, 0, {0, 0, 0, 255}, text_height, "%d", m_id);
+            pixel::texture_ref tex = make_text2(tl_tex, 0, color, text_height, "%d", m_id);
             tex->draw_fbcoord(0, 0);
         }
         if(m_d2Setted) {
             point_t tl_tex = d2.box().bl;
-            pixel::texture_ref tex = make_text2(tl_tex, 0, {0, 0, 0, 255}, text_height, "%d", m_id);
+            pixel::texture_ref tex = make_text2(tl_tex, 0, color, text_height, "%d", m_id);
             tex->draw_fbcoord(0, 0);
         }
     }
@@ -211,6 +218,8 @@ class Car {
     Car* m_target = nullptr;
     float m_punish = 0;
     State m_state;
+    disk_t headlight;
+    disk_t footlight;
 
     void update_aabbox() noexcept {
         m_aabbox.reset();
@@ -301,6 +310,8 @@ class Car {
         m_length = m_length*0.75f + m_width / 2;
         m_parking_ground = {{m_rect_body.m_tl.x - 1_m, m_rect_body.m_tl.y + m_width / 2 + 125_cm},
                      m_width + 2_m, m_length + 25_dm};
+        headlight = disk_t(m_rect_body.p_center + vec_t(0, m_length/2 + 5_m), m_width*1.5f);
+        footlight = disk_t(m_rect_body.p_center - vec_t(0, m_length/2 + 5_m), m_width*1.5f);
         m_aabbox.resize(circle_seg_body.box());
         m_aabbox.resize(m_rect_body.box());
         for(rect_t &wheel : wheels){
@@ -388,17 +399,20 @@ class Car {
             return;
         }
         m_angle += rad;
-        m_rect_body.rotate(rad, m_rect_body.p_center);
+        const point_t center = m_rect_body.p_center;
+        m_rect_body.rotate(rad, center);
         for(rect_t &wheel : wheels){
-            wheel.rotate(rad, m_rect_body.p_center);
+            wheel.rotate(rad, center);
         }
-        m_aabbox.rotate(rad, m_rect_body.p_center);
-        circle_seg_body.rotate(rad, m_rect_body.p_center);
+        m_aabbox.rotate(rad, center);
+        circle_seg_body.rotate(rad, center);
         if(m_angle > PI*2){
             m_angle = m_angle - PI*2;
         } else if(m_angle < (-PI*2)){
             m_angle = m_angle + PI*2;
         }
+        headlight.rotate(rad, center);
+        footlight.rotate(rad, center);
     }
 
     void move(const vec_t d, bool overScreen=true) noexcept {
@@ -408,6 +422,8 @@ class Car {
         }
         circle_seg_body.move(d);
         m_aabbox.move(d);
+        headlight.move(d);
+        footlight.move(d);
         if(overScreen) {
             if( m_rect_body.p_center.x < pixel::cart_coord.min_x() ) {
                 move({cart_coord.max_x()-m_rect_body.p_center.x, 0.0f}, false);
@@ -812,9 +828,10 @@ class Car {
         if(is_car_exploded()){
             return;
         }
-
+        
         if(!m_target) {
-            m_parking_ground.draw(false);
+            set_pixel_color4f(1, 1, 0, 1);
+            m_parking_ground.draw(true);
         }
 
         if(m_state.digging_tunnel || m_state.inTunnel){
@@ -828,29 +845,33 @@ class Car {
                 set_pixel_color4f(0, 1, 0, 1);
                 make_l_move(1).draw();
             }
-            set_pixel_color4f(0, 0, 1, 1);
+            set_pixel_color(day ? f4::vec_t(0, 0, 1, 1) : f4::vec_t(1, 0, 0, 1));
         } else {
             if(debug_gfx) {
                 set_pixel_color4f(1, 0, 1, 1);
                 make_l_move(1).draw();
             }
-            set_pixel_color4f(0, 0, 0, 0);
+            
+            if(m_state.digging_tunnel || m_state.inTunnel) {
+                set_pixel_color4f(0.5f, 0.5f, 0.5f, 0.5f);
+            } else {
+                set_pixel_color(day ? f4::vec_t(0, 0, 0, 0) : f4::vec_t(0.6f, 0.6f, 0.6f, 0.6f));
+            }
         }
         m_rect_body.draw(false);
         circle_seg_body.draw();
         for(const rect_t &r : wheels){
             r.draw(false);
         }
+        if(!day && !m_target && !m_state.digging_tunnel && !m_state.inTunnel) {
+            set_pixel_color4f(1, 1, 1, 1);
+            headlight.draw(true);
+            set_pixel_color4f(1, 0, 0, 1);
+            footlight.draw(true);
+        }        
         set_pixel_color4f(0, 0, 0, 0);
     }
 
-    point_t make_point(point_t p, const float radians, const float length) {
-        const float x = length * cos(radians);
-        const float y = length * sin(radians);
-        point_t p1 = {x, y};
-        return p1 + p;
-    }
-    
     void set_lifes(const uint8_t new_life_number) noexcept {
         m_state.life += (new_life_number - lifes);
     }
@@ -864,7 +885,33 @@ const float space_height = 100_m;
 struct d_times_t {
     si_time_f32 dtime_max;
     si_time_f32 dtime;
+    
+    d_times_t operator-=(const float &o) {
+        dtime -= o;
+        return *this;
+    }
+    
+    bool operator<(const float &o) {
+        return dtime < o;
+    }
+    bool operator>(const float &o) {
+        return dtime > o;
+    }
+    bool operator<=(const float &o) {
+        return dtime <= o;
+    }
+    bool operator>=(const float &o) {
+        return dtime >= o;
+    }
+    bool operator==(const float &o) {
+        return dtime == o;
+    }
+    void reset() { dtime = dtime_max; }
 };
+
+static d_times_t velo_limit = {1_min, 0};
+static d_times_t fuel_price = {51_s, 0};
+static d_times_t day_time = {5_min, 5_min};
 
 extern "C" {
     EMSCRIPTEN_KEEPALIVE void set_lifes(int new_lifes) noexcept {
@@ -874,16 +921,27 @@ extern "C" {
     }
     EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool new_debug_gfx) noexcept { debug_gfx = new_debug_gfx; }
     EMSCRIPTEN_KEEPALIVE void set_debug_prt(bool new_debug_prt) noexcept { debug_prt = new_debug_prt; }
+    EMSCRIPTEN_KEEPALIVE void set_day_period(const float new_day_time) noexcept {
+        day_time.dtime_max = new_day_time;
+        day_time.dtime = std::min(day_time.dtime, new_day_time);
+    }
+    EMSCRIPTEN_KEEPALIVE void set_velo_period(const float new_velo_limit) noexcept {
+        velo_limit.dtime_max = new_velo_limit;
+        velo_limit.dtime = std::min(velo_limit.dtime, new_velo_limit);
+    }
+    EMSCRIPTEN_KEEPALIVE void set_fuel_period(const float new_fuel_price) noexcept {
+        fuel_price.dtime_max = new_fuel_price;
+        fuel_price.dtime = std::min(fuel_price.dtime, new_fuel_price);
+    }
 }
 
-    static const f4::vec_t text_color = {0, 0, 0, 0};
 void mainloop() noexcept {
+    static f4::vec_t text_color = {0, 0, 0, 0};
     static uint64_t t_last = getElapsedMillisecond(); // [ms]
     static input_event_t event;
     static std::vector<texture_ref> text_list;
+    static texture_ref game_over_text;
     static si_accel_f32 velo_step = 40_m_s2;
-    static d_times_t velo_limit = {1_min, 0};
-    static d_times_t fuel_price = {51_s, 0};
     static std::vector<si_velo_f32> velo_limits = { 30_km_h, 50_km_h, 70_km_h, 90_km_h,
                                             100_km_h, 120_km_h, 130_km_h, 150_km_h, 200_km_h,
                                             500_km_h, 600_km_h };
@@ -917,6 +975,9 @@ void mainloop() noexcept {
             aus_geom_list.clear();
             car1.reset(true);
             car2.reset(true);
+            velo_limit.reset();
+            fuel_price.reset();
+            day_time.reset();
             max_velo = start_max_velo;
             tunnels.clear();
             AI_cars.clear();
@@ -991,18 +1052,19 @@ void mainloop() noexcept {
         text_list.push_back(pixel::make_text2(tl_text, 0, text_color, text_height,
             "td %s, fps %2.2f, d_time %2d, car1(velo %3.2f km/h, %s, "
             "fuse %.2f s, stability %.2f pct, tank %.2fl, tunnel %.2f, max velo %.2fkm/h, money %.2f$, "
-            "life %d, total punish %.2f$), ",
+            "life %d, total punish %.2f$), %s in %d [s]",
                 to_decstring(t1/1000, ',', 9).c_str(), gpu_avg_fps(), (int)velo_limit.dtime, car1.velocity() * 3.6f,
                 car1.state().velo_smily.data(), // NOLINT(bugprone-suspicious-stringview-data-usage)
                 car1.state().fuse01,
                 car1.state().stability, car1.state().tank*1000, car1.state().tunnel_digging_time,
-                car1.state().max_car_velo * 3.6f, car1.state().money, car1.state().life, car1.punish()));
+                car1.state().max_car_velo * 3.6f, car1.state().money, car1.state().life, car1.punish(), 
+                day ? "night" : "day", (int)day_time.dtime));
         text_list.push_back(pixel::make_text2(tl_text, 1, text_color, text_height,
             "car2(velo %.2f km/h, %s, fuse %.2f s, stability %.2f pct, tank %.2fl, "
-            "tunnel %.2f, max velo %.2fkm/h, money %.2f$, life %d, total punish %.2f$), dtime %d, fuel price %.3f$/l",
+            "tunnel %.2f, max velo %.2fkm/h, money %.2f$, life %d, total punish %.2f$), dtime %d, fuel price %.3f$/l, %s",
                 car2.velocity() * 3.6f, car2.state().velo_smily.data(), // NOLINT(bugprone-suspicious-stringview-data-usage)
                 car2.state().fuse01, car2.state().stability, car2.state().tank * 1000, car2.state().tunnel_digging_time,
-                car2.state().max_car_velo * 3.6f, car2.state().money, car2.state().life, car2.punish(), (int)fuel_price.dtime, dollar_per_liter * 1_l));
+                car2.state().max_car_velo * 3.6f, car2.state().money, car2.state().life, car2.punish(), (int)fuel_price.dtime, dollar_per_liter * 1_l, day ? "day" : "night"));
         if(parken){
             text_list.push_back(make_text2(tl_text, 2, text_color, text_height,
                 "park, %.2f km/h", max_velo * 3.6f));
@@ -1014,12 +1076,16 @@ void mainloop() noexcept {
         text_list.push_back(pixel::make_text2(werkstatt.m_tl, 0, text_color, text_height * 2, "R"));
     }
     // white background
-    clear_pixel_fb(255, 255, 255, 255);
+    if(day) {
+        clear_pixel_fb(255, 255, 255, 255);
+    } else {
+        clear_pixel_fb(0, 0, 0, 0);
+    }
     set_pixel_color(0, 0, 0, 255);
     if(animating) {
-        fuel_price.dtime -= dt;
-        if(fuel_price.dtime <= 0) {
-            fuel_price.dtime = fuel_price.dtime_max;
+        fuel_price -= dt;
+        if(fuel_price <= 0) {
+            fuel_price.reset();
             const float old_fuel_price = dollar_per_liter;
             do {
                 size_t idx = (size_t)((float)(fuel_prices.size()) * next_rnd()) % fuel_prices.size();
@@ -1031,8 +1097,8 @@ void mainloop() noexcept {
         if(parken && car1.intersects(car1.parking_ground()) && car2.intersects(car2.parking_ground())){
             velo_limit.dtime = 0;
         }
-        velo_limit.dtime -= dt;
-        if(velo_limit.dtime <= 0){
+        velo_limit -= dt;
+        if(velo_limit <= 0){
             float max_velo_old = max_velo;
             do {
                 size_t a = (size_t)((float)(velo_limits.size()) * next_rnd()) % velo_limits.size();
@@ -1054,7 +1120,13 @@ void mainloop() noexcept {
                 max_velo = 50_km_h;
                 parken = true;
             }
-            velo_limit.dtime = velo_limit.dtime_max;
+            velo_limit.reset();
+        }
+        day_time -= dt;
+        if(day_time <= 0) {
+            day = !day;
+            day_time.reset();
+            text_color = day ? f4::vec_t(0, 0, 0, 0) : f4::vec_t(1, 1, 1, 1);
         }
         car1.intersection(car2, dt);
         if(!car1.intersects(tankstelle)){
@@ -1092,10 +1164,10 @@ void mainloop() noexcept {
             printf("XXX.X: AI_cars %zu -> %zu\n", pre_ai_sz, AI_cars.size());
         }
     }
-    tankstelle.draw(false);
-    werkstatt.draw(false);
     car1.draw();
     car2.draw();
+    tankstelle.draw(false);
+    werkstatt.draw(false);
     for(const rect_t& tLicet : TunnelsLicet) {
         set_pixel_color(0, 255, 0, 255);
         tLicet.draw(false);
@@ -1104,8 +1176,9 @@ void mainloop() noexcept {
     for(const Tunnel& t : tunnels) {
         t.draw();
     }
+    set_pixel_color(0, 0, 0, 0);
     for(const rect_t& house : houses) {
-        house.draw();
+        house.draw(!day);
     }
     for(const auto& AI_car : AI_cars) {
          AI_car->draw();
@@ -1141,6 +1214,18 @@ int main(int argc, char *argv[]) noexcept {
                 debug_gfx = true;
             } else if( 0 == strcmp("-debug_prt", argv[i]) ) {
                 debug_prt = true;
+            } else if( 0 == strcmp("-day_period", argv[i]) && i+1<argc) {
+                day_time.dtime_max = float(atof(argv[i+1]));
+                day_time.reset();
+                ++i;
+            } else if( 0 == strcmp("-vel_period", argv[i]) && i+1<argc) {
+                velo_limit.dtime_max = float(atof(argv[i+1]));
+                velo_limit.reset();
+                ++i;
+            } else if( 0 == strcmp("-fuel_period", argv[i]) && i+1<argc) {
+                fuel_price.dtime_max = float(atof(argv[i+1]));
+                fuel_price.reset();
+                ++i;
             } else if( 0 == strcmp("--help", argv[i]) ) {
                 printf("-debug: set debug_gfx and debug_prt on\n");
                 printf("-debug_gfx: set debug_gfx on\n");

@@ -212,4 +212,21 @@ If you drives backwards, the car comes at the same position out as it went in.
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   - and the penalty of the new police car is than the double of my penalty
+
+### Day/Night period
+- if it is day/night the things will be draw with these colors:
+
+   Thing           | Color at day    | Color at night  |
+   :---------------|:----------------|:----------------|
+   background      | white           | black           |
+   housees         | black           | black           |
+   cars            | black           | white           |
+   tunnel places   | green           | green           |
+   tunnel          | black           | gray            |
+   police cars     | blue            | red             |
+   text            | black           | white           |
+   marks^          | black           | gray            |
   
+  - ^ marks of the rectangles (fuel station `F` and repair station `R`)
+  
+- you can change while game the period length
