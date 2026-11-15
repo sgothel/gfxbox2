@@ -2,6 +2,10 @@
 0 2  30    33         // maze field rect [x0, y0, width, height]
      14.5  10.0       // fritzchen start position
      14.5  22.0       // erna start position
+ca   15.5  35.0       // TV1 (vertical tunnel)
+cb   15.5   2.0       // TV2
+ca    0.0  20.0       // TH1 (horizontal tunnel)
+cb   30.0  20.0       // TH2
 empty
 empty
 +------------+  +------------+

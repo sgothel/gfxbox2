@@ -23,23 +23,27 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#include <algorithm>
 #include <cstddef>
+#include <initializer_list>
+#include <limits>
 #include <memory>
-#include <pixel/pixel2f.hpp>
-#include <pixel/pixel2i.hpp>
-#include <pixel/pixel.hpp>
-#include <pixel/dynarray2d.hpp>
-
 #include <iostream>
 #include <fstream>
-
 #include <cstdio>
 #include <cmath>
-#include <pixel/pixel4f.hpp>
-#include <physics.hpp>
 #include <vector>
+
 #include <jau/float_si_types.hpp>
 #include <jau/utils.hpp>
+
+#include <pixel/pixel2f.hpp>
+#include <pixel/pixel2i.hpp>
+#include <pixel/pixel4f.hpp>
+#include <pixel/pixel.hpp>
+#include <pixel/dynarray2d.hpp>
+#include <physics.hpp>
+
 using namespace jau;
 using namespace jau::si_f32_literals;
 using namespace pixel::f2;
@@ -81,6 +85,8 @@ enum class direction_t : int {
     UP = 3
 };
 
+constexpr int number(direction_t v) noexcept { return static_cast<int>(v); }
+
 constexpr si_angle_f32 dir_to_angle(direction_t dir) noexcept {
     switch(dir) {
         case direction_t::DOWN: return -90_deg;
@@ -100,10 +106,44 @@ constexpr char dir_to_char(direction_t dir) noexcept {
     }
 }
 
+direction_t inverse(direction_t dir) noexcept {
+    switch(dir) {
+        case direction_t::RIGHT: return direction_t::LEFT;
+        case direction_t::DOWN: return direction_t::UP;
+        case direction_t::LEFT: return direction_t::RIGHT;
+        case direction_t::UP: return direction_t::DOWN;
+        default: return direction_t::DOWN;
+    }
+}
+
+direction_t rot_left(direction_t dir) noexcept {
+    switch(dir) {
+        case direction_t::RIGHT: return direction_t::UP;
+        case direction_t::DOWN: return direction_t::RIGHT;
+        case direction_t::LEFT: return direction_t::DOWN;
+        case direction_t::UP: return direction_t::LEFT;
+        default: return direction_t::LEFT;
+    }
+}
+
+direction_t rot_right(direction_t dir) noexcept {
+    switch(dir) {
+        case direction_t::RIGHT: return direction_t::DOWN;
+        case direction_t::DOWN: return direction_t::LEFT;
+        case direction_t::LEFT: return direction_t::UP;
+        case direction_t::UP: return direction_t::RIGHT;
+        default: return direction_t::RIGHT;
+    }
+}
+
 direction_t next_rnd_dir() noexcept {
     int r = (int)std::round(next_rnd() * float(4 - 0) + float(0)) % 4;
     return (direction_t)r;
 }
+
+struct Connector {
+    point_t a, b;
+};
 
 class Maze {
   public:
@@ -112,6 +152,7 @@ class Maze {
     vec_t field_dim;
     DynArray2D<tile_t> tiles; ///< Orientation: 0/0 bottom-left, Dimension of screen_dim
     point_t fritzchen_start, erna_start;
+    std::vector<Connector> connectors;
     pixel::f2::aabbox_t box1; ///< Matching field bounding box
     pixel::f2::aabbox_t box2; ///< Outer field bounding box
 
@@ -124,10 +165,13 @@ class Maze {
     std::vector<pixel::f2::lineseg_t> v_lines;
 
 
-    bool digest_point_line(const std::string& name, point_t& dest, const std::string& line) noexcept {
+    bool digest_point_line(const std::string& name, point_t& dest, const std::string &line) noexcept {
+        return digest_point_line(name, dest, line.c_str());
+    }
+    bool digest_point_line(const std::string& name, point_t& dest, const char *line) noexcept {
         float x_pos = 0.0f, y_pos = 0.0f;
-        if (2 != sscanf(line.c_str(), "%f %f", &x_pos, &y_pos)) {
-            jau::log_printf("maze: error reading 2 floats '%s' from line: '%s'\n", name.c_str(), line.c_str());
+        if (2 != sscanf(line, "%f %f", &x_pos, &y_pos)) {
+            jau::log_printf("maze: error reading 2 floats '%s' from line: '%s'\n", name.c_str(), line);
             return false;
         }
         dest.set(x_pos, y_pos);
@@ -169,6 +213,7 @@ class Maze {
                 std::string line;
                 size_t linenum=0;
                 int y = 0;
+                point_t connector_a; bool has_connector_a=false;
                 while( std::getline(file, line) ) {
                     if( 0 == linenum ) {
                         if (!digest_point_line("screen dim", screen_dim, line)) {
@@ -181,11 +226,11 @@ class Maze {
                         width = size_t(screen_dim.x);
                         height = size_t(screen_dim.y);
                         tiles = DynArray2D<tile_t>(width, height);
+                        const vec_t half(0.5f, 0.5f);
                         box1.reset();
                         box1.resize(field_offset);
                         box1.resize(field_offset + field_dim);
                         box2.reset();
-                        const vec_t half(0.5f, 0.5f);
                         box2.resize(field_offset - half);
                         box2.resize(field_offset + field_dim + half);
                         tiles.clear(tile_t::EMPTY);
@@ -198,6 +243,27 @@ class Maze {
                             return false;
                         }
                     } else if( field_line_iter < height ) {
+                        if (0==field_line_iter && line.starts_with('c')) {
+                            if (line.starts_with("ca ")) {
+                                if (!digest_point_line("conn_a", connector_a, line.c_str()+2)) {
+                                    return false;
+                                }
+                                has_connector_a = true;;
+                            } else if (line.starts_with("cb ")) {
+                                if (has_connector_a) {
+                                    point_t connector_b;
+                                    if (!digest_point_line("conn_b", connector_b, line.c_str()+2)) {
+                                        return false;
+                                    }
+                                    connectors.push_back({ connector_a, connector_b});
+                                    has_connector_a = false;
+                                } else {
+                                    jau::log_printf("maze: cb without ca: %s\n", fname0.c_str());
+                                    return false;
+                                }
+                            }
+                            continue;
+                        }
                         if( DEBUG_ON ) {
                             jau::log_printf("maze: read line y = %zu, len = %zu: %s\n", field_line_iter, line.length(), line.c_str());
                         }
@@ -302,18 +368,160 @@ class Maze {
 
     void draw_grid(pixel::f4::vec_t color) {
         pixel::set_pixel_color(color);
-        // const float dxy = 0.5f;
-        const float dxy = 0;
         for (float x = box1.bl.x; x < box1.tr.x; x+=1.0f) { // NOLINT
-            lineseg_t::draw(point_t(x - dxy, box1.bl.y - dxy), point_t(x + dxy, box1.tr.y + dxy));
+            lineseg_t::draw(point_t(x, box1.bl.y), point_t(x, box1.tr.y));
         }
         for (float y = box1.bl.y; y < box1.tr.y; y+=1.0f) { // NOLINT
-            lineseg_t::draw(point_t(box1.bl.x - dxy, y - dxy), point_t(box1.tr.x + dxy, y + dxy));
+            lineseg_t::draw(point_t(box1.bl.x, y), point_t(box1.tr.x, y));
         }
     }
 
+    void print(FILE *out) const noexcept {
+        fprintf(out, "Maze Screen-Dim %s:\n", screen_dim.toString().c_str());
+        fprintf(out, "Maze Field-Pos  %s:\n", field_offset.toString().c_str());
+        fprintf(out, "Maze Field-Dim  %s:\n", field_dim.toString().c_str());
+        fprintf(out, "Maze tiles      %zux%zu:\n", tiles.columns(), tiles.rows());
+        fprintf(out, "Maze box1       %s:\n", box1.toString().c_str());
+        fprintf(out, "Maze box2       %s:\n", box2.toString().c_str());
+        fprintf(out, "Maze connector  %zu\n", connectors.size());
+        for(auto &c : connectors) {
+            fprintf(out, "- a %s, b %s\n", c.a.toString().c_str(), c.b.toString().c_str());
+        }
+        for(size_t y=tiles.rows(); y-->0; ) {
+            fprintf(out, "%3.3zu: ", y);
+            for(size_t x=0; x<tiles.columns(); ++x) {
+                fprintf(out, "%c", getChar(tiles[x,y]));
+            }
+            fprintf(out, "\n");
+        }
+        fprintf(out, "\n");
+    }
 };
 Maze maze;
+
+constexpr int round_center(float &f, float &d) noexcept {
+    const float r = std::round(f);
+    d = r - f;
+    f = r;
+    return int(r);
+}
+
+constexpr bool crossed_center(const point_t &p, const vec_t &d) noexcept {
+    bool rx, ry;
+    if (d.x < 0) {
+        const float frac = std::ceil(p.x) - p.x; // left
+        rx = frac <= -d.x;
+    } else {
+        const float frac = p.x - std::floor(p.x); // right
+        rx = frac <= d.x;
+    }
+    if (d.y < 0) {
+        const float frac = std::ceil(p.y) - p.y; // down
+        ry = frac <= -d.y;
+    } else {
+        const float frac = p.y - std::floor(p.y); // up
+        ry = frac <= d.y;
+    }
+    return rx && ry;
+}
+
+struct spos_t {
+    point_t pos;
+    bool is_center = false;
+
+    bool one_step(const direction_t dir) noexcept {
+        pos.x = std::round(pos.x);
+        pos.y = std::round(pos.y);
+        si_angle_f32 angle = dir_to_angle(dir);
+        vec_t d = vec_t::from_length_angle(1.0f, angle);
+        return step(dir, d);
+    }
+
+    bool step(const direction_t dir, vec_t &d) noexcept {
+        const vec_t pos1 = pos;
+        const vec_t pos2 = pos + d;
+        float x1 = pos1.x;
+        float y1 = pos1.y;
+        float x2 = pos2.x;
+        float y2 = pos2.y;
+        if (x2 <= maze.box1.bl.x) {
+            x2 = maze.box1.tr.x-1;
+            d.x = x2 - x1;
+        } else if(x2 >= maze.box1.tr.x) {
+            x2 = maze.box1.bl.x;
+            d.x = x2 - x1;
+        }
+        if (y2 <= maze.box1.bl.y) {
+            y2 = maze.box1.tr.y-1;
+            d.y = y2 - y1;
+        } else if(y2 >= maze.box1.tr.y) {
+            y2 = maze.box1.bl.y;
+            d.y = y2 - y1;
+        }
+        size_t xi2=0, yi2=0; // forward tile position
+        bool hit = false;
+        switch(dir) {
+            case direction_t::DOWN:
+                xi2 = round_center(x2, d.x);
+                yi2 = (size_t)y2;
+                if (maze.hasWall(xi2, yi2)) {
+                    const float frac = y1 - std::trunc(y1);
+                    if( 0.0f < frac && frac < 0.5f) {
+                        d.y = -frac;
+                    } else {
+                        hit = true;
+                    }
+                }
+                break;
+            case direction_t::LEFT:
+                yi2 = round_center(y2, d.y);
+                xi2 = (size_t)x2;
+                if (maze.hasWall(xi2, yi2)) {
+                    const float frac = x1 - std::trunc(x1);
+                    if( 0.0 < frac && frac < 0.5f) {
+                        d.x = -frac;
+                    } else {
+                        hit = true;
+                    }
+                }
+                break;
+            case direction_t::RIGHT:
+                yi2 = round_center(y2, d.y);
+                xi2 = (size_t)std::ceil(x2);
+                if (maze.hasWall(xi2, yi2)) {
+                    const float frac = x1 - std::trunc(x1);
+                    if( 0.5 < frac && frac < 1.0f) {
+                        d.x = 1-frac;
+                    } else {
+                        hit = true;
+                    }
+                }
+                break;
+            case direction_t::UP:
+            default:
+                xi2 = round_center(x2, d.x);
+                yi2 = (size_t)std::ceil(y2);
+                if (maze.hasWall(xi2, yi2)) {
+                    const float frac = y1 - std::trunc(y1);
+                    if( 0.5 < frac && frac < 1.0f) {
+                        d.y = 1-frac;
+                    } else {
+                        hit = true;
+                    }
+                }
+                break;
+        }
+        if (!hit) {
+            pos += d;
+            is_center = crossed_center(pos, d);
+        }
+        if ( DEBUG_ON && hit ) {
+            printf("XXX: %2.2f/%2.2f -> %zu / %zu; pos %s -> %s, d %s, center %d, hit %d\n",
+                x2, y2, xi2, yi2, pos1.toString().c_str(), (pos+d).toString().c_str(), d.toString().c_str(), is_center, hit);
+        }
+        return !hit;
+    }
+};
 
 class Player {
   private:
@@ -338,7 +546,7 @@ class Player {
     rect_t m_shoulders;
     lineseg_t m_nose;
     aabbox_t m_aabbox;
-    point_t m_center;
+    spos_t m_center;
     vec_t m_velocity_v; // [m/s]
     float m_velocity_s; // [m/s]
     direction_t m_dir;
@@ -348,19 +556,12 @@ class Player {
     float m_ball_velo_s = ball_velocity_min;
     std::vector<physiks::ball_ref_t> m_balls;
 
-    static int round_center(float &f, float &d) noexcept {
-        const float r = std::round(f);
-        d = r - f;
-        f = r;
-        return int(r);
-    }
-
     void move(const vec_t d) noexcept {
         m_head.move(d);
         m_shoulders.move(d);
         m_nose.move(d);
         m_aabbox.move(d);
-        m_center = m_aabbox.center();
+        m_center.pos = m_aabbox.center();
     }
 
     void rotateTo(const si_angle_f32 rad) noexcept {
@@ -375,7 +576,7 @@ class Player {
         m_aabbox.reset();
         m_aabbox.resize(m_head.box());
         m_aabbox.resize(m_shoulders.box());
-        m_center = m_aabbox.center();
+        m_center.pos = m_aabbox.center();
     }
 
   public:
@@ -391,20 +592,18 @@ class Player {
         m_nose = lineseg_t(m_head.center+vec_t(0, m_head.radius), m_head.center+vec_t(0, m_head.radius + nose_length));
         m_aabbox.resize(m_head.box());
         m_aabbox.resize(m_shoulders.box());
-        m_center = m_aabbox.center();
+        m_center.pos = m_aabbox.center();
         // rotate to start-direction
         rotateTo(dir_to_angle(start_dir));
         m_dir = start_dir;
         // move to start-position
         move(m_start - pos());
-        // gobjects().push_back(std::make_shared<disk_t>(m_head));
-        // gobjects().push_back(std::make_shared<rect_t>(m_shoulders));
-        // gobjects().push_back(std::make_shared<lineseg_t>(m_nose));
     }
 
     Player() = default;
 
-    const point_t& pos() const noexcept { return m_center; }
+    bool is_center() const noexcept { return m_center.is_center; }
+    const point_t& pos() const noexcept { return m_center.pos; }
     const point_t& nasenpos() const noexcept { return m_nose.p1; }
     direction_t dir() const noexcept { return m_dir; }
     const vec_t &velo_v() const noexcept { return m_velocity_v; }
@@ -424,8 +623,7 @@ class Player {
     }
 
     void setVelo(const float speed) noexcept {
-        si_angle_f32 angle = dir_to_angle(m_dir);
-        m_velocity_v = vec_t::from_length_angle(speed, angle);
+        m_velocity_v = vec_t::from_length_angle(speed, dir_to_angle(m_dir));
         m_velocity_s = speed;
     }
 
@@ -436,7 +634,7 @@ class Player {
         if (!test_step(dir, speed)) {
             return false;
         }
-        si_angle_f32 angle = dir_to_angle(dir);
+        const si_angle_f32 angle = dir_to_angle(dir);
         rotateTo(angle);
         m_velocity_v = vec_t::from_length_angle(speed, angle);
         m_velocity_s = speed;
@@ -519,95 +717,18 @@ class Player {
     }
     void setRun(bool v) { m_run = v; }
 
-    bool test_step(const direction_t dir, const float speed=def_velocity) const noexcept {
-        si_angle_f32 angle = dir_to_angle(dir);
-        vec_t velocity = vec_t::from_length_angle(speed, angle);
-        vec_t d = velocity * m_last_dt; // [m/s] * [s] = [m]
+    bool test_step(const direction_t dir, float speed=def_velocity) const noexcept {
         if(m_run && m_ausdauer > 0 ) {
-            d = ( float(m_run) + 1.0f ) * m_velocity_v * m_last_dt; // [m/s] * [s] = [m]
+            speed *= 2;
         }
-        return step(dir, d);
+        vec_t velocity = vec_t::from_length_angle(speed, dir_to_angle(dir));
+        vec_t d = velocity * m_last_dt; // [m/s] * [s] = [m]
+        spos_t p = m_center;
+        return p.step(dir, d);
     }
 
-    bool step(const direction_t dir, vec_t &d) const noexcept {
-        vec_t pos2 = pos() + d;
-        float x1 = pos().x;
-        float y1 = pos().y;
-        float x2 = pos2.x;
-        float y2 = pos2.y;
-        if (x2 <= maze.box1.bl.x) {
-            x2 = maze.box1.tr.x-1;
-            d.x = x2 - x1;
-        } else if(x2 >= maze.box1.tr.x) {
-            x2 = maze.box1.bl.x;
-            d.x = x2 - x1;
-        }
-        if (y2 <= maze.box1.bl.y) {
-            y2 = maze.box1.tr.y-1;
-            d.y = y2 - y1;
-        } else if(y2 >= maze.box1.tr.y) {
-            y2 = maze.box1.bl.y;
-            d.y = y2 - y1;
-        }
-        size_t xi2=0, yi2=0; // forward tile position
-        bool hit = false;
-        switch(dir) {
-            case direction_t::DOWN:
-                xi2 = round_center(x2, d.x);
-                yi2 = (size_t)(y2);      // NOLINT
-                if (maze.hasWall(xi2, yi2)) {
-                    const float frac = y1 - std::trunc(y1);
-                    if( 0.0f < frac && frac < 0.5f) {
-                        d.y = -frac;
-                    } else {
-                        hit = true;
-                    }
-                }
-                break;
-            case direction_t::LEFT:
-                yi2 = round_center(y2, d.y);
-                xi2 = (size_t)(x2);           // NOLINT
-                if (maze.hasWall(xi2, yi2)) {
-                    const float frac = x1 - std::trunc(x1);
-                    if( 0.0 < frac && frac < 0.5f) {
-                        d.x = -frac;
-                    } else {
-                        hit = true;
-                    }
-                }
-                break;
-            case direction_t::RIGHT:
-                yi2 = round_center(y2, d.y);
-                xi2 = (size_t)(x2+1.0f);      // NOLINT
-                if (maze.hasWall(xi2, yi2)) {
-                    const float frac = x1 - std::trunc(x1);
-                    if( 0.5 < frac && frac < 1.0f) {
-                        d.x = 1-frac;
-                    } else {
-                        hit = true;
-                    }
-                }
-                break;
-            case direction_t::UP:
-            default:
-                xi2 = round_center(x2, d.x);
-                yi2 = (size_t)(y2+1.0f);      // NOLINT
-                if (maze.hasWall(xi2, yi2)) {
-                    const float frac = y1 - std::trunc(y1);
-                    if( 0.5 < frac && frac < 1.0f) {
-                        d.y = 1-frac;
-                    } else {
-                        hit = true;
-                    }
-                }
-                break;
-        }
-        if (DEBUG_ON && hit) {
-            printf("XXX: %2.2f/%2.2f -> %zu / %zu; pos %s, pos2 %s; aabbox %s, center %s\n",
-                x2, y2, xi2, yi2, pos().toString().c_str(), pos2.toString().c_str(),
-                m_aabbox.toString().c_str(), m_aabbox.center().toString().c_str());
-        }
-        return !hit;
+    bool step(const direction_t dir, vec_t &d) noexcept {
+        return m_center.step(dir, d);
     }
 
     void draw() noexcept {
@@ -631,34 +752,141 @@ Player erna;
 uint64_t t_start = 0; // [ms]
 uint64_t frame_count_total = 0;
 
-void erna_ai_tick(float dt) {
-    if(!erna.tick(dt)) {
-        printf("EEE: collision: dir %c\n", dir_to_char(erna.dir()));
-        direction_t new_dir;
-        #if 0
-        switch(erna.dir()) {
-            case direction_t::DOWN: * - ball geschwindigkeit erhoehen zu maximum in 1s (-> canonball)
+float calc_min_dist(const point_t &src, const point_t &dest) noexcept {
+    float l1 = (dest - src).length();
+    float l2 = std::numeric_limits<float>::max();
+    for(const Connector &c : maze.connectors) {
+        float lca = (c.a - dest).length();
+        lca += (c.b - src).length();
 
-                new_dir = direction_t::RIGHT;
+        float lcb = (c.a - src).length();
+        lcb += (c.b - dest).length();
+        l2 = std::min({l2, lca, lcb});
+    }
+    return std::min(l1, l2);
+}
+
+enum class strategy_t {
+    escape,
+    attract,
+    random
+};
+static strategy_t erna_mode = strategy_t::escape;
+[[maybe_unused]] static float erna_mode_rem = 10_s;
+
+void erna_bot_tick(float dt) {
+#if 1
+    if (erna_mode_rem >= dt) {
+        erna_mode_rem -= dt;
+    } else {
+        switch (erna_mode) {
+            case strategy_t::attract:
+                erna_mode = strategy_t::escape;
+                erna_mode_rem = 10_s;
                 break;
-            case direction_t::RIGHT:
-                new_dir = direction_t::UP;
+            case strategy_t::escape:
+                erna_mode = strategy_t::random;
+                erna_mode_rem = 5_s;
                 break;
-            case direction_t::UP:
-                new_dir = direction_t::LEFT;
-                break;
-            case direction_t::LEFT:
+            case strategy_t::random:
             default:
-                new_dir = direction_t::DOWN;
+                erna_mode = strategy_t::attract;
+                erna_mode_rem = 10_s;
                 break;
         }
-        #else
+    }
+#endif
+    if (erna.is_center()) {
+        const direction_t fwd_dir = erna.dir();
+        const direction_t left_dir = rot_left(fwd_dir);
+        const direction_t right_dir = rot_right(fwd_dir);
+        const direction_t bwd_dir = inverse(fwd_dir);
+
+        direction_t new_dir = fwd_dir;
+
+        constexpr int R = number(direction_t::RIGHT);
+        constexpr int D = number(direction_t::DOWN);
+        constexpr int L = number(direction_t::LEFT);
+        constexpr int U = number(direction_t::UP);
+
+        constexpr float d_threshold = 0.5f;
+        constexpr float d_threshold_bwd = 0.6f;
+
+        const point_t pe = erna.pos();
+        spos_t dir_pos[4] = { { pe }, { pe }, { pe }, { pe } }; // R D L U
+
+        printf("EEE: center-pos: %s\n", pe.toString().c_str());
+
+        bool dir_ok[] {
+            dir_pos[R].one_step(direction_t::RIGHT),
+            dir_pos[D].one_step(direction_t::DOWN),
+            dir_pos[L].one_step(direction_t::LEFT),
+            dir_pos[U].one_step(direction_t::UP) };
+
+        if( !dir_ok[ number(left_dir) ] && !dir_ok[ number(right_dir) ] ) {
+            // walls left and right
+            if( dir_ok[ number(fwd_dir) ] ) {
+                // straight ahead and walls left and right
+                new_dir = fwd_dir;
+            } else {
+                // dead-end, can only return .. unusual (not in orig map)
+                new_dir = bwd_dir;
+            }
+            printf("EEE: decision.T: dir %c -> %c\n", dir_to_char(fwd_dir), dir_to_char(new_dir));
+        } else if (erna_mode == strategy_t::random) {
             do {
                 new_dir = next_rnd_dir();
-            } while (!erna.test_step(new_dir));
-        #endif
-        printf("EEE: new_dir: dir %c\n", dir_to_char(new_dir));
+            } while (!dir_ok[number(new_dir)] || new_dir == bwd_dir);
+            printf("EEE: decision.2: dir %c -> %c\n", dir_to_char(fwd_dir), dir_to_char(new_dir));
+        } else {
+            // decision: find longest path
+            const point_t pf = fritzchen.pos();
+            const float d_fwd   = calc_min_dist(dir_pos[number(fwd_dir)].pos, pf);
+            const float d_right = calc_min_dist(dir_pos[number(right_dir)].pos, pf);
+            const float d_left  = calc_min_dist(dir_pos[number(left_dir)].pos, pf);
+            const float d_bwd   = calc_min_dist(dir_pos[number(bwd_dir)].pos, pf);
+
+            if (erna_mode == strategy_t::escape) {
+                float d_max = 0;
+                if( dir_ok[number(fwd_dir)] ) {
+                    d_max = d_fwd;
+                }
+                if( dir_ok[number(right_dir)] && d_right - d_max > d_threshold) {
+                    d_max = d_right;
+                    new_dir = right_dir;
+                }
+                if( dir_ok[number(left_dir)] && d_left - d_max > d_threshold) {
+                    d_max = d_left;
+                    new_dir = left_dir;
+                }
+                if( dir_ok[number(bwd_dir)] && d_bwd - d_max > d_threshold_bwd) {
+                    new_dir = bwd_dir;
+                }
+            } else if (erna_mode == strategy_t::attract) {
+                float d_min = std::numeric_limits<float>::max();
+                if( dir_ok[number(fwd_dir)] ) {
+                    d_min = d_fwd;
+                }
+                if( dir_ok[number(right_dir)] && d_min - d_right > d_threshold) {
+                    d_min = d_right;
+                    new_dir = right_dir;
+                }
+                if( dir_ok[number(left_dir)] && d_min - d_left > d_threshold) {
+                    d_min = d_left;
+                    new_dir = left_dir;
+                }
+                if( dir_ok[number(bwd_dir)] && d_min - d_bwd > d_threshold_bwd) {
+                    new_dir = bwd_dir;
+                }
+            }
+            printf("EEE: decision.%d: dir_ok[fwd %d, right %d, left %d, back %d\n", int(erna_mode), dir_ok[number(fwd_dir)], dir_ok[number(right_dir)], dir_ok[number(left_dir)], dir_ok[number(bwd_dir)]);
+            printf("EEE: decision.%d: dist[fwd %f, right %f, left %f, back %f\n", int(erna_mode), d_fwd, d_right, d_left, d_bwd);
+            printf("EEE: decision.%d: dir %c -> %c\n", int(erna_mode), dir_to_char(fwd_dir), dir_to_char(new_dir));
+        }
         erna.setDir(new_dir);
+    }
+    if(!erna.tick(dt)) {
+        printf("EEE: COLLISION: dir %c\n", dir_to_char(erna.dir()));
     }
 }
 
@@ -742,7 +970,7 @@ void mainloop() {
             fritzchen.setVelo(0);
         }
         fritzchen.tick(dt);
-        erna_ai_tick(dt);
+        erna_bot_tick(dt);
     }
 
     // white background
@@ -754,7 +982,18 @@ void mainloop() {
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
     maze.draw();
 
-    pixel::set_pixel_color(    255 /* r */,   0 /* g */, 255 /* b */, 255 /* a */);
+    switch (erna_mode) {
+        case strategy_t::attract:
+            pixel::set_pixel_color(    255 /* r */,   0 /* g */, 0 /* b */, 255 /* a */);
+            break;
+        case strategy_t::escape:
+            pixel::set_pixel_color(    255 /* r */,   0 /* g */, 255 /* b */, 255 /* a */);
+            break;
+        case strategy_t::random:
+        default:
+            pixel::set_pixel_color(    0 /* r */,   0 /* g */, 0 /* b */, 255 /* a */);
+            break;
+    }
     erna.draw();
     pixel::set_pixel_color(    0 /* r */,   0 /* g */, 255 /* b */, 255 /* a */);
     fritzchen.draw();
@@ -773,7 +1012,6 @@ int main(int argc, char *argv[])
 {
     std::string maze_name = "fritzchen/maze4.txt";
     int window_width = 640, window_height = 720;
-    // int window_width = 1920, window_height = 1080;
     #if defined(__EMSCRIPTEN__)
         window_width = 1024, window_height = 576; // 16:9
     #endif
@@ -800,21 +1038,7 @@ int main(int argc, char *argv[])
     if (!maze.read(maze_name)) {
         return -1;
     }
-    {
-        printf("Maze Screen-Dim %s:\n", maze.screen_dim.toString().c_str());
-        printf("Maze Field-Pos  %s:\n", maze.field_offset.toString().c_str());
-        printf("Maze Field-Dim  %s:\n", maze.field_dim.toString().c_str());
-        printf("Maze tiles      %zux%zu:\n", maze.tiles.columns(), maze.tiles.rows());
-        printf("Maze box1       %s:\n", maze.box1.toString().c_str());
-        printf("Maze box2       %s:\n", maze.box2.toString().c_str());
-        for(size_t y=maze.tiles.rows(); y-->0; ) {
-            for(size_t x=0; x<maze.tiles.columns(); ++x) {
-                printf("%c", getChar(maze.tiles[x,y]));
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }
+    maze.print(stdout);
 
     log_printf(0, "XX %s\n", pixel::cart_coord.toString().c_str());
     {
@@ -847,8 +1071,9 @@ int main(int argc, char *argv[])
  * - abbiegen (-> pacman)
  * - ball logik -> Player
  * - ball geschwindigkeit erhoehen zu maximum in 1s (-> canonball)
- *
- * TODO - Erna
  * - weglaufen
  * - jagen
+ *
+ * TODO
+ * - gameplay
  */
