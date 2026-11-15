@@ -75,7 +75,7 @@ static pixel::input_event_t event;
  *   -
  *
  * Orig hardware vs this code:
- * - Alien velovity
+ * - Alien velocity
  *   - Original hardware renders only 1 alien per frame
  *   - Single alien moves at max-speed 2 pixel/frame @ 60fps -> 120 pixel/s
  *   - N alien move at 2*60/N, i.e. 2.18 pixel/s
