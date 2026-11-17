@@ -72,8 +72,8 @@ class DynArray2D {
             }
         }
     }
-    constexpr size_t columns() noexcept { return m_columns; };
-    constexpr size_t rows() noexcept { return m_rows; };
+    constexpr size_t columns() const noexcept { return m_columns; };
+    constexpr size_t rows() const noexcept { return m_rows; };
     constexpr const T operator[](size_t x, size_t y) const noexcept {
         return m_mem[x + y * m_columns];
     };
