@@ -466,8 +466,8 @@ struct spos_t {
                 yi2 = (size_t)y2;
                 if (maze.hasWall(xi2, yi2)) {
                     const float frac = y1 - std::trunc(y1);
-                    if( 0.0f < frac && frac < 0.5f) {
-                        d.y = -frac;
+                    if (0.0f < frac && frac < 0.5f) {
+                        d.y = -frac; // round-down to center
                     } else {
                         hit = true;
                     }
@@ -478,8 +478,8 @@ struct spos_t {
                 xi2 = (size_t)x2;
                 if (maze.hasWall(xi2, yi2)) {
                     const float frac = x1 - std::trunc(x1);
-                    if( 0.0 < frac && frac < 0.5f) {
-                        d.x = -frac;
+                    if (0.0f < frac && frac < 0.5f) {
+                        d.x = -frac; // round-down to center
                     } else {
                         hit = true;
                     }
@@ -490,8 +490,8 @@ struct spos_t {
                 xi2 = (size_t)std::ceil(x2);
                 if (maze.hasWall(xi2, yi2)) {
                     const float frac = x1 - std::trunc(x1);
-                    if( 0.5 < frac && frac < 1.0f) {
-                        d.x = 1-frac;
+                    if (0.5f < frac) {
+                        d.x = 1 - frac; // round-up to center
                     } else {
                         hit = true;
                     }
@@ -503,8 +503,8 @@ struct spos_t {
                 yi2 = (size_t)std::ceil(y2);
                 if (maze.hasWall(xi2, yi2)) {
                     const float frac = y1 - std::trunc(y1);
-                    if( 0.5 < frac && frac < 1.0f) {
-                        d.y = 1-frac;
+                    if (0.5f < frac) {
+                        d.y = 1 - frac; // round-up to center
                     } else {
                         hit = true;
                     }
@@ -516,8 +516,8 @@ struct spos_t {
             is_center = crossed_center(pos, d);
         }
         if ( DEBUG_ON && hit ) {
-            printf("XXX: %2.2f/%2.2f -> %zu / %zu; pos %s -> %s, d %s, center %d, hit %d\n",
-                x2, y2, xi2, yi2, pos1.toString().c_str(), (pos+d).toString().c_str(), d.toString().c_str(), is_center, hit);
+            printf("XXX: %2.2f/%2.2f -> %2.2f/%2.2f -> %zu / %zu; pos %s -> %s -> %s, d %s, center %d, hit %d\n",
+                x1, y1, x2, y2, xi2, yi2, pos1.toString().c_str(), pos2.toString().c_str(), pos.toString().c_str(), d.toString().c_str(), is_center, hit);
         }
         return !hit;
     }
