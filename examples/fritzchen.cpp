@@ -24,14 +24,9 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include <algorithm>
-#include <cstddef>
-#include <initializer_list>
 #include <limits>
 #include <memory>
-#include <iostream>
 #include <fstream>
-#include <cstdio>
-#include <cmath>
 #include <vector>
 
 #include <jau/float_si_types.hpp>
@@ -56,16 +51,7 @@ enum class tile_t : int {
     EMPTY = 0,
     WALL_JOINT = 1,
     WALL_HORZ = 2,
-    WALL_VERT = 3,
-    PELLET_POWER = 20,
-    CHERRY = 80,
-    STRAWBERRY = 81,
-    PEACH = 82,
-    APPLE = 83,
-    MELON = 84,
-    GALAXIAN = 85,
-    BELL = 86,
-    KEY = 87
+    WALL_VERT = 3
 };
 
 static char getChar(tile_t t) noexcept {
@@ -271,10 +257,6 @@ class Maze {
                         for(size_t x=0; x<maxlen; ++x) {
                             const char c = line[x];
                             switch( c ) {
-                                case '_':
-                                    [[fallthrough]];
-                                case ' ':
-                                    break;
                                 case '|':
                                     tiles[x, height-1-y] = tile_t::WALL_VERT;
                                     break;
@@ -284,16 +266,7 @@ class Maze {
                                 case '-':
                                     tiles[x, height-1-y] = tile_t::WALL_HORZ;
                                     break;
-                                case '.':
-                                    // original.add_tile(tile_t::PELLET);
-                                    //printf(".");
-                                    break;
-                                case '*':
-                                    // original.add_tile(tile_t::PELLET_POWER);
-                                    //printf("*");
-                                    break;
                                 default:
-                                    // jau::log_printf("maze error: unknown tile @ %d / %d: '%c'\n", x, field_line_iter, c);
                                     break;
                             }
                         }
@@ -516,7 +489,7 @@ struct spos_t {
             is_center = crossed_center(pos, d);
         }
         if ( DEBUG_ON && hit ) {
-            printf("XXX: %2.2f/%2.2f -> %2.2f/%2.2f -> %zu / %zu; pos %s -> %s -> %s, d %s, center %d, hit %d\n",
+            jau::log_printf("XXX: %2.2f/%2.2f -> %2.2f/%2.2f -> %zu / %zu; pos %s -> %s -> %s, d %s, center %d, hit %d\n",
                 x1, y1, x2, y2, xi2, yi2, pos1.toString().c_str(), pos2.toString().c_str(), pos.toString().c_str(), d.toString().c_str(), is_center, hit);
         }
         return !hit;
@@ -534,7 +507,6 @@ class Player {
     constexpr static float recovery_time = 10; // [s] of max_ausdauer
     constexpr static float recovery_per_second = max_ausdauer / recovery_time; // [ausdauer/s]
     constexpr static direction_t start_dir = direction_t::LEFT;
-    // constexpr static si_length_f32 step_width = height/2;
     constexpr static si_length_f32 nose_length = height/6;
     constexpr static si_velo_f32 def_velocity = 7.0f; // [m/s]
     constexpr static size_t max_balls = 10;
@@ -572,7 +544,6 @@ class Player {
         m_shoulders.rotate(rad);
         m_nose.rotate(rad, m_head.center);
         m_velocity_v.rotate(rad);
-        // m_aabbox.rotate(rad);
         m_aabbox.reset();
         m_aabbox.resize(m_head.box());
         m_aabbox.resize(m_shoulders.box());
@@ -657,9 +628,7 @@ class Player {
             return false;
         }
         m_balls.push_back( physiks::ball_t::createZeroG("ballFritz",
-            nasenpos(),
-            ball_radius, // radius
-            m_ball_velo_s, // velocity (scalar)
+            nasenpos(), ball_radius, m_ball_velo_s,
             dir_to_angle(dir()) + jau::adeg_to_rad(45), // angle/direction of velocity: Fritz + 45deg
             m_ball_velo_s, // max velocity (scalar)
             false /* reset */) );
@@ -671,7 +640,6 @@ class Player {
 
     bool tick(const float dt) noexcept { // override {
         m_last_dt = dt;
-
         for(const auto& i : m_balls) {
             i->tick(dt);
         }
@@ -680,19 +648,19 @@ class Player {
             if (!b->box().inside(maze.box2)) {
                 // delete i
                 m_balls.erase(i);
-                std::cout << "maze-box: " << maze.box2.toString() << "\n";
-                std::cout << "ball-box: " << b->box().toString() << "\n";
+                if( DEBUG_ON ) {
+                    jau::log_printf("maze-box %s\nball-box %s\n", maze.box2.toString().c_str(), b->box().toString().c_str());
+                }
             } else if (b->velocity.length() < 3) {
                 // delete i
                 m_balls.erase(i);
-                std::cout << "ball-velo: " << b->velocity.toString() << "\n";
+                if( DEBUG_ON ) {
+                    jau::log_printf("ball-velo %s\n", b->velocity.toString().c_str());
+                }
             } else {
                 ++i;
             }
         }
-
-        // pixel::f2::vec_t g = sun->gravity_ships(p_center);
-        // velocity += g * dt; // [m/s^2] * [s] = [m/s]
         vec_t d = m_velocity_v * dt; // [m/s] * [s] = [m]
         if(m_run) {
             m_ausdauer -= 2.0f*recovery_per_second * dt;
@@ -749,8 +717,6 @@ class Player {
 };
 Player fritzchen;
 Player erna;
-uint64_t t_start = 0; // [ms]
-uint64_t frame_count_total = 0;
 
 float calc_min_dist(const point_t &src, const point_t &dest) noexcept {
     float l1 = (dest - src).length();
@@ -797,25 +763,21 @@ void erna_bot_tick(float dt) {
     }
 #endif
     if (erna.is_center()) {
-        const direction_t fwd_dir = erna.dir();
-        const direction_t left_dir = rot_left(fwd_dir);
-        const direction_t right_dir = rot_right(fwd_dir);
-        const direction_t bwd_dir = inverse(fwd_dir);
-
-        direction_t new_dir = fwd_dir;
-
         constexpr int R = number(direction_t::RIGHT);
         constexpr int D = number(direction_t::DOWN);
         constexpr int L = number(direction_t::LEFT);
         constexpr int U = number(direction_t::UP);
-
         constexpr float d_threshold = 0.5f;
         constexpr float d_threshold_bwd = 0.6f;
 
+        const direction_t fwd_dir = erna.dir();
+        const direction_t left_dir = rot_left(fwd_dir);
+        const direction_t right_dir = rot_right(fwd_dir);
+        const direction_t bwd_dir = inverse(fwd_dir);
         const point_t pe = erna.pos();
-        spos_t dir_pos[4] = { { pe }, { pe }, { pe }, { pe } }; // R D L U
 
-        printf("EEE: center-pos: %s\n", pe.toString().c_str());
+        spos_t dir_pos[4] = { { pe }, { pe }, { pe }, { pe } }; // R D L U
+        direction_t new_dir = fwd_dir;
 
         bool dir_ok[] {
             dir_pos[R].one_step(direction_t::RIGHT),
@@ -832,12 +794,10 @@ void erna_bot_tick(float dt) {
                 // dead-end, can only return .. unusual (not in orig map)
                 new_dir = bwd_dir;
             }
-            printf("EEE: decision.T: dir %c -> %c\n", dir_to_char(fwd_dir), dir_to_char(new_dir));
         } else if (erna_mode == strategy_t::random) {
             do {
                 new_dir = next_rnd_dir();
             } while (!dir_ok[number(new_dir)] || new_dir == bwd_dir);
-            printf("EEE: decision.2: dir %c -> %c\n", dir_to_char(fwd_dir), dir_to_char(new_dir));
         } else {
             // decision: find longest path
             const point_t pf = fritzchen.pos();
@@ -879,16 +839,24 @@ void erna_bot_tick(float dt) {
                     new_dir = bwd_dir;
                 }
             }
-            printf("EEE: decision.%d: dir_ok[fwd %d, right %d, left %d, back %d\n", int(erna_mode), dir_ok[number(fwd_dir)], dir_ok[number(right_dir)], dir_ok[number(left_dir)], dir_ok[number(bwd_dir)]);
-            printf("EEE: decision.%d: dist[fwd %f, right %f, left %f, back %f\n", int(erna_mode), d_fwd, d_right, d_left, d_bwd);
-            printf("EEE: decision.%d: dir %c -> %c\n", int(erna_mode), dir_to_char(fwd_dir), dir_to_char(new_dir));
+            if (DEBUG_ON) {
+                jau::log_printf("EEE: decision.%d: dist[fwd %f, right %f, left %f, back %f\n", int(erna_mode), d_fwd, d_right, d_left, d_bwd);
+            }
+        }
+        if (DEBUG_ON) {
+            jau::log_printf("EEE: center-pos: %s\n", pe.toString().c_str());
+            jau::log_printf("EEE: decision.%d: dir_ok[fwd %d, right %d, left %d, back %d\n", int(erna_mode), dir_ok[number(fwd_dir)], dir_ok[number(right_dir)], dir_ok[number(left_dir)], dir_ok[number(bwd_dir)]);
+            jau::log_printf("EEE: decision.%d: dir %c -> %c\n", int(erna_mode), dir_to_char(fwd_dir), dir_to_char(new_dir));
         }
         erna.setDir(new_dir);
     }
     if(!erna.tick(dt)) {
-        printf("EEE: COLLISION: dir %c\n", dir_to_char(erna.dir()));
+        printf("EEE: COLLISION: dir %c\n", dir_to_char(erna.dir())); // should not happen
     }
 }
+
+uint64_t t_start = 0; // [ms]
+uint64_t frame_count_total = 0;
 
 void reset_globals() {
     t_start = 0;
@@ -1063,17 +1031,6 @@ int main(int argc, char *argv[])
 }
 
 /**
- * DONE
- * - run (ausdauer etc)
- * - ball reparieren
- * - n baelle erlauben (-> vector)
- * - bewegung einschraenken (-> pacman)
- * - abbiegen (-> pacman)
- * - ball logik -> Player
- * - ball geschwindigkeit erhoehen zu maximum in 1s (-> canonball)
- * - weglaufen
- * - jagen
- *
  * TODO
  * - gameplay
  */
