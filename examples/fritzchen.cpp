@@ -70,7 +70,6 @@ enum class direction_t : int {
     LEFT = 2,
     UP = 3
 };
-
 constexpr int number(direction_t v) noexcept { return static_cast<int>(v); }
 
 constexpr si_angle_f32 dir_to_angle(direction_t dir) noexcept {
@@ -545,6 +544,35 @@ struct spos_t {
     }
 };
 
+enum class strategy_t {
+    escape,
+    attract,
+    random
+};
+
+enum class strategy_duration_t {
+    attract = 30,
+    escape  = 30,
+    random  = 10
+};
+constexpr float number(strategy_duration_t v) noexcept { return static_cast<float>(v); }
+
+strategy_t erna_mode = strategy_t::attract;
+[[maybe_unused]] float erna_mode_to = number(strategy_duration_t::attract);
+
+enum class player_id_t {
+  fritzchen,
+  erna
+};
+
+enum class score_t {
+    ball_hit          =    10,
+    erna_home_attract =   100,
+    erna_home_random  =  1000,
+    erna_home_escape  = 10000
+};
+constexpr int number(score_t v) noexcept { return static_cast<int>(v); }
+
 class Player {
   private:
     constexpr static si_length_f32 height = 1.2f;
@@ -562,6 +590,7 @@ class Player {
     constexpr static const float ball_radius = 20_cm;
     constexpr static const float ball_velocity_min = 11_m_s; // [m/s]
     constexpr static const float ball_velocity_max = 25_m_s; //
+    player_id_t m_id;
     point_t m_start;
     disk_t m_head;
     rect_t m_shoulders;
@@ -576,6 +605,7 @@ class Player {
     float m_last_dt = 1.0f/60.0f;
     float m_ball_velo_s = ball_velocity_min;
     std::vector<physiks::ball_ref_t> m_balls;
+    int m_score = 0;
 
     void move(const vec_t d) noexcept {
         m_head.move(d);
@@ -599,10 +629,12 @@ class Player {
         m_center.pos = m_aabbox.center();
     }
 
+    bool test_ball_erna(physiks::ball_t &ball) const noexcept;
+
   public:
 
-    Player(const point_t position)
-    : m_start(position), m_head(position, height / 2), m_aabbox(),
+    Player(player_id_t id, const point_t position) noexcept
+    : m_id(id), m_start(position), m_head(position, height / 2), m_aabbox(),
       m_velocity_v(), m_velocity_s(0), m_dir(direction_t::UP),
       m_ausdauer(max_ausdauer), m_run(false)
     {
@@ -623,7 +655,8 @@ class Player {
         }
     }
 
-    Player() = default;
+    Player(player_id_t id) noexcept
+    : m_id(id) {}
 
     bool is_center() const noexcept { return m_center.is_center; }
     const point_t& pos() const noexcept { return m_center.pos; }
@@ -634,6 +667,13 @@ class Player {
     bool is_running() const noexcept { return m_run; }
     float ausdauer() const noexcept { return m_ausdauer; }
 
+    constexpr player_id_t id() const noexcept { return m_id; }
+    constexpr bool is_erna() const noexcept { return player_id_t::erna == m_id; }
+    constexpr bool is_fritzchen() const noexcept { return player_id_t::fritzchen == m_id; }
+
+    int score() const noexcept { return m_score; }
+    int& score() noexcept { return m_score; }
+
     void reset() noexcept {
         m_velocity_v = vec_t();
         m_velocity_s = 0;
@@ -643,6 +683,7 @@ class Player {
         m_dir = start_dir;
         move(m_start - pos());
         m_balls.clear();
+        m_score = 0;
     }
 
     void setVelo(const float speed) noexcept {
@@ -709,6 +750,13 @@ class Player {
                 if( DEBUG_ON ) {
                     jau::log_printf("ball-velo %s\n", b->velocity.toString().c_str());
                 }
+            } else if(is_fritzchen() && test_ball_erna(*b)) {
+                // delete i
+                m_balls.erase(i);
+                m_score += number(score_t::ball_hit);
+                if( DEBUG_ON ) {
+                    jau::log_printf("ball-erna %s\n", b->box().toString().c_str());
+                }
             } else {
                 ++i;
             }
@@ -767,8 +815,12 @@ class Player {
         }
     }
 };
-Player fritzchen;
-Player erna;
+Player fritzchen(player_id_t::fritzchen);
+Player erna(player_id_t::erna);
+
+bool Player::test_ball_erna(physiks::ball_t &ball) const noexcept {
+    return erna.m_aabbox.intersects(ball.box());
+}
 
 float calc_min_dist(const point_t &src, const point_t &dest) noexcept {
     float l1 = (dest - src).length();
@@ -784,32 +836,24 @@ float calc_min_dist(const point_t &src, const point_t &dest) noexcept {
     return std::min(l1, l2);
 }
 
-enum class strategy_t {
-    escape,
-    attract,
-    random
-};
-static strategy_t erna_mode = strategy_t::escape;
-[[maybe_unused]] static float erna_mode_rem = 10_s;
-
 void erna_bot_tick(float dt) {
 #if 1
-    if (erna_mode_rem >= dt) {
-        erna_mode_rem -= dt;
+    if (erna_mode_to >= dt) {
+        erna_mode_to -= dt;
     } else {
         switch (erna_mode) {
             case strategy_t::attract:
                 erna_mode = strategy_t::escape;
-                erna_mode_rem = 10_s;
+                erna_mode_to = number(strategy_duration_t::escape);
                 break;
             case strategy_t::escape:
                 erna_mode = strategy_t::random;
-                erna_mode_rem = 5_s;
+                erna_mode_to = number(strategy_duration_t::random);
                 break;
             case strategy_t::random:
             default:
                 erna_mode = strategy_t::attract;
-                erna_mode_rem = 10_s;
+                erna_mode_to = number(strategy_duration_t::attract);
                 break;
         }
     }
@@ -965,8 +1009,9 @@ void mainloop() {
 
     static point_t text_tl = {0, maze.screen_dim.y};
     std::vector<pixel::texture_ref> hud_texts = {
-        pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f/%d",
-            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), pixel::expected_fps()),
+        pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f/%d, score %4.4d",
+            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(),
+            pixel::expected_fps(), fritzchen.score()),
         pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "run-e %2.2f, throw-e %2.2f, %2.2f/%2.2f",
             fritzchen.ausdauer(), fritzchen.ball_velo(), fritzchen.pos().x, fritzchen.pos().y)
     };
@@ -1070,8 +1115,8 @@ int main(int argc, char *argv[])
     }
 
     pixel::cart_coord.set_fitting(0.0f, 0.0f, maze.screen_dim.x, maze.screen_dim.y);
-    fritzchen = Player(maze.fritzchen_start);
-    erna = Player(maze.erna_start);
+    fritzchen = Player(player_id_t::fritzchen, maze.fritzchen_start);
+    erna = Player(player_id_t::erna, maze.erna_start);
     erna.setDir(direction_t::LEFT);
 
     #if defined(__EMSCRIPTEN__)
