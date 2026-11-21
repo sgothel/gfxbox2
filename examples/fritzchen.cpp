@@ -136,11 +136,14 @@ class Maze {
     vec_t screen_dim;
     vec_t field_offset;
     vec_t field_dim;
-    DynArray2D<tile_t> tiles; ///< Orientation: 0/0 bottom-left, Dimension of screen_dim
-    point_t fritzchen_start, erna_start;
-    std::vector<Connector> connectors;
     pixel::f2::aabbox_t box1; ///< Matching field bounding box
     pixel::f2::aabbox_t box2; ///< Outer field bounding box
+    DynArray2D<tile_t> tiles; ///< Orientation: 0/0 bottom-left, Dimension of screen_dim
+    point_t fritzchen_start;
+    pixel::f2::aabbox_t home_ext; ///< Home exterior box
+    pixel::f2::aabbox_t home_int; ///< Home interior box
+    point_t erna_start;
+    std::vector<Connector> connectors;
 
     bool hasWall(size_t x, size_t y) noexcept {
         return x<tiles.columns() && y<tiles.rows() && tile_t::EMPTY != tiles[x, y];
@@ -177,6 +180,23 @@ class Maze {
         dest2.set(x2_pos, y2_pos);
         if( DEBUG_ON ) {
             jau::log_printf("maze: read '%s' position: %s; %s\n", name.c_str(), dest1.toString().c_str(), dest2.toString().c_str());
+        }
+        return true;
+    }
+    bool digest_aabbox_line(const std::string& name, aabbox_t& dest, const std::string& line) noexcept {
+        float x_pos = 0.0f, y_pos = 0.0f;
+        float width = 0.0f, height = 0.0f;
+        if (4 != sscanf(line.c_str(), "%f %f %f %f", &x_pos, &y_pos, &width, &height)) {
+            jau::log_printf("maze: error reading 4 floats '%s' from line: '%s'\n", name.c_str(), line.c_str());
+            return false;
+        }
+        point_t p = { x_pos, y_pos };
+        point_t d = { width, height };
+        dest.reset();
+        dest.resize(p);
+        dest.resize(p + d);
+        if( DEBUG_ON ) {
+            jau::log_printf("maze: read '%s' aabbox: %s\n", name.c_str(), dest.toString().c_str());
         }
         return true;
     }
@@ -225,6 +245,14 @@ class Maze {
                             return false;
                         }
                     } else if( 3 == linenum ) {
+                        if (!digest_aabbox_line("home_ext", home_ext, line)) {
+                            return false;
+                        }
+                    } else if( 4 == linenum ) {
+                        if (!digest_aabbox_line("home_int", home_int, line)) {
+                            return false;
+                        }
+                    } else if( 5 == linenum ) {
                         if (!digest_point_line("erna pos", erna_start, line)) {
                             return false;
                         }
@@ -339,6 +367,11 @@ class Maze {
         for (const auto &l : v_lines) { l.draw(); }
     }
 
+    void draw_home() const noexcept {
+        home_ext.draw();
+        home_int.draw();
+    }
+
     void draw_grid(pixel::f4::vec_t color) {
         pixel::set_pixel_color(color);
         for (float x = box1.bl.x; x < box1.tr.x; x+=1.0f) { // NOLINT
@@ -353,9 +386,11 @@ class Maze {
         fprintf(out, "Maze Screen-Dim %s:\n", screen_dim.toString().c_str());
         fprintf(out, "Maze Field-Pos  %s:\n", field_offset.toString().c_str());
         fprintf(out, "Maze Field-Dim  %s:\n", field_dim.toString().c_str());
-        fprintf(out, "Maze tiles      %zux%zu:\n", tiles.columns(), tiles.rows());
         fprintf(out, "Maze box1       %s:\n", box1.toString().c_str());
         fprintf(out, "Maze box2       %s:\n", box2.toString().c_str());
+        fprintf(out, "Maze tiles      %zux%zu:\n", tiles.columns(), tiles.rows());
+        fprintf(out, "Maze home-ext   %s:\n", home_ext.toString().c_str());
+        fprintf(out, "Maze home-int   %s:\n", home_int.toString().c_str());
         fprintf(out, "Maze connector  %zu\n", connectors.size());
         for(auto &c : connectors) {
             fprintf(out, "- a %s, b %s\n", c.a.toString().c_str(), c.b.toString().c_str());
@@ -401,6 +436,7 @@ constexpr bool crossed_center(const point_t &p, const vec_t &d) noexcept {
 struct spos_t {
     point_t pos;
     bool is_center = false;
+    std::vector<aabbox_t> exclude = {};
 
     bool one_step(const direction_t dir) noexcept {
         pos.x = std::round(pos.x);
@@ -408,6 +444,19 @@ struct spos_t {
         si_angle_f32 angle = dir_to_angle(dir);
         vec_t d = vec_t::from_length_angle(1.0f, angle);
         return step(dir, d);
+    }
+
+    bool is_legal_pos(size_t x, size_t y) const noexcept {
+        if (maze.hasWall(x, y)) {
+            return true;
+        }
+        const point_t p = { float(x), float(y) };
+        for(const aabbox_t &b : exclude) {
+            if (b.contains(p)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     bool step(const direction_t dir, vec_t &d) noexcept {
@@ -437,7 +486,7 @@ struct spos_t {
             case direction_t::DOWN:
                 xi2 = round_center(x2, d.x);
                 yi2 = (size_t)y2;
-                if (maze.hasWall(xi2, yi2)) {
+                if (is_legal_pos(xi2, yi2)) {
                     const float frac = y1 - std::trunc(y1);
                     if (0.0f < frac && frac < 0.5f) {
                         d.y = -frac; // round-down to center
@@ -449,7 +498,7 @@ struct spos_t {
             case direction_t::LEFT:
                 yi2 = round_center(y2, d.y);
                 xi2 = (size_t)x2;
-                if (maze.hasWall(xi2, yi2)) {
+                if (is_legal_pos(xi2, yi2)) {
                     const float frac = x1 - std::trunc(x1);
                     if (0.0f < frac && frac < 0.5f) {
                         d.x = -frac; // round-down to center
@@ -461,7 +510,7 @@ struct spos_t {
             case direction_t::RIGHT:
                 yi2 = round_center(y2, d.y);
                 xi2 = (size_t)std::ceil(x2);
-                if (maze.hasWall(xi2, yi2)) {
+                if (is_legal_pos(xi2, yi2)) {
                     const float frac = x1 - std::trunc(x1);
                     if (0.5f < frac) {
                         d.x = 1 - frac; // round-up to center
@@ -474,7 +523,7 @@ struct spos_t {
             default:
                 xi2 = round_center(x2, d.x);
                 yi2 = (size_t)std::ceil(y2);
-                if (maze.hasWall(xi2, yi2)) {
+                if (is_legal_pos(xi2, yi2)) {
                     const float frac = y1 - std::trunc(y1);
                     if (0.5f < frac) {
                         d.y = 1 - frac; // round-up to center
@@ -569,6 +618,9 @@ class Player {
         m_dir = start_dir;
         // move to start-position
         move(m_start - pos());
+        if (is_fritzchen()) {
+            m_center.exclude.push_back(maze.home_ext);
+        }
     }
 
     Player() = default;
