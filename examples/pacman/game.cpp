@@ -727,7 +727,6 @@ void mainloop() {
 
 int main(int argc, char *argv[])
 {
-    bool enable_vsync = true;
     int forced_fps = -1;
     float fields_per_sec_total=10;
     int win_width = 640, win_height = 720;
@@ -745,11 +744,9 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-pixqual", argv[i]) && i+1<argc) {
                 pixel_filter_quality = atoi(argv[i+1]);
                 ++i;
-            } else if( 0 == strcmp("-no_vsync", argv[i]) ) {
-                enable_vsync = false;
             } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
                 forced_fps = atoi(argv[i+1]);
-                enable_vsync = false;
+                pixel::set_gpu_forced_fps(forced_fps);
                 ++i;
             } else if( 0 == strcmp("-speed", argv[i]) && i+1<argc) {
                 fields_per_sec_total = (float)atof(argv[i+1]);
@@ -801,7 +798,6 @@ int main(int argc, char *argv[])
         jau::log_printf("- 2p %d\n", human_blinky);
         jau::log_printf("- use_audio %d\n", use_audio);
         jau::log_printf("- pixqual %d\n", pixel_filter_quality);
-        jau::log_printf("- enable_vsync %d\n", enable_vsync);
         jau::log_printf("- forced_fps %d\n", forced_fps);
         jau::log_printf("- fields_per_sec %5.2f\n", fields_per_sec_total);
         jau::log_printf("- win size %d x %d\n", win_width, win_height);
