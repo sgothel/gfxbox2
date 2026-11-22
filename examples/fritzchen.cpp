@@ -23,6 +23,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+#include <cinttypes>
 #include <algorithm>
 #include <limits>
 #include <memory>
@@ -43,9 +44,43 @@ using namespace jau;
 using namespace jau::si_f32_literals;
 using namespace pixel::f2;
 
-static constexpr bool DEBUG_ON = false;
-static constexpr bool debug_gfx1 = false;
-static constexpr bool debug_gfx2 = false;
+enum class player_id_t {
+  fritzchen,
+  erna
+};
+
+enum class score_t {
+    ball_hit          =    10,
+    erna_home_attract =   100,
+    erna_tick_escape  =   400,
+    erna_home_random  =  1000,
+    erna_home_escape  = 10000
+};
+constexpr int number(score_t v) noexcept { return static_cast<int>(v); }
+
+enum class strategy_t {
+    attract,
+    escape,
+    random,
+    seek_pos
+};
+static const char *to_string(strategy_t v) noexcept {
+    switch(v) {
+        case strategy_t::attract:  return "attrac";
+        case strategy_t::escape:   return "escape";
+        case strategy_t::random:   return "random";
+        case strategy_t::seek_pos: return "seekpo";
+        default: return "undefined";
+    }
+}
+
+enum class strategy_duration_t {
+    attract = 30,
+    escape  = 25,
+    random  = 15,
+    seekpos = 10
+};
+constexpr float number(strategy_duration_t v) noexcept { return static_cast<float>(v); }
 
 enum class tile_t : int {
     EMPTY = 0,
@@ -72,7 +107,7 @@ enum class direction_t : int {
 };
 constexpr int number(direction_t v) noexcept { return static_cast<int>(v); }
 
-constexpr si_angle_f32 dir_to_angle(direction_t dir) noexcept {
+static si_angle_f32 dir_to_angle(direction_t dir) noexcept {
     switch(dir) {
         case direction_t::DOWN: return -90_deg;
         case direction_t::RIGHT: return 0_deg;
@@ -81,7 +116,7 @@ constexpr si_angle_f32 dir_to_angle(direction_t dir) noexcept {
         default: return 0_deg;
     }
 }
-constexpr char dir_to_char(direction_t dir) noexcept {
+static char dir_to_char(direction_t dir) noexcept {
     switch(dir) {
         case direction_t::DOWN: return 'D';
         case direction_t::RIGHT: return 'R';
@@ -90,8 +125,7 @@ constexpr char dir_to_char(direction_t dir) noexcept {
         default: return ' ';
     }
 }
-
-direction_t inverse(direction_t dir) noexcept {
+static direction_t inverse(direction_t dir) noexcept {
     switch(dir) {
         case direction_t::RIGHT: return direction_t::LEFT;
         case direction_t::DOWN: return direction_t::UP;
@@ -100,8 +134,7 @@ direction_t inverse(direction_t dir) noexcept {
         default: return direction_t::DOWN;
     }
 }
-
-direction_t rot_left(direction_t dir) noexcept {
+static direction_t rot_left(direction_t dir) noexcept {
     switch(dir) {
         case direction_t::RIGHT: return direction_t::UP;
         case direction_t::DOWN: return direction_t::RIGHT;
@@ -110,8 +143,7 @@ direction_t rot_left(direction_t dir) noexcept {
         default: return direction_t::LEFT;
     }
 }
-
-direction_t rot_right(direction_t dir) noexcept {
+static direction_t rot_right(direction_t dir) noexcept {
     switch(dir) {
         case direction_t::RIGHT: return direction_t::DOWN;
         case direction_t::DOWN: return direction_t::LEFT;
@@ -120,11 +152,24 @@ direction_t rot_right(direction_t dir) noexcept {
         default: return direction_t::RIGHT;
     }
 }
-
-direction_t next_rnd_dir() noexcept {
+static direction_t next_rnd_dir() noexcept {
     int r = (int)std::round(next_rnd() * float(4 - 0) + float(0)) % 4;
     return (direction_t)r;
 }
+
+///
+///
+
+static bool DEBUG_ON = false;
+static bool debug_gfx1 = false;
+static bool debug_gfx2 = false;
+static std::string record_bmpseq_basename;
+static uint64_t t_start = 0; // [ms]
+
+static strategy_t erna_mode = strategy_t::attract;
+static float erna_mode_to = number(strategy_duration_t::attract);
+
+///
 
 struct Connector {
     point_t a, b;
@@ -362,7 +407,7 @@ class Maze {
     }
 
     point_t get_random_upper_pos() const noexcept {
-        return {jau::next_rnd(box1.bl.x, box1.tr.x), jau::next_rnd(home_ext.tr.y, box1.tr.y)};
+        return {jau::next_rnd(box1.bl.x+2, box1.tr.x-2), jau::next_rnd(home_ext.tr.y+2, box1.tr.y-2)};
     }
 
     void draw() const noexcept {
@@ -408,7 +453,7 @@ class Maze {
         fprintf(out, "\n");
     }
 };
-Maze maze;
+static Maze maze;
 
 constexpr int round_center(float &f, float &d) noexcept {
     const float r = std::round(f);
@@ -417,7 +462,7 @@ constexpr int round_center(float &f, float &d) noexcept {
     return int(r);
 }
 
-constexpr bool crossed_center(const point_t &p, const vec_t &d) noexcept {
+static bool crossed_center(const point_t &p, const vec_t &d) noexcept {
     bool rx, ry;
     if (d.x < 0) {
         const float frac = std::ceil(p.x) - p.x; // left
@@ -547,45 +592,6 @@ struct spos_t {
         return !hit;
     }
 };
-
-enum class strategy_t {
-    attract,
-    escape,
-    random,
-    seek_pos
-};
-const char *to_string(strategy_t v) noexcept {
-    switch(v) {
-        case strategy_t::attract:  return "attrac";
-        case strategy_t::escape:   return "escape";
-        case strategy_t::random:   return "random";
-        case strategy_t::seek_pos: return "seekpo";
-        default: return "undefined";
-    }
-}
-
-enum class strategy_duration_t {
-    attract = 30,
-    escape  = 30,
-    random  = 10
-};
-constexpr float number(strategy_duration_t v) noexcept { return static_cast<float>(v); }
-
-strategy_t erna_mode = strategy_t::attract;
-[[maybe_unused]] float erna_mode_to = number(strategy_duration_t::attract);
-
-enum class player_id_t {
-  fritzchen,
-  erna
-};
-
-enum class score_t {
-    ball_hit          =    10,
-    erna_home_attract =   100,
-    erna_home_random  =  1000,
-    erna_home_escape  = 10000
-};
-constexpr int number(score_t v) noexcept { return static_cast<int>(v); }
 
 class Player {
   private:
@@ -834,14 +840,14 @@ class Player {
         }
     }
 };
-Player fritzchen(player_id_t::fritzchen);
-Player erna(player_id_t::erna);
+static Player fritzchen(player_id_t::fritzchen);
+static Player erna(player_id_t::erna);
 
 bool Player::test_ball_erna(physiks::ball_t &ball) const noexcept {
     return erna.m_aabbox.intersects(ball.box());
 }
 
-float calc_min_dist(const point_t &src, const point_t &dest) noexcept {
+static float calc_min_dist(const point_t &src, const point_t &dest) noexcept {
     float l1 = (dest - src).length();
     float l2 = std::numeric_limits<float>::max();
     for(const Connector &c : maze.connectors) {
@@ -855,7 +861,7 @@ float calc_min_dist(const point_t &src, const point_t &dest) noexcept {
     return std::min(l1, l2);
 }
 
-void erna_bot_tick(float dt) {
+static void erna_bot_tick(float dt) {
     static point_t stored_seek_pos;
     point_t target_pos;
 
@@ -867,32 +873,49 @@ void erna_bot_tick(float dt) {
         }
     } else {
         target_pos = fritzchen.pos();
-        if (erna_mode_to >= dt) {
-            erna_mode_to -= dt;
-        } else {
-            switch (erna_mode) {
-                case strategy_t::attract:
-                    erna_mode = strategy_t::escape;
-                    erna_mode_to = number(strategy_duration_t::escape);
-                    break;
-                case strategy_t::escape:
-                    erna_mode = strategy_t::random;
-                    erna_mode_to = number(strategy_duration_t::random);
-                    break;
-                case strategy_t::random:
-                default:
-                    erna_mode = strategy_t::attract;
-                    erna_mode_to = number(strategy_duration_t::attract);
-                    break;
+        if (fritzchen.contains(erna.pos())) {
+            if(erna_mode == strategy_t::attract) {
+                erna_mode = strategy_t::escape;
+                erna_mode_to = number(strategy_duration_t::escape);
+            } else {
+                if(erna_mode == strategy_t::escape) {
+                    fritzchen.score() += number(score_t::erna_tick_escape);
+                }
+                stored_seek_pos = maze.get_random_upper_pos();
+                target_pos = stored_seek_pos;
+                erna_mode = strategy_t::seek_pos;
+                erna_mode_to = number(strategy_duration_t::seekpos);
             }
-        }
-        if (maze.home_int.contains(erna.pos())) {
+        } else if (maze.home_int.contains(erna.pos())) {
             fritzchen.score() += erna_mode == strategy_t::attract ?
                 number(score_t::erna_home_attract) :
                 (erna_mode == strategy_t::escape ? number(score_t::erna_home_escape) : number(score_t::erna_home_random));
             stored_seek_pos = maze.get_random_upper_pos();
             target_pos = stored_seek_pos;
             erna_mode = strategy_t::seek_pos;
+            erna_mode_to = number(strategy_duration_t::seekpos);
+        }
+    }
+    if (erna_mode_to >= dt) {
+        erna_mode_to -= dt;
+    } else {
+        switch (erna_mode) {
+            case strategy_t::attract:
+                [[fallthrough]];
+            case strategy_t::seek_pos:
+                erna_mode = strategy_t::escape;
+                erna_mode_to = number(strategy_duration_t::escape);
+                break;
+            case strategy_t::escape:
+                erna_mode = strategy_t::random;
+                erna_mode_to = number(strategy_duration_t::random);
+                break;
+            case strategy_t::random:
+                [[fallthrough]];
+            default:
+                erna_mode = strategy_t::attract;
+                erna_mode_to = number(strategy_duration_t::attract);
+                break;
         }
     }
 
@@ -992,20 +1015,27 @@ void erna_bot_tick(float dt) {
     }
 }
 
-uint64_t t_start = 0; // [ms]
-uint64_t frame_count_total = 0;
+///
+///
 
-void reset_globals() {
-    t_start = 0;
-    frame_count_total = 0;
+static void reset_all() noexcept {
+    t_start = jau::getElapsedMillisecond();
+    fritzchen.reset();
+    erna.reset();
+    erna_mode = strategy_t::attract;
+    erna_mode_to = number(strategy_duration_t::attract);
+    erna.setDir(direction_t::LEFT);
 }
 
 void mainloop() {
+    static uint64_t frame_count_total = 0;
+    static uint64_t snap_count = 0;
     static uint64_t t_last = getElapsedMillisecond();  // [ms]
     static pixel::input_event_t event;
     static bool animating = true;
-    constexpr static float text_height = 1.0f;
+    constexpr float text_height = 1.0f;
 
+    bool do_snapshot = false;
     const uint64_t t1 = getElapsedMillisecond();      // [ms]
     const float dt = (float)(t1 - t_last) / 1000.0f;  // [s]
     t_last = t1;
@@ -1026,16 +1056,16 @@ void mainloop() {
         } else if (event.pressed_and_clr(pixel::input_event_type_t::WINDOW_RESIZED)) {
             pixel::cart_coord.set_fitting(0.0f, 0.0f, maze.screen_dim.x, maze.screen_dim.y);
         } else if (event.pressed(pixel::input_event_type_t::RESET)) {
-            fritzchen.reset();
-            erna.reset();
-        }
-        if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION2)) {
+            reset_all();
+        } else if( event.released_and_clr(pixel::input_event_type_t::F12) ) {
+            do_snapshot = true;
+        } else if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION3)) {
+            fritzchen.setRun(false);
+        } else if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION2)) {
             fritzchen.throwBall();
         }
         if (event.pressed(pixel::input_event_type_t::P2_ACTION3)) {
             fritzchen.setRun(true);
-        } else if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION3)) {
-            fritzchen.setRun(false);
         }
         if (event.paused()) {
             animating = false;
@@ -1050,11 +1080,10 @@ void mainloop() {
 
     static point_t text_tl = {0, maze.screen_dim.y};
     std::vector<pixel::texture_ref> hud_texts = {
-        pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f, score %4.4d, erna[%s, %.1fs]",
-            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(),
-            fritzchen.score(), to_string(erna_mode), erna_mode_to),
-        pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "run-e %2.2f, throw-e %2.2f, %2.2f/%2.2f",
-            fritzchen.ausdauer(), fritzchen.ball_velo(), fritzchen.pos().x, fritzchen.pos().y)
+        pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f, score %4.4d",
+            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), fritzchen.score()),
+        pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "run %2.2f, ball %2.2f, erna[%s, %.1fs]",
+            fritzchen.ausdauer(), fritzchen.ball_velo(), to_string(erna_mode), erna_mode_to)
     };
 
     // white background
@@ -1083,7 +1112,7 @@ void mainloop() {
     }
 
     if (debug_gfx1) {
-        maze.draw_grid(pixel::f4::vec_t(127, 127, 127, 255));
+        maze.draw_grid(pixel::f4::vec_t(0.8f, 0.8f, 0.8f, 255));
     }
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
     maze.draw();
@@ -1111,6 +1140,19 @@ void mainloop() {
         }
     }
     pixel::swap_gpu_buffer();
+    if( record_bmpseq_basename.size() > 0 ) {
+        std::string snap_fname(128, '\0');
+        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "%s-%7.7" PRIu64 ".bmp", record_bmpseq_basename.c_str(), frame_count_total);
+        snap_fname.resize(written);
+        pixel::save_snapshot(snap_fname);
+    }
+    if( do_snapshot ) {
+        std::string snap_fname(128, '\0');
+        const int written = std::snprintf(&snap_fname[0], snap_fname.size(), "fritzchen-%7.7" PRIu64 ".bmp", snap_count++);
+        snap_fname.resize(written);
+        pixel::save_snapshot(snap_fname);
+        printf("Snapshot written to %s\n", snap_fname.c_str());
+    }
     ++frame_count_total;
 }
 
@@ -1132,8 +1174,23 @@ int main(int argc, char *argv[])
             } else if( 0 == strcmp("-maze", argv[i]) && i+1<argc) {
                 maze_name= argv[i+1];
                 ++i;
+            } else if( 0 == strcmp("-fps", argv[i]) && i+1<argc) {
+                pixel::set_gpu_forced_fps(atoi(argv[i+1]));
+                ++i;
+            } else if( 0 == strcmp("-debug_gfx", argv[i]) ) {
+                debug_gfx1 = true;
+            } else if( 0 == strcmp("-debug_gfx2", argv[i]) ) {
+                debug_gfx2 = true;
+            } else if( 0 == strcmp("-record", argv[i]) && i+1<argc) {
+                record_bmpseq_basename = argv[i+1];
+                ++i;
             }
         }
+        const uint64_t elapsed_ms = getElapsedMillisecond();
+        log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
+        log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
+        log_printf(elapsed_ms, "- debug_gfx1 %d\n", debug_gfx1);
+        log_printf(elapsed_ms, "- debug_gfx2 %d\n", debug_gfx2);
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
@@ -1167,8 +1224,3 @@ int main(int argc, char *argv[])
     #endif
     return 0;
 }
-
-/**
- * TODO
- * - gameplay
- */
