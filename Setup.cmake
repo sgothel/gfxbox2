@@ -32,6 +32,12 @@ message (STATUS "OS_NAME ${OS_NAME}")
 message (STATUS "OS_ARCH ${OS_ARCH} (${CMAKE_SYSTEM_PROCESSOR})")
 message (STATUS "OS_AND_ARCH ${OS_AND_ARCH}")
 
+include(CheckIPOSupported)
+check_ipo_supported(RESULT TOOLCHAIN_SUPPORTS_IPO OUTPUT error)
+set(TOOLCHAIN_SUPPORTS_IPO "${TOOLCHAIN_SUPPORTS_IPO}" CACHE BOOL "" FORCE)
+set(USE_LTO_FOR_ALL_TARGETS ${USE_LTO_FOR_ALL_TARGETS} CACHE BOOL "" FORCE)
+message (STATUS "USE_LTO_FOR_ALL_TARGETS ${USE_LTO_FOR_ALL_TARGETS}")
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(DEFINED CMAKE_CXX_CLANG_TIDY)
@@ -141,6 +147,15 @@ else()
     #set(${PROJECT_NAME}_STATIC_LINKER_FLAGS ${${PROJECT_NAME}_STATIC_LINKER_FLAGS} "-frtti")
     set(${PROJECT_NAME}_EXE_LINKER_FLAGS ${${PROJECT_NAME}_EXE_LINKER_FLAGS} "-frtti")
 endif(DONT_USE_RTTI)
+
+if(USE_LTO_FOR_ALL_TARGETS AND TOOLCHAIN_SUPPORTS_IPO)
+    message(STATUS "JaulibSetup: LTO enabled for all targets (user config)")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+elseif(CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+    message(STATUS "JaulibSetup: LTO enabled for all targets (cmake config)")
+else()
+    message(STATUS "JaulibSetup: LTO not enabled for all targets")
+endif()
 
 if(NOT EMSCRIPTEN)
     if(${OS_NAME} STREQUAL "freebsd")
