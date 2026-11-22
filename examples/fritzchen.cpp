@@ -37,12 +37,14 @@
 #include <pixel/pixel2i.hpp>
 #include <pixel/pixel4f.hpp>
 #include <pixel/pixel.hpp>
+#include "pixel/audio.hpp"
 #include <pixel/dynarray2d.hpp>
 #include <physics.hpp>
 
 using namespace jau;
 using namespace jau::si_f32_literals;
 using namespace pixel::f2;
+using namespace jau::audio;
 
 enum class player_id_t {
   fritzchen,
@@ -168,6 +170,19 @@ static uint64_t t_start = 0; // [ms]
 
 static strategy_t erna_mode = strategy_t::attract;
 static float erna_mode_to = number(strategy_duration_t::attract);
+
+constexpr int audio_ball_maxvol = MIX_MAX_VOLUME/4;
+static audio_sample_ref audio_ball;
+
+static bool load_samples() {
+    if( jau::audio::is_audio_subsystem_initialized() ) {
+        audio_ball = std::make_shared<jau::audio::audio_sample_t>("fritzchen/ball-1bounce.ogg", false, audio_ball_maxvol);
+        return true;
+    } else {
+        audio_ball = std::make_shared<jau::audio::audio_sample_t>();
+        return false;
+    }
+}
 
 ///
 
@@ -748,6 +763,7 @@ class Player {
             false /* reset */) );
         m_balls.back()->boost_factor = 1;
         m_balls.back()->brake_factor = 1;
+        m_balls.back()->bounce_callback = [](const physiks::ball_t &) { audio_ball->play(); };
         m_ball_velo_s = ball_velocity_min;
         return true;
     }
@@ -1027,6 +1043,19 @@ static void reset_all() noexcept {
     erna.setDir(direction_t::LEFT);
 }
 
+#if defined(__EMSCRIPTEN__)
+    static void init_audio() {
+        jau::audio::init_audio_subsystem(MIX_INIT_OGG, MIX_INIT_OGG);
+        load_samples();
+    }
+    extern "C" {
+        EMSCRIPTEN_KEEPALIVE void reset_game() noexcept { reset_all(); }
+        EMSCRIPTEN_KEEPALIVE void start_audio() noexcept { init_audio(); reset_game(); }
+        EMSCRIPTEN_KEEPALIVE void set_game_fps(int v) noexcept { pixel::set_gpu_forced_fps(v); reset_game(); }
+        EMSCRIPTEN_KEEPALIVE void set_debug_gfx(bool v) noexcept { debug_gfx1 = v; }
+    }
+#endif
+
 void mainloop() {
     static uint64_t frame_count_total = 0;
     static uint64_t snap_count = 0;
@@ -1217,6 +1246,10 @@ int main(int argc, char *argv[])
     erna = Player(player_id_t::erna, maze.erna_start);
     erna.setDir(direction_t::LEFT);
 
+    #if !defined(__EMSCRIPTEN__)
+        jau::audio::init_audio_subsystem(MIX_INIT_OGG, MIX_INIT_OGG);
+    #endif
+    load_samples();
     #if defined(__EMSCRIPTEN__)
         emscripten_set_main_loop(mainloop, 0, 1);
     #else

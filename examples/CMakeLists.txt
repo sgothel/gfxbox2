@@ -4,10 +4,9 @@ include_directories(
 
 # These examples use the standard separate compilation
 if (DEFINED EMSCRIPTEN)
-    set(SOURCES_IDIOMATIC_TARGETS "car.cpp;tictactoe.cpp;spacewars.cpp;spaceinv01.cpp;canonball.cpp;piviz.cpp;freefall01.cpp;pong01.cpp;tron.cpp;sandbox01.cpp;solarsystem.cpp;example01.cpp")
+    set(SOURCES_IDIOMATIC_TARGETS "canonball.cpp;car.cpp;example01.cpp;freefall01.cpp;fritzchen.cpp;piviz.cpp;pong01.cpp;sandbox01.cpp;solarsystem.cpp;spaceinv01.cpp;spacewars.cpp;tictactoe.cpp;tron.cpp")
 else()
     file(GLOB SOURCES_IDIOMATIC_TARGETS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "*.cpp")
-#    set(SOURCES_IDIOMATIC_TARGETS "jagd.cpp;tictactoe.cpp;kreis.cpp;spacewars.cpp;spaceinv01.cpp;canonball.cpp;solarsystem.cpp;tron.cpp;panzer.cpp;car.cpp;sandbox01.cpp;pong01.cpp")
 endif()
 
 string( REPLACE ".cpp" "" BASENAMES_IDIOMATIC_TARGETS "${SOURCES_IDIOMATIC_TARGETS}" )
@@ -34,6 +33,10 @@ foreach( name ${BASENAMES_IDIOMATIC_TARGETS} )
             configure_file(${PROJECT_SOURCE_DIR}/resources/spaceinv/alienX.wav resources/spaceinv/alienX.wav COPYONLY)
             configure_file(${PROJECT_SOURCE_DIR}/resources/spaceinv/baseX.wav resources/spaceinv/baseX.wav COPYONLY)
             configure_file(${PROJECT_SOURCE_DIR}/resources/spaceinv/peng.wav resources/spaceinv/peng.wav COPYONLY)
+        elseif(${name} STREQUAL "fritzchen")
+            message(STATUS "Target ${name}: Adding resources: fritzchen")
+            configure_file(${PROJECT_SOURCE_DIR}/resources/fritzchen/maze4.txt resources/fritzchen/maze4.txt COPYONLY)
+            configure_file(${PROJECT_SOURCE_DIR}/resources/fritzchen/ball-1bounce.ogg resources/fritzchen/ball-1bounce.ogg COPYONLY)
         else()
             message(STATUS "Target ${name}: Adding resources: none")
         endif()
