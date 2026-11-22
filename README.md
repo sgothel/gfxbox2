@@ -74,7 +74,7 @@ After complete clang installation, you might want to setup the latest version as
 For Debian you can use this [clang alternatives setup script](https://jausoft.com/cgit/cs_class/gfxbox2.git/tree/scripts/setup_clang_alternatives.sh).
 
 #### WebAssembly (via emscripten)
-At time of writing (Debian 12), it is recommended to install
+At time of writing (Debian 13), it is recommended to install
 [emscripten >= 7.0.0](https://emscripten.org/) for WebAssembly (Wasm)
 from [its upstream source](https://emscripten.org/docs/getting_started/downloads.html).
 
@@ -101,7 +101,7 @@ git pull
 source ./emsdk_env.sh
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-At a later time (more recent Debian > 12 deployment) the Debian default may be functional:
+At a later time (more recent Debian > 13 deployment) the Debian default may be functional:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
 apt install emscripten
