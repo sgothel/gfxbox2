@@ -615,8 +615,8 @@ class Player {
     constexpr static si_length_f32 shoulder_height = height*0.6f;
     constexpr static si_length_f32 arm_width = width*0.20f;
     constexpr static si_length_f32 leg_width = width*0.25f;
-    constexpr static float max_ausdauer = 10;
-    constexpr static float recovery_time = 10; // [s] of max_ausdauer
+    constexpr static float max_ausdauer = 3_s;
+    constexpr static float recovery_time = 10_s; // [s] of max_ausdauer
     constexpr static float recovery_per_second = max_ausdauer / recovery_time; // [ausdauer/s]
     constexpr static direction_t start_dir = direction_t::LEFT;
     constexpr static si_length_f32 nose_length = height/6;
@@ -800,9 +800,9 @@ class Player {
         }
         vec_t d = m_velocity_v * dt; // [m/s] * [s] = [m]
         if(m_run) {
-            m_ausdauer -= 2.0f*recovery_per_second * dt;
+            m_ausdauer -= dt;
             if( m_ausdauer > 0 ) {
-                d = ( float(m_run) + 1.0f ) * m_velocity_v * dt; // [m/s] * [s] = [m]
+                d *= 1.5f;
             } else {
                 m_ausdauer = 0;
             }
@@ -1111,7 +1111,7 @@ void mainloop() {
     std::vector<pixel::texture_ref> hud_texts = {
         pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f, score %4.4d",
             to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), fritzchen.score()),
-        pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "run %2.2f, ball %2.2f, erna[%s, %.1fs]",
+        pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "run %2.1f, ball %2.1f, erna[%s, %.1fs]",
             fritzchen.ausdauer(), fritzchen.ball_velo(), to_string(erna_mode), erna_mode_to)
     };
 
