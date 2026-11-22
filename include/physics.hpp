@@ -26,6 +26,8 @@ namespace physiks {
     class ball_t;
     typedef std::shared_ptr<ball_t> ball_ref_t;
 
+    typedef void (*ball_bounce_callback_t)(const ball_t &);
+
     class ball_t : public disk_t {
       public:
         /**
@@ -81,6 +83,7 @@ namespace physiks {
         float min_velocity;
         float boost_factor = 1.5f;
         float brake_factor = 0.9f;
+        ball_bounce_callback_t bounce_callback = nullptr;
 
       private:
         std::vector<rect_ref_t> player_pads;
@@ -363,6 +366,9 @@ namespace physiks {
             }
             if( nullptr != coll_obj ) {
                 // collision
+                if (bounce_callback) {
+                    bounce_callback(*this);
+                }
                 if(has_gravity){
                     // reconstruct distance post collision, minimum to surface
                     vec_t vec_post_coll = l_move.p1 - coll_point;
