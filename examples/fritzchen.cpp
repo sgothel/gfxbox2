@@ -54,7 +54,7 @@ enum class player_id_t {
 enum class score_t {
     ball_hit          =    10,
     erna_home_attract =   100,
-    erna_tick_escape  =   400,
+    erna_tic_escape   =   400,
     erna_home_random  =  1000,
     erna_home_escape  = 10000
 };
@@ -172,14 +172,16 @@ static strategy_t erna_mode = strategy_t::attract;
 static float erna_mode_to = number(strategy_duration_t::attract);
 
 constexpr int audio_ball_maxvol = MIX_MAX_VOLUME/4;
-static audio_sample_ref audio_ball;
+static audio_sample_ref audio_ball, audio_tic;
 
 static bool load_samples() {
     if( jau::audio::is_audio_subsystem_initialized() ) {
         audio_ball = std::make_shared<jau::audio::audio_sample_t>("fritzchen/ball-1bounce.ogg", false, audio_ball_maxvol);
+        audio_tic = std::make_shared<jau::audio::audio_sample_t>("fritzchen/eatfruit.ogg", false, audio_ball_maxvol);
         return true;
     } else {
         audio_ball = std::make_shared<jau::audio::audio_sample_t>();
+        audio_tic = std::make_shared<jau::audio::audio_sample_t>();
         return false;
     }
 }
@@ -890,12 +892,13 @@ static void erna_bot_tick(float dt) {
     } else {
         target_pos = fritzchen.pos();
         if (fritzchen.contains(erna.pos())) {
+            audio_tic->play();
             if(erna_mode == strategy_t::attract) {
                 erna_mode = strategy_t::escape;
                 erna_mode_to = number(strategy_duration_t::escape);
             } else {
                 if(erna_mode == strategy_t::escape) {
-                    fritzchen.score() += number(score_t::erna_tick_escape);
+                    fritzchen.score() += number(score_t::erna_tic_escape);
                 }
                 stored_seek_pos = maze.get_random_upper_pos();
                 target_pos = stored_seek_pos;
@@ -903,6 +906,7 @@ static void erna_bot_tick(float dt) {
                 erna_mode_to = number(strategy_duration_t::seekpos);
             }
         } else if (maze.home_int.contains(erna.pos())) {
+            audio_tic->play();
             fritzchen.score() += erna_mode == strategy_t::attract ?
                 number(score_t::erna_home_attract) :
                 (erna_mode == strategy_t::escape ? number(score_t::erna_home_escape) : number(score_t::erna_home_random));
