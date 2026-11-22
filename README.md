@@ -17,19 +17,21 @@ Optional WebAssembly (Wasm) builds with SDL2 via [emscripten](https://emscripten
 
 ## Online WebAssembly Examples
 * Educational / Science
-  * [Solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html) - ([Sonnensystem Simulation](https://jausoft.com/cgit/cs_class/gfxbox2.git/plain/doc/Sonnensystem.pdf))
-  * [Piviz](https://jausoft.com/projects/gfxbox2/piviz.html) - ([π Visualisierung](https://jausoft.com/cgit/cs_class/gfxbox2.git/plain/doc/Projekt_Pi.pdf))
   * [Freefall](https://jausoft.com/projects/gfxbox2/freefall01.html)
   * [Funcdraw](https://jausoft.com/projects/gfxbox2/funcdraw.html)
+  * [Piviz](https://jausoft.com/projects/gfxbox2/piviz.html) - ([π Visualisierung](https://jausoft.com/cgit/cs_class/gfxbox2.git/plain/doc/Projekt_Pi.pdf))
+  * [Solarsystem](https://jausoft.com/projects/gfxbox2/solarsystem.html) - ([Sonnensystem Simulation](https://jausoft.com/cgit/cs_class/gfxbox2.git/plain/doc/Sonnensystem.pdf))
 * Our Games
-  * [Spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
   * [Canonball](https://jausoft.com/projects/gfxbox2/canonball.html)
-  * [Tron](https://jausoft.com/projects/gfxbox2/tron.html)
+  * [Car](https://jausoft.com/projects/gfxbox2/car.html) - ([readme](examples/README.Car.html))
+  * [Fritzchen](https://jausoft.com/projects/gfxbox2/fritzchen.html)
+  * [Spacewars](https://jausoft.com/projects/gfxbox2/spacewars.html)
   * [Tic-tac-toe or 五子棋 (wu zi qi)](https://jausoft.com/projects/gfxbox2/tictactoe.html)
+  * [Tron](https://jausoft.com/projects/gfxbox2/tron.html)
 * Game Classics / Homages
+  * [Pacman](https://jausoft.com/projects/gfxbox2/pacman.html) - ([readme](examples/pacman/README.md))
   * [Pong](https://jausoft.com/projects/gfxbox2/pong01.html)
   * [Space Invaders](https://jausoft.com/projects/gfxbox2/spaceinv01.html)
-  * [Pacman](https://jausoft.com/projects/gfxbox2/pacman.html) - ([readme](examples/pacman/README.md))
 * Boilerplates / Tests
   * [Example01](https://jausoft.com/projects/gfxbox2/example01.html)
   * [Sandbox01](https://jausoft.com/projects/gfxbox2/sandbox01.html)
