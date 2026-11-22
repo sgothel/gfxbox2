@@ -361,6 +361,10 @@ class Maze {
         return true;
     }
 
+    point_t get_random_upper_pos() const noexcept {
+        return {jau::next_rnd(box1.bl.x, box1.tr.x), jau::next_rnd(home_ext.tr.y, box1.tr.y)};
+    }
+
     void draw() const noexcept {
         for (const auto &l : h_lines) { l.draw(); }
         for (const auto &l : v_lines) { l.draw(); }
@@ -545,10 +549,20 @@ struct spos_t {
 };
 
 enum class strategy_t {
-    escape,
     attract,
-    random
+    escape,
+    random,
+    seek_pos
 };
+const char *to_string(strategy_t v) noexcept {
+    switch(v) {
+        case strategy_t::attract:  return "attrac";
+        case strategy_t::escape:   return "escape";
+        case strategy_t::random:   return "random";
+        case strategy_t::seek_pos: return "seekpo";
+        default: return "undefined";
+    }
+}
 
 enum class strategy_duration_t {
     attract = 30,
@@ -588,6 +602,7 @@ class Player {
     constexpr static si_velo_f32 def_velocity = 7.0f; // [m/s]
     constexpr static size_t max_balls = 10;
     constexpr static const float ball_radius = 20_cm;
+    constexpr static const float ball_angle = 10_deg;
     constexpr static const float ball_velocity_min = 11_m_s; // [m/s]
     constexpr static const float ball_velocity_max = 25_m_s; //
     player_id_t m_id;
@@ -722,7 +737,7 @@ class Player {
         }
         m_balls.push_back( physiks::ball_t::createZeroG("ballFritz",
             nasenpos(), ball_radius, m_ball_velo_s,
-            dir_to_angle(dir()) + jau::adeg_to_rad(45), // angle/direction of velocity: Fritz + 45deg
+            dir_to_angle(dir()) + ball_angle, // angle/direction of velocity: Fritz + ball_angle
             m_ball_velo_s, // max velocity (scalar)
             false /* reset */) );
         m_balls.back()->boost_factor = 1;
@@ -799,6 +814,10 @@ class Player {
         return m_center.step(dir, d);
     }
 
+    bool contains(const point_t &p) const noexcept {
+        return m_aabbox.contains(p);
+    }
+
     void draw() noexcept {
         m_head.draw(false);
         m_shoulders.draw(false);
@@ -837,34 +856,53 @@ float calc_min_dist(const point_t &src, const point_t &dest) noexcept {
 }
 
 void erna_bot_tick(float dt) {
-#if 1
-    if (erna_mode_to >= dt) {
-        erna_mode_to -= dt;
+    static point_t stored_seek_pos;
+    point_t target_pos;
+
+    if(erna_mode == strategy_t::seek_pos) {
+        target_pos = stored_seek_pos;
+        if ((target_pos - erna.pos()).length() < 2.0f) {
+            erna_mode = strategy_t::escape;
+            erna_mode_to = number(strategy_duration_t::escape);
+        }
     } else {
-        switch (erna_mode) {
-            case strategy_t::attract:
-                erna_mode = strategy_t::escape;
-                erna_mode_to = number(strategy_duration_t::escape);
-                break;
-            case strategy_t::escape:
-                erna_mode = strategy_t::random;
-                erna_mode_to = number(strategy_duration_t::random);
-                break;
-            case strategy_t::random:
-            default:
-                erna_mode = strategy_t::attract;
-                erna_mode_to = number(strategy_duration_t::attract);
-                break;
+        target_pos = fritzchen.pos();
+        if (erna_mode_to >= dt) {
+            erna_mode_to -= dt;
+        } else {
+            switch (erna_mode) {
+                case strategy_t::attract:
+                    erna_mode = strategy_t::escape;
+                    erna_mode_to = number(strategy_duration_t::escape);
+                    break;
+                case strategy_t::escape:
+                    erna_mode = strategy_t::random;
+                    erna_mode_to = number(strategy_duration_t::random);
+                    break;
+                case strategy_t::random:
+                default:
+                    erna_mode = strategy_t::attract;
+                    erna_mode_to = number(strategy_duration_t::attract);
+                    break;
+            }
+        }
+        if (maze.home_int.contains(erna.pos())) {
+            fritzchen.score() += erna_mode == strategy_t::attract ?
+                number(score_t::erna_home_attract) :
+                (erna_mode == strategy_t::escape ? number(score_t::erna_home_escape) : number(score_t::erna_home_random));
+            stored_seek_pos = maze.get_random_upper_pos();
+            target_pos = stored_seek_pos;
+            erna_mode = strategy_t::seek_pos;
         }
     }
-#endif
+
     if (erna.is_center()) {
         constexpr int R = number(direction_t::RIGHT);
         constexpr int D = number(direction_t::DOWN);
         constexpr int L = number(direction_t::LEFT);
         constexpr int U = number(direction_t::UP);
         constexpr float d_threshold = 0.5f;
-        constexpr float d_threshold_bwd = 0.6f;
+        constexpr float d_threshold_bwd = 0.8f;
 
         const direction_t fwd_dir = erna.dir();
         const direction_t left_dir = rot_left(fwd_dir);
@@ -896,11 +934,10 @@ void erna_bot_tick(float dt) {
             } while (!dir_ok[number(new_dir)] || new_dir == bwd_dir);
         } else {
             // decision: find longest path
-            const point_t pf = fritzchen.pos();
-            const float d_fwd   = calc_min_dist(dir_pos[number(fwd_dir)].pos, pf);
-            const float d_right = calc_min_dist(dir_pos[number(right_dir)].pos, pf);
-            const float d_left  = calc_min_dist(dir_pos[number(left_dir)].pos, pf);
-            const float d_bwd   = calc_min_dist(dir_pos[number(bwd_dir)].pos, pf);
+            const float d_fwd   = calc_min_dist(dir_pos[number(fwd_dir)].pos, target_pos);
+            const float d_right = calc_min_dist(dir_pos[number(right_dir)].pos, target_pos);
+            const float d_left  = calc_min_dist(dir_pos[number(left_dir)].pos, target_pos);
+            const float d_bwd   = calc_min_dist(dir_pos[number(bwd_dir)].pos, target_pos);
 
             if (erna_mode == strategy_t::escape) {
                 float d_max = 0;
@@ -918,7 +955,7 @@ void erna_bot_tick(float dt) {
                 if( dir_ok[number(bwd_dir)] && d_bwd - d_max > d_threshold_bwd) {
                     new_dir = bwd_dir;
                 }
-            } else if (erna_mode == strategy_t::attract) {
+            } else if (erna_mode == strategy_t::attract || erna_mode == strategy_t::seek_pos) {
                 float d_min = std::numeric_limits<float>::max();
                 if( dir_ok[number(fwd_dir)] ) {
                     d_min = d_fwd;
@@ -948,6 +985,10 @@ void erna_bot_tick(float dt) {
     }
     if(!erna.tick(dt)) {
         printf("EEE: COLLISION: dir %c\n", dir_to_char(erna.dir())); // should not happen
+    }
+    if (debug_gfx1) {
+        pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
+        lineseg_t::draw(erna.pos(), target_pos);
     }
 }
 
@@ -1009,12 +1050,15 @@ void mainloop() {
 
     static point_t text_tl = {0, maze.screen_dim.y};
     std::vector<pixel::texture_ref> hud_texts = {
-        pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f/%d, score %4.4d",
+        pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f, score %4.4d, erna[%s, %.1fs]",
             to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(),
-            pixel::expected_fps(), fritzchen.score()),
+            fritzchen.score(), to_string(erna_mode), erna_mode_to),
         pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "run-e %2.2f, throw-e %2.2f, %2.2f/%2.2f",
             fritzchen.ausdauer(), fritzchen.ball_velo(), fritzchen.pos().x, fritzchen.pos().y)
     };
+
+    // white background
+    pixel::clear_pixel_fb(255, 255, 255, 255);
 
     if (animating) {
         // static/memorized cursor event
@@ -1037,9 +1081,6 @@ void mainloop() {
         fritzchen.tick(dt);
         erna_bot_tick(dt);
     }
-
-    // white background
-    pixel::clear_pixel_fb(255, 255, 255, 255);
 
     if (debug_gfx1) {
         maze.draw_grid(pixel::f4::vec_t(127, 127, 127, 255));
