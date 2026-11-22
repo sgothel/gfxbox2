@@ -100,31 +100,31 @@ static Mix_Chunk* Mix_LoadWAV2(const std::string& f) {
     }
 }
 jau::audio::audio_sample_t::audio_sample_t(const std::string &fname, const bool single_play, const int volume)
-: chunk(Mix_LoadWAV2(fname.c_str()), Mix_FreeChunk), channel_playing(-1), singly(single_play)
+: m_chunk(Mix_LoadWAV2(fname.c_str()), Mix_FreeChunk), m_channel_playing(-1), m_singly(single_play), m_volume(volume)
 {
-    if ( !chunk ) {
+    if ( !m_chunk ) {
         log_printf("Mix_LoadWAV: Load '%s' -> '%s' (asset dir '%s'), Error: %s\n", fname.c_str(), pixel::resolve_asset(fname).c_str(), pixel::asset_dir().c_str(), SDL_GetError());
     } else {
-        Mix_VolumeChunk(chunk.get(), volume);
+        Mix_VolumeChunk(m_chunk.get(), volume);
     }
 }
 
 void jau::audio::audio_sample_t::play(int loops) {
-    if ( audio_subsystem_init && nullptr != chunk.get() ) {
-        if( !singly || 0 > channel_playing || ( 0 <= channel_playing && 0 == Mix_Playing(channel_playing) ) ) {
-            channel_playing = Mix_PlayChannel(-1, chunk.get(), loops - 1);
+    if ( audio_subsystem_init && nullptr != m_chunk.get() ) {
+        if( !m_singly || 0 > m_channel_playing || ( 0 <= m_channel_playing && 0 == Mix_Playing(m_channel_playing) ) ) {
+            m_channel_playing = Mix_PlayChannel(-1, m_chunk.get(), loops - 1);
         }
     }
 }
-
 void jau::audio::audio_sample_t::stop() {
-    if( audio_subsystem_init && 0 <= channel_playing ) {
-        Mix_HaltChannel(channel_playing);
-        channel_playing = -1;
+    if( audio_subsystem_init && 0 <= m_channel_playing ) {
+        Mix_HaltChannel(m_channel_playing);
+        m_channel_playing = -1;
     }
 }
 void jau::audio::audio_sample_t::set_volume(int volume) {
-    if ( audio_subsystem_init && nullptr != chunk.get() ) {
-        Mix_VolumeChunk(chunk.get(), volume);
+    if ( audio_subsystem_init && nullptr != m_chunk.get() ) {
+        m_volume = volume;
+        Mix_VolumeChunk(m_chunk.get(), volume);
     }
 }

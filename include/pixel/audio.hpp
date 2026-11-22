@@ -56,13 +56,14 @@ namespace jau::audio {
 
     class audio_sample_t {
         private:
-            std::unique_ptr<Mix_Chunk, void (*)(Mix_Chunk *)> chunk;
-            int channel_playing;
-            bool singly;
+            std::unique_ptr<Mix_Chunk, void (*)(Mix_Chunk *)> m_chunk;
+            int m_channel_playing;
+            bool m_singly;
+            int m_volume;
 
         public:
             audio_sample_t()
-            : chunk(nullptr, nullptr), channel_playing(-1), singly(true) {}
+            : m_chunk(nullptr, nullptr), m_channel_playing(-1), m_singly(true), m_volume(MIX_MAX_VOLUME/2) {}
 
             /**
              * Create a new instance.
@@ -97,13 +98,15 @@ namespace jau::audio {
              */
             void set_volume(int volume);
 
+            int get_volume() const { return m_volume; }
+
             /**
              * If enabled, only allow to play this sample at one at a time, otherwise it may be played in parallel multiple times.
              * @param enable
              */
-            void set_single_play(bool enable) { singly = enable; }
+            void set_single_play(bool enable) { m_singly = enable; }
 
-            bool is_valid() const { return nullptr != chunk.get(); }
+            bool is_valid() const { return nullptr != m_chunk.get(); }
     };
     typedef std::shared_ptr<audio_sample_t> audio_sample_ref;
 
