@@ -111,6 +111,7 @@
   <span><input type="number" id="SetFuelPric" min="1" max="600" step="10" value="51" style="width: 5em;" onchange="setFul(this.value)"/>fuel price period</span>
   <span><input type="checkbox" id="set_debug_gfx" onclick="setDebugGFX(this.checked)">debug_gfx</span>
   <span><input type="checkbox" id="set_debug_prt" onclick="setDebugPRT(this.checked)">debug_prt</span>
+  <span><input type="checkbox" id="set_many_houses" onclick="setManyHouses(this.checked)">many_houses</span>
 </span>
 
     <div class="emscripten">
@@ -176,6 +177,7 @@
             wasm_set_ful = Module.cwrap('set_fuel_period', 'null', ['number']);
             wasm_set_debug_gfx = Module.cwrap('set_debug_gfx', 'null', ['boolean']);
             wasm_set_debug_prt = Module.cwrap('set_debug_prt', 'null', ['boolean']);
+            wasm_set_many_houses = Module.cwrap('set_many_houses', 'null', ['boolean']);
             maximizeCanvas(0.98);
         },
         preRun: [],
@@ -273,6 +275,11 @@
       function setDebugPRT(v) {
           if( null != wasm_set_debug_prt ) {
               wasm_set_debug_prt(v);
+          }
+      }
+      function setManyHouses(v) {
+          if( null != wasm_set_many_houses ) {
+              wasm_set_many_houses(v);
           }
       }
       function maximizeCanvas(scale) {

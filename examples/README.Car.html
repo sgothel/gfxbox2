@@ -429,6 +429,7 @@
   <li><a href="#police-car" id="toc-police-car">Police car</a></li>
   <li><a href="#daynight-period" id="toc-daynight-period">Day/Night
   period</a></li>
+  <li><a href="#houses" id="toc-houses">Houses</a></li>
   </ul></li>
   </ul></li>
   </ul>
@@ -535,6 +536,7 @@ stops to refueling</li>
 <li>if the fuel can have less fuel than the maximum and the car is
 refueling, the fuel can will be refuels at first</li>
 <li>at beginning, the fuel can and the tank are full</li>
+<li>the fuel price changes in default every 51 seconds</li>
 <li>the gas station is marked with a <code>F</code></li>
 </ul>
 <h3 id="stability">Stability</h3>
@@ -580,7 +582,8 @@ at Mode: Park)</li>
 </ul>
 <h3 id="tunnel">Tunnel</h3>
 <ul>
-<li>one car can makes tunnels for 10 minute</li>
+<li>one car can makes one tunnels for 30 seconds, if the car exceeds
+this time, it loses a life</li>
 <li>if the car makes a tunnel, the car gets money</li>
 <li>if a car drives on a tunnel (a circel with it index under it) the
 car is in the tunnel: Than you see, that the car does not moves and the
@@ -623,21 +626,51 @@ limit.</li>
 <li>so the punish is the absolute velocity multiplicated with 15.</li>
 </ul></li>
 <li><p>the police car drives under the speed limit, exept:</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="kw">(</span><span class="ex">m_target-</span><span class="op">&gt;</span>m_punish <span class="op">&lt;</span> 1000<span class="kw">)</span> <span class="kw">{</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="ex">addToVelocity</span><span class="er">(</span><span class="ex">std::min</span><span class="er">(</span><span class="ex">{accel,</span> m_state.max_car_velo <span class="at">-</span> m_velocity, max_velo<span class="pp">*</span>0.9f <span class="at">-</span> m_velocity}<span class="kw">)</span><span class="ex">,</span> dt<span class="kw">);</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span> <span class="cf">else</span> <span class="cf">if</span><span class="kw">(</span><span class="ex">m_target-</span><span class="op">&gt;</span>m_punish <span class="op">&lt;</span> 5000<span class="kw">)</span> <span class="kw">{</span></span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="ex">addToVelocity</span><span class="er">(</span><span class="ex">std::min</span><span class="er">(</span><span class="ex">{accel,</span> m_state.max_car_velo <span class="at">-</span> m_velocity, max_velo<span class="pp">*</span>2.0f <span class="at">-</span> m_velocity}<span class="kw">)</span><span class="ex">,</span> dt<span class="kw">);</span></span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span> <span class="cf">else</span> <span class="kw">{</span></span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="ex">addToVelocity</span><span class="er">(</span><span class="ex">std::min</span><span class="er">(</span><span class="ex">accel,</span> m_state.max_car_velo <span class="at">-</span> m_velocity<span class="kw">)</span><span class="ex">,</span> dt<span class="kw">);</span></span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div>
+<h4 id="speed-limit">Speed Limit</h4>
 <ul>
-<li>if the total punish of the target (of the police car hunted car) is
-over 1000$ and under 5000$, the police car will drive under 2 * speed
-limit.</li>
-<li>if the total punish of the target is over 5000$, the police car has
-only the speed limit maximum velocity of it.</li>
-<li>but in all cases, the police car will drive not over its maximum
-velocity.</li>
+<li>gsl = global speed limit</li>
+<li>isl = individual speed limit of police car</li>
+</ul>
+<div class="sourceCode" id="cb6"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span><span class="kw">(</span><span class="ex">m_target-</span><span class="op">&gt;</span>m_punish <span class="op">&lt;</span> 1000<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>    <span class="ex">addToVelocity</span><span class="er">(</span><span class="ex">std::min</span><span class="er">(</span><span class="ex">{accel,</span> m_state.max_car_velo <span class="at">-</span> m_velocity, max_velo<span class="pp">*</span>0.9f <span class="at">-</span> m_velocity, </span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>        <span class="ex">day</span> <span class="pp">?</span> accel : 50_km_h <span class="at">-</span> m_velocity}<span class="kw">)</span><span class="ex">,</span> dt<span class="kw">);</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span> <span class="cf">else</span> <span class="cf">if</span><span class="kw">(</span><span class="ex">m_target-</span><span class="op">&gt;</span>m_punish <span class="op">&lt;</span> 5000<span class="kw">)</span> <span class="kw">{</span></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    <span class="ex">addToVelocity</span><span class="er">(</span><span class="ex">std::min</span><span class="er">(</span><span class="ex">{accel,</span> m_state.max_car_velo <span class="at">-</span> m_velocity, max_velo<span class="pp">*</span>2.0f <span class="at">-</span> m_velocity, </span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>        <span class="ex">day</span> <span class="pp">?</span> accel : 80_km_h <span class="at">-</span> m_velocity}<span class="kw">)</span><span class="ex">,</span> dt<span class="kw">);</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span> <span class="cf">else</span> <span class="kw">{</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>    <span class="ex">addToVelocity</span><span class="er">(</span><span class="ex">std::min</span><span class="er">(</span><span class="ex">{accel,</span> m_state.max_car_velo <span class="at">-</span> m_velocity, </span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>        <span class="ex">day</span> <span class="pp">?</span> accel : 120_km_h <span class="at">-</span> m_velocity}<span class="kw">)</span><span class="ex">,</span> dt<span class="kw">);</span></span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a><span class="kw">}</span></span></code></pre></div>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Punishment of target</th>
+<th>at day</th>
+<th>at night</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">&lt; 1000 $</td>
+<td>gsl &amp; isl</td>
+<td>gsl &amp; 50 km/h &amp; isl</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">&gt; 1000 $ and &lt; 5000 $</td>
+<td>2*gsl &amp; isl</td>
+<td>2*gsl &amp; 80 km/h &amp; isl</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">&gt; 5000 $</td>
+<td>isl</td>
+<td>120 km/h &amp; isl</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>&amp; means: e.g. <code>gsl &amp; isl</code>, speed limit is the
+smaller worth: if gsl is smaller than isl, speed limit = gsl, else speed
+limit = isl</li>
 </ul></li>
 <li><p>if a car collide with a house, three police cars comes:</p>
 <ul>
@@ -672,11 +705,7 @@ point)</p></li>
 <li><p>another example:</p></li>
 </ul>
 <p><img src="../resources/car/CarScreenShot02.png"
-style="width:50.0%" /></p>
-<ul>
-<li>here have two police car the same target point (exactly on the
-car)</li>
-</ul></li>
+style="width:50.0%" /></p></li>
 <li><p>(perspective of a police car) if no police car with the next id
 has less than the threefold difference to the targetted car as I or I
 reached my target point, I get the next id</p>
@@ -733,7 +762,7 @@ penalty</li>
 <td style="text-align: left;">black</td>
 </tr>
 <tr class="even">
-<td style="text-align: left;">housees</td>
+<td style="text-align: left;">houses</td>
 <td style="text-align: left;">black</td>
 <td style="text-align: left;">black</td>
 </tr>
@@ -767,13 +796,31 @@ penalty</li>
 <td style="text-align: left;">black</td>
 <td style="text-align: left;">gray</td>
 </tr>
+<tr class="odd">
+<td style="text-align: left;">parking places</td>
+<td style="text-align: left;">yellow</td>
+<td style="text-align: left;">blue</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">station’ places</td>
+<td style="text-align: left;">black</td>
+<td style="text-align: left;">black</td>
+</tr>
 </tbody>
 </table>
 <ul>
 <li>^ marks of the rectangles (fuel station <code>F</code> and repair
 station <code>R</code>)</li>
+<li>’ station: fuel station and repair station</li>
 </ul></li>
-<li><p>you can change while game the period length</p></li>
 </ul>
+<h3 id="houses">Houses</h3>
+<ul>
+<li>you can set boolean many_houses on, to get more houses</li>
+<li>are not destrurcteble</li>
+<li>have constant position</li>
+</ul>
+<h4 id="you-can-change-while-game-the-period-lengths">- you can change
+while game the period lengths</h4>
 </body>
 </html>

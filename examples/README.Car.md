@@ -23,7 +23,7 @@ Car is a game for two players. Each player has to drive a car.
 #### Global Speed Limit
 Don't violate the speed limit, otherwise the car will be hunted of one police car after 10 sec driving 10% above the limit.
 The speed limit changes every minute.
- 
+  
 #### Speed Status: Smiley
 - If the car velocity is under the speed limit the face will become: `:-)`.
 - If your car's velocity exceeds the speed limit but is still within the 10% tolerance, the face will become `:-|`.
@@ -52,6 +52,7 @@ the smaller worth is 240 km/h, else the other worth.
 - if the car is refueling and it drives out of the gas station, it stops to refueling
 - if the fuel can have less fuel than the maximum and the car is refueling, the fuel can will be refuels at first
 - at beginning, the fuel can and the tank are full
+- the fuel price changes in default every 51 seconds
 - the gas station is marked with a `F`
   
 ### Stability
@@ -91,7 +92,7 @@ the car gets a life, and the stability will set on zero
 - the number of lifes will be decreased if the stability is zero(look at Stability) or you aren't on the perking place after parking mode (see at Mode: Park)
 
 ### Tunnel
-- one car can makes tunnels for 10 minute
+- one car can makes one tunnels for 30 seconds, if the car exceeds this time, it loses a life
 - if the car makes a tunnel, the car gets money
 - if a car drives on a tunnel (a circel with it index under it) the car is in the tunnel:
 Than you see, that the car does not moves and the car is gray. If you accelerate, the car drives through the tunnel, but you do not see it.
@@ -127,19 +128,31 @@ If you drives backwards, the car comes at the same position out as it went in.
   - so the punish is the absolute velocity multiplicated with 15.
 - the police car drives under the speed limit, exept:
   
+  #### Speed Limit
+  - gsl = global speed limit
+  - isl = individual speed limit of police car
+    
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
   if(m_target->m_punish < 1000) {
-      addToVelocity(std::min({accel, m_state.max_car_velo - m_velocity, max_velo*0.9f - m_velocity}), dt);
+      addToVelocity(std::min({accel, m_state.max_car_velo - m_velocity, max_velo*0.9f - m_velocity, 
+          day ? accel : 50_km_h - m_velocity}), dt);
   } else if(m_target->m_punish < 5000) {
-      addToVelocity(std::min({accel, m_state.max_car_velo - m_velocity, max_velo*2.0f - m_velocity}), dt);
+      addToVelocity(std::min({accel, m_state.max_car_velo - m_velocity, max_velo*2.0f - m_velocity, 
+          day ? accel : 80_km_h - m_velocity}), dt);
   } else {
-    addToVelocity(std::min(accel, m_state.max_car_velo - m_velocity), dt);
+      addToVelocity(std::min({accel, m_state.max_car_velo - m_velocity, 
+          day ? accel : 120_km_h - m_velocity}), dt);
   }
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    
-  - if the total punish of the target (of the police car hunted car) is over 1000$ and under 5000$, the police car will drive under 2 * speed limit.
-  - if the total punish of the target is over 5000$, the police car has only the speed limit maximum velocity of it.
-  - but in all cases, the police car will drive not over its maximum velocity.
+   
+  Punishment of target | at day        | at night 
+  :--------------------|---------------|------------------
+  < 1000 $             | gsl & isl     | gsl & 50 km/h & isl
+  > 1000 $ and < 5000 $| 2*gsl & isl   | 2*gsl & 80 km/h & isl
+  > 5000 $             | isl           | 120 km/h & isl
+  
+  - & means: e.g. `gsl & isl`, speed limit is the smaller worth: if gsl is smaller than isl, speed limit = gsl, else speed limit = isl
+  
 - if a car collide with a house, three police cars comes:
   - one car has its target befor the targetted car
   - another car has its target exactly on the targetted car
@@ -174,7 +187,6 @@ If you drives backwards, the car comes at the same position out as it went in.
   
   ![](../resources/car/CarScreenShot02.png){width=50%}
   
-  - here have two police car the same target point (exactly on the car)
 - (perspective of a police car) if no police car with the next id has less than the threefold difference to the targetted car as I or I reached my target point, I get the next id
   
   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.sh}
@@ -219,14 +231,22 @@ If you drives backwards, the car comes at the same position out as it went in.
    Thing           | Color at day    | Color at night  |
    :---------------|:----------------|:----------------|
    background      | white           | black           |
-   housees         | black           | black           |
+   houses         | black           | black           |
    cars            | black           | white           |
    tunnel places   | green           | green           |
    tunnel          | black           | gray            |
    police cars     | blue            | red             |
    text            | black           | white           |
    marks^          | black           | gray            |
+   parking places  | yellow          | blue            |
+   station' places | black           | black           |
   
   - ^ marks of the rectangles (fuel station `F` and repair station `R`)
-  
-- you can change while game the period length
+  - ' station: fuel station and repair station
+
+### Houses
+- you can set boolean many_houses on, to get more houses
+- are not destrurcteble
+- have constant position
+
+#### - you can change while game the period lengths

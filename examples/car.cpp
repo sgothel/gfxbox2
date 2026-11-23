@@ -37,10 +37,9 @@ constexpr static int car_id_2 = 2;
 constexpr static int car_id_3 = 3;
 constexpr static int car_id_4 = 4;
 constexpr static int car_id_5 = 5;
-constexpr static si_velo_f32 start_max_velo = 50_km_h;
 constexpr static si_length_f32 text_height = 17_dm;
 static uint8_t lifes = 3;;
-si_velo_f32 max_velo = start_max_velo;
+si_velo_f32 max_velo;
 si_velo_f32 max_train_velo = 100_km_h;
 std::vector<geom_ref_t> aus_geom_list;
 std::vector<geom_ref_t> loc_geom_list;
@@ -50,6 +49,8 @@ static bool debug_gfx = false;
 static bool debug_prt = false;
 static float dollar_per_liter = 0;
 static bool day = true;
+static input_event_t event;
+static bool many_houses = false;
 
 float normalize(const float f) {
     return f / abs(f);
@@ -161,6 +162,8 @@ class Car {
     constexpr static si_time_f32 max_NTVT = 10_s; // No Tank and Velocity Time
     constexpr static si_time_f32 max_break_time = 1_s;
     constexpr static si_time_f32 max_allowed_stand_time = 30_s;
+    constexpr static si_accel_f32 velo_step = 40_m_s2;
+    constexpr static si_time_f32 max_tunnel_dig_time = 30_s;
 
     point_t tl1 = {
         cart_coord.min_x() + 3 * cart_coord.width() / 4, cart_coord.min_y() + 3_m};
@@ -182,7 +185,7 @@ class Car {
         float stability = max_stability; // the stability of car
         si_volume_f32 tank = max_tank; // the volume of fuel in the tank
         si_volume_f32 fuel_can = max_fuel_can; // the volume of fuel in the fuel can
-        si_time_f32 tunnel_digging_time = 10_min; // how long the car digged the last tunnel
+        si_time_f32 tunnel_digging_time = max_tunnel_dig_time; // car only can dig a tunnel 30 sec long
         si_velo_f32 max_car_velo = 240_km_h; // the maximum velocity of car
         float money = start_money; // money
         int life = lifes; // the lifes of the car
@@ -326,16 +329,16 @@ class Car {
 
     bool in_tunnel () { return m_state.inTunnel || m_state.digging_tunnel; }
     bool intersection(Car &o, const float dt) noexcept {
-        if(!intersects(o) && !in_tunnel() && !o.in_tunnel()) {
+        if(!intersects(o) || in_tunnel() || o.in_tunnel()) {
             return false;
         }
         const float pre_car1_velo = velocity();
-        decrease_stabil((std::abs(velocity()) + std::abs(o.velocity())) * 0.1f);
-        move(vec_t::from_length_angle(-velocity()*dt*2, velo_angle()));
-        stop();
-        o.decrease_stabil((std::abs(pre_car1_velo) + std::abs(o.velocity())) * 0.1f);
-        o.move(vec_t::from_length_angle(-o.velocity()*dt*2, o.velo_angle()));
-        o.stop();
+        m_state.stability -= ((std::abs(velocity()) + std::abs(o.velocity())) * 0.1f);
+        move(vec_t::from_length_angle(-velocity()*dt*2, m_angle));
+        m_velocity = 0;
+        o.m_state.stability -= ((std::abs(pre_car1_velo) + std::abs(o.velocity())) * 0.1f);
+        o.move(vec_t::from_length_angle(-o.velocity()*dt*2, o.m_angle));
+        o.m_velocity = 0;
         return true;
     }
 
@@ -362,38 +365,14 @@ class Car {
         }
     }
 
-    bool toggle_tankt() noexcept {
-        if(intersects(tankstelle)) {
-            m_state.refueling = !m_state.refueling;
-            return true;
-        }
-        return false;
-    }
-
-    bool toggle_repairing() noexcept {
-        if(intersects(werkstatt)) {
-            m_state.repairing = !m_state.repairing;
-            return true;
-        }
-        return false;
-    }
-
     const State& state() noexcept { return m_state; }
     float punish() const noexcept { return m_punish; }
     bool is_car_exploded() const noexcept { return m_state.life <= 0; }
-    bool toggle_put_can_in_tank() noexcept { return m_state.put_can_in_tank = !m_state.put_can_in_tank; }
-    bool toggle_digging_tunnel() noexcept { return m_state.digging_tunnel = !m_state.digging_tunnel; }
     bool set_tankt(const bool new_refueling) noexcept { return m_state.refueling = new_refueling; }
     bool set_repairing(const bool new_repairing) noexcept { return m_state.repairing = new_repairing; }
-    void released_brake() noexcept { m_state.brake_time = 0; }
     si_velo_f32 velocity() noexcept { return m_velocity; }
-    si_angle_f32 velo_angle() noexcept { return m_angle; }
-    const aabbox_t& box() noexcept { return m_aabbox; }
     void decrease_life() noexcept { --m_state.life; }
-    void decrease_stabil(const float minuent) noexcept { m_state.stability -= minuent; }
-    void stop() noexcept { m_velocity = 0; }
     const rect_t& parking_ground() noexcept { return m_parking_ground; }
-    void increase_brake_time(const si_time_f32 dt) noexcept { m_state.brake_time += dt; }
 
     void rotate(const float rad) noexcept {
         if(m_state.life <= 0){
@@ -461,11 +440,16 @@ class Car {
             }
             m_state.next_tunnel.addToLength(dt*m_velocity);
             m_state.tunnel_digging_time -= dt;
+            if(m_state.tunnel_digging_time <= 0) {
+                --m_state.life;
+                reset(false);
+            }
             m_state.money += 100 * dt;
             m_velocity *= 0.99f;
         } else {
             if(m_state.last_grab_tunnel){
                 bool b = true;
+                m_state.tunnel_digging_time = max_tunnel_dig_time;
                 for(const rect_t& r : TunnelsLicet) {
                     if(r.contains(m_rect_body.p_center)){
                         b = false;
@@ -520,11 +504,14 @@ class Car {
         vec_t diff = target_point - center;
         const float diff_length = diff.length();
         if(m_target->m_punish < 1000) {
-            addToVelocity(std::min({accel, m_state.max_car_velo - m_velocity, max_velo*0.9f - m_velocity}), dt);
+            addToVelocity(std::min({accel, m_state.max_car_velo - m_velocity, max_velo*0.9f - m_velocity, 
+                day ? accel : 50_km_h - m_velocity}), dt);
         } else if(m_target->m_punish < 5000) {
-            addToVelocity(std::min({accel, m_state.max_car_velo - m_velocity, max_velo*2.0f - m_velocity}), dt);
+            addToVelocity(std::min({accel, m_state.max_car_velo - m_velocity, max_velo*2.0f - m_velocity, 
+                day ? accel : 80_km_h - m_velocity}), dt);
         } else {
-            addToVelocity(std::min(accel, m_state.max_car_velo - m_velocity), dt);
+            addToVelocity(std::min({accel, m_state.max_car_velo - m_velocity, 
+                day ? accel : 120_km_h - m_velocity}), dt);
         }
         si_angle_f32 diff_angle = (diff.angle() - m_angle);
         set_pixel_color4f(1, 0, 1, 1);
@@ -831,7 +818,7 @@ class Car {
         }
         
         if(!m_target) {
-            set_pixel_color4f(1, 1, 0, 1);
+            set_pixel_color4f(day ? 1 : 0, day ? 1 : 0, day ? 0 : 1, 1);
             m_parking_ground.draw(true);
         }
 
@@ -856,7 +843,7 @@ class Car {
             if(m_state.digging_tunnel || m_state.inTunnel) {
                 set_pixel_color4f(0.5f, 0.5f, 0.5f, 0.5f);
             } else {
-                set_pixel_color(day ? f4::vec_t(0, 0, 0, 0) : f4::vec_t(0.6f, 0.6f, 0.6f, 0.6f));
+                set_pixel_color(day ? f4::vec_t(0, 0, 0, 0) : f4::vec_t(1, 1, 1, 1));
             }
         }
         m_rect_body.draw(false);
@@ -875,6 +862,46 @@ class Car {
 
     void set_lifes(const uint8_t new_life_number) noexcept {
         m_state.life += (new_life_number - lifes);
+    }
+    
+    void handle_event(const float dt) {
+        if(m_id > car_id_2) {
+            return;
+        }
+        if(event.has_any_pn(m_id)){
+            if( event.pressed(pixel::to_input_event(m_id, pixel::player_event_type_t::UP)) ) {
+                addToVelocity(velo_step, dt);
+            } else if (event.pressed(pixel::to_input_event(m_id, pixel::player_event_type_t::DOWN)) && !is_car_exploded()) {
+                addToVelocity(-velo_step, dt);
+            } else if (event.pressed(pixel::to_input_event(m_id, pixel::player_event_type_t::ACTION1))) {
+                if(velocity() > 0){
+                    addToVelocity(-std::min(3*velo_step,  velocity()), dt, true);
+                } else if(velocity() < 0) {
+                    addToVelocity( std::min(3*velo_step, -velocity()), dt, true);
+                }
+                if(velocity() != 0){
+                    m_state.brake_time += dt;
+                }
+            }
+            if (event.pressed(pixel::to_input_event(m_id, pixel::player_event_type_t::LEFT))) {
+                rotate( angle_step*dt);
+            } else if (event.pressed(pixel::to_input_event(m_id, pixel::player_event_type_t::RIGHT))) {
+                rotate(-angle_step*dt);
+            }
+        }
+        if(event.released_and_clr(pixel::to_input_event(m_id, pixel::player_event_type_t::ACTION1))){
+            m_state.brake_time = 0;
+        } else if(event.released_and_clr(pixel::to_input_event(m_id, pixel::player_event_type_t::ACTION2))) {
+            m_state.digging_tunnel = !m_state.digging_tunnel;
+        } else if(event.released_and_clr(pixel::to_input_event(m_id, pixel::player_event_type_t::ACTION4))){
+            m_state.put_can_in_tank = !m_state.put_can_in_tank;
+        } else if(event.released_and_clr(pixel::to_input_event(m_id, pixel::player_event_type_t::ACTION3))){
+            if(intersects(tankstelle)) {
+                m_state.refueling = !m_state.refueling;
+            } else if(intersects(werkstatt)) {
+                m_state.repairing = !m_state.repairing;
+            }
+        }
     }
 };
 
@@ -908,6 +935,7 @@ struct d_times_t {
         return dtime == o;
     }
     void reset() { dtime = dtime_max; }
+    void set0() { dtime = 0; }
 };
 
 static d_times_t velo_limit = {1_min, 0};
@@ -934,15 +962,34 @@ extern "C" {
         fuel_price.dtime_max = new_fuel_price;
         fuel_price.dtime = std::min(fuel_price.dtime, new_fuel_price);
     }
+    EMSCRIPTEN_KEEPALIVE void set_many_houses(const bool new_many_houses) noexcept {
+        if(new_many_houses) {
+            many_houses = true;
+            if(houses.size() == 4) {
+                houses.emplace_back(point_t(0, houses[0].m_tr.y + 10_m + 6_m), 30_m, 10_m);
+                houses.emplace_back(TunnelsLicet[3].m_bl + vec_t(10_m, -1_m), 20_m, 25_m);
+                houses.emplace_back(point_t(cart_coord.min_x() + 8_m, cart_coord.max_y() - 27_m), 10_m, 15_m);
+                houses.emplace_back(point_t(cart_coord.min_x() + 15_m + 8_m + 3_m, cart_coord.max_y() - 5_m), 10_m, 15_m);
+                houses.emplace_back(point_t(cart_coord.min_x() + 15_m + 8_m + 3_m, cart_coord.max_y() - 27_m), 10_m, 15_m);
+            }
+        } else {
+            many_houses = false;
+            if(houses.size() == 9) {
+                houses.erase(houses.end()-1);
+                houses.erase(houses.end()-1);
+                houses.erase(houses.end()-1);
+                houses.erase(houses.end()-1);
+                houses.erase(houses.end()-1);
+            }
+        }
+    }
 }
 
 void mainloop() noexcept {
     static f4::vec_t text_color = {0, 0, 0, 0};
     static uint64_t t_last = getElapsedMillisecond(); // [ms]
-    static input_event_t event;
     static std::vector<texture_ref> text_list;
     static texture_ref game_over_text;
-    static si_accel_f32 velo_step = 40_m_s2;
     static std::vector<si_velo_f32> velo_limits = { 30_km_h, 50_km_h, 70_km_h, 90_km_h,
                                             100_km_h, 120_km_h, 130_km_h, 150_km_h, 200_km_h,
                                             500_km_h, 600_km_h };
@@ -976,78 +1023,20 @@ void mainloop() noexcept {
             aus_geom_list.clear();
             car1.reset(true);
             car2.reset(true);
-            velo_limit.reset();
-            fuel_price.reset();
+            velo_limit.set0();
+            fuel_price.set0();
             day_time.reset();
-            max_velo = start_max_velo;
             tunnels.clear();
             AI_cars.clear();
             loc_geom_list.clear();
             schienen_geom_list.clear();
+            day = true;
             // train.reset();
         }
     }
     if(animating) {
-        if(event.has_any_p1()){
-            if (event.pressed(input_event_type_t::P1_UP) && !car1.is_car_exploded()) {
-                car1.addToVelocity(velo_step, dt);
-            } else if (event.pressed(input_event_type_t::P1_DOWN) && !car1.is_car_exploded()) {
-                car1.addToVelocity(-velo_step, dt);
-            } else if (event.pressed(input_event_type_t::P1_LEFT)) {
-                car1.rotate( angle_step*dt);
-            } else if (event.pressed(input_event_type_t::P1_RIGHT)) {
-                car1.rotate(-angle_step*dt);
-            } else if (event.pressed(input_event_type_t::P1_ACTION1)) {
-                if(car1.velocity() > 0){
-                    car1.addToVelocity(-std::min(2*velo_step,  car1.velocity()), dt, true);
-                } else if(car1.velocity() < 0) {
-                    car1.addToVelocity( std::min(2*velo_step, -car1.velocity()), dt, true);
-                }
-                if(car1.velocity() != 0){
-                    car1.increase_brake_time(dt);
-                }
-            }
-        }
-        if(event.released_and_clr(input_event_type_t::P1_ACTION1)){
-            car1.released_brake();
-        } else if(event.released_and_clr(input_event_type_t::P1_ACTION4)){
-            car1.toggle_put_can_in_tank();
-        } else if(event.released_and_clr(input_event_type_t::P1_ACTION2)) {
-            car1.toggle_digging_tunnel();
-        } else if(event.released_and_clr(input_event_type_t::P1_ACTION3)){
-            car1.toggle_tankt();
-            car1.toggle_repairing();
-        }
-        if(event.released_and_clr(input_event_type_t::P2_ACTION4)){
-            car2.toggle_put_can_in_tank();
-        } else if(event.released_and_clr(input_event_type_t::P2_ACTION2)) {
-            car2.toggle_digging_tunnel();
-        } else if(event.released_and_clr(input_event_type_t::P2_ACTION1)){
-            car2.released_brake();
-        } else if(event.released_and_clr(input_event_type_t::P2_ACTION3)){
-            car2.toggle_tankt();
-            car2.toggle_repairing();
-        }
-        if(event.has_any_p2()){
-            if (event.pressed(input_event_type_t::P2_UP) && !car2.is_car_exploded()) {
-                car2.addToVelocity( velo_step, dt);
-            } else if (event.pressed(input_event_type_t::P2_DOWN) && !car2.is_car_exploded()) {
-                car2.addToVelocity(-velo_step, dt);
-            } else if (event.pressed(input_event_type_t::P2_LEFT)) {
-                car2.rotate( angle_step*dt);
-            } else if (event.pressed(input_event_type_t::P2_RIGHT)) {
-                car2.rotate(-angle_step*dt);
-            } else if (event.pressed(input_event_type_t::P2_ACTION1)) {
-                if(car2.velocity() > 0){
-                    car2.addToVelocity(-std::min(velo_step*2,  car2.velocity()), dt, true);
-                } else if(car2.velocity() < 0) {
-                    car2.addToVelocity( std::min(velo_step*2, -car2.velocity()), dt, true);
-                }
-                if(car2.velocity() != 0){
-                    car2.increase_brake_time(dt);
-                }
-            }
-        }
+        car1.handle_event(dt);
+        car2.handle_event(dt);
     }
     {
         text_list.push_back(pixel::make_text2(tl_text, 0, text_color, text_height,
@@ -1182,7 +1171,7 @@ void mainloop() noexcept {
     tankstelle.draw(false);
     werkstatt.draw(false);
     for(const rect_t& tLicet : TunnelsLicet) {
-        set_pixel_color(0, 255, 0, 255);
+        set_pixel_color(0, day ? 255 : 64, 0, 255);
         tLicet.draw(false);
     }
     set_pixel_color(0, 0, 0, 0);
@@ -1230,9 +1219,15 @@ int main(int argc, char *argv[]) noexcept {
                 debug_gfx = true;
             } else if( 0 == strcmp("-debug_prt", argv[i]) ) {
                 debug_prt = true;
+            } else if( 0 == strcmp("-many_houses", argv[i]) ) {
+                many_houses = true;
             } else if( 0 == strcmp("-day_period", argv[i]) && i+1<argc) {
                 day_time.dtime_max = float(atof(argv[i+1]));
                 day_time.reset();
+                ++i;
+            } else if( 0 == strcmp("-start_speed_limit", argv[i]) && i+1<argc) {
+                max_velo = float(atof(argv[i+1])) / 3.6f;
+                velo_limit.dtime = 1_min;
                 ++i;
             } else if( 0 == strcmp("-vel_period", argv[i]) && i+1<argc) {
                 velo_limit.dtime_max = float(atof(argv[i+1]));
@@ -1266,12 +1261,20 @@ int main(int argc, char *argv[]) noexcept {
     TunnelsLicet.emplace_back(point_t(0, 0), 20_m, 15_m, 1_rad);
     TunnelsLicet.emplace_back(point_t(cart_coord.max_x()-40_m, 20_m), 30_m, 50_m);
     TunnelsLicet.emplace_back(point_t(-50, -10), 20_m, 30_m, 30_deg);
-    TunnelsLicet.emplace_back(point_t(-80, 40), 30_m, 50_m);
+    TunnelsLicet.emplace_back(point_t(cart_coord.min_x() + 50_m, cart_coord.max_y() - 5_m), 20_m, 30_m);
 
     houses.emplace_back(point_t(-10_m, cart_coord.height()/4-3_m), 30_m, 10_m);
-    houses.emplace_back(point_t(cart_coord.min_x(), cart_coord.max_y()), 6_m, 7_m);
+    houses.emplace_back(point_t(cart_coord.min_x() + 8_m, cart_coord.max_y() - 5_m), 10_m, 15_m);
     houses.emplace_back(point_t(-20_m, cart_coord.min_y()+25_m), 40_m, 20_m);
     houses.emplace_back(point_t(houses[0].m_tr.x + 5_m, houses[0].m_tr.y), 10_m, 40_m);
+    if(many_houses) {
+        houses.emplace_back(point_t(0, houses[0].m_tr.y + 10_m + 6_m), 30_m, 10_m);
+        houses.emplace_back(TunnelsLicet[3].m_bl + vec_t(10_m, -1_m), 20_m, 25_m);
+        houses.emplace_back(point_t(cart_coord.min_x() + 8_m, cart_coord.max_y() - 27_m), 10_m, 15_m);
+        houses.emplace_back(point_t(cart_coord.min_x() + 15_m + 8_m + 3_m, cart_coord.max_y() - 5_m), 10_m, 15_m);
+        houses.emplace_back(point_t(cart_coord.min_x() + 15_m + 8_m + 3_m, cart_coord.max_y() - 27_m), 10_m, 15_m);
+        houses.emplace_back(point_t(cart_coord.max_x()-50_m, 20_m), 9_m, 40_m);
+    }
 
     tankstelle = {{cart_coord.min_x(), 0}, 4_m, 5_m};
     werkstatt = {{cart_coord.max_x() - 4_m, 0}, 4_m, 5_m};
