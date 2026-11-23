@@ -22,6 +22,7 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
@@ -47,16 +48,18 @@ static pixel::input_event_t event;
  * Space Invaders (1978 by Taito)
  *
  * - Playfield Area
- *   - Origin bottom-left (orig hardware coordinate system)
+ *   - Origin
+ *     - orig hardware coordinate system: bottom-left
+ *     - this emulation: center (of screen)
  *   - Screen  224 x 256
  *   - Field   204 x 216  (w: min-max, h: base -> mothership)
  *   - Base    [16..185]  base horizontal range
  *   - Saucer  x=[9..192], y=206
  *   - Bunker  1: 32/50, 2: 77/50, 3: 122/50, 4: 167/50
  * - Object Dimension
- *   - Alien-1  12 x   8
- *   - Alien-2  11 x   8
- *   - Alien-3   8 x   8
+ *   - Alien-1  12 x   8 (bottom, 2 rows)
+ *   - Alien-2  11 x   8 (middle, 2 rows)
+ *   - Alien-3   8 x   8 (top, 1 row)
  *   - Alien-X  13 x   8
  *   - Alien-S   3 x   7  (shot sets 2x3)
  *   - Red-X     8 x   8
@@ -72,16 +75,21 @@ static pixel::input_event_t event;
  *   - Alien   2*60/N (2/N per frame with N = alient count, see below)
  *   - Saucer  183/4  (183 in 4s, 183 saucer distance)
  *   - Base    1*60   (1 per frame, i.e. 60 in 1s)
- *   -
+ * - Alien: 5 x 11 = 55
+ *   - per row 11
+ *   - rows     5
  *
- * Orig hardware vs this code:
- * - Alien velocity
- *   - Original hardware renders only 1 alien per frame
+ * - Alien velocity (as implemented)
+ *   - Original hardware renders only 1 alien per frame,
+ *     from left to right (and vice-versa) and from bottom to top
  *   - Single alien moves at max-speed 2 pixel/frame @ 60fps -> 120 pixel/s
- *   - N alien move at 2*60/N, i.e. 2.18 pixel/s
+ *   - N alien move at 2*60/N = 120/55 = 2.18 pixel/s
  *   - This `emulation` renders all at once, but paused 1/60*N for N aliens,
  *     giving proper group movement, removes artifacts and simplifies code
-*/
+ *
+ * @see https://www.computerarcheology.com/Arcade/SpaceInvaders/
+ */
+constexpr static float screen_fps = 60.0f;
 constexpr static float screen_width = 224.0f;
 constexpr static float screen_height = 256.0f;
 constexpr static float screen_width_pct = screen_width / screen_height;
@@ -99,25 +107,24 @@ constexpr static float base_height = 8.0f;
 // constexpr static float bunk_width = 22.0f;
 // constexpr static float bunk_height = 16.0f;
 
-constexpr static float base_velo_h = 1.0f*60.0f; // 1 pixel per frame, half of max single alien speed
+constexpr static float base_velo_h = 1.0f*screen_fps; // 1 pixel per frame, half of max single alien speed
 constexpr static float base_peng_velo = field_height / 1.0f; // approx 1s for field
 constexpr static int base_peng_inventory_max = 1;
 
 constexpr static int aliens_per_row = 11;
 constexpr static int aliens_rows = 5;
 constexpr static int aliens_total_default = aliens_rows * aliens_per_row;
+constexpr static float alien_px_per_frame = 2.0f; // 1/60s
+constexpr static float alien_px_per_sec = alien_px_per_frame * screen_fps; // s
+constexpr static float aliens_total_default_px_per_sec = alien_px_per_sec/aliens_total_default;
+constexpr static float alien_vertical_px_down = -8.0f;
 
 constexpr static float alien_saucer_period = 25.6f;
 constexpr static pixel::f2::vec_t saucer_lpos(scrn2cartx(9), scrn2carty(206));
 constexpr static pixel::f2::vec_t saucer_rpos(scrn2cartx(192), scrn2carty(206));
 constexpr static pixel::f2::vec_t saucer_velo( (saucer_rpos.x - saucer_lpos.x)/4.0f, 0.0f); // ([1/s], [1]) 183 in 4s
 
-/// horizontal: [1/s], single-alien full-speed 2 pixel/frame @ 60fps -> 120 pixel/s
-///             Due to orig hardware limitation, must be divided by current alien_count,
-///             hence slowest speed is 2*60/55=2.18 pixel/s.
-/// vertical:   only 8 pixel per step-down
-constexpr static pixel::f2::vec_t alien_max_velo( 2.0f*60.0f, -8.0f); // ([1/s], [1])
-constexpr static float alien_explosion_d = 16.0f/60.f; // [s], 16 frames @ 60fps
+constexpr static float alien_explosion_d = 16.0f/screen_fps; // [s], 16 frames @ 60fps
 
 constexpr static pixel::f2::point_t bunk1_bl( scrn2cartx( 32), scrn2carty(50) );
 constexpr static pixel::f2::point_t bunk2_bl( scrn2cartx( 77), scrn2carty(50) );
@@ -125,6 +132,40 @@ constexpr static pixel::f2::point_t bunk3_bl( scrn2cartx(122), scrn2carty(50) );
 constexpr static pixel::f2::point_t bunk4_bl( scrn2cartx(167), scrn2carty(50) );
 
 static const pixel::f2::aabbox_t base_box( { scrn2cartx(16), -field_height/2.0f +base_height*2.0f }, { scrn2cartx(185)+base_width, field_height/2.0f } );
+
+/**
+ * Alien delay lists. First list is the number of aliens. The second list is the corresponding delay.
+ * This delay is only for the rate of change in the fleet's sound.
+ * The check takes the first num-aliens-value that is lower or the same as the actual num-aliens on screen.
+ *
+ * The game starts with 55 aliens. The aliens are move/drawn one per interrupt which means it
+ * takes 55 interrupts. The first delay value is 52 ... which is almost in sync with the number
+ * of aliens. It is a tad faster and you can observe the sound and steps getting out of sync.
+ *
+ * @see https://www.computerarcheology.com/Arcade/SpaceInvaders/
+ */
+constexpr static std::array<size_t, 16> alien_sound_count = { 0x32, 0x2B, 0x24, 0x1C, 0x16, 0x11, 0x0D, 0x0A, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01 };
+constexpr static std::array<int, 16> alien_sound_delay = { 0x34, 0x2E, 0x27, 0x22, 0x1C, 0x18, 0x15, 0x13, 0x10, 0x0E, 0x0D, 0x0C, 0x0B, 0x09, 0x07, 0x05 };
+static float get_alien_sound_delay(size_t alien_count) noexcept {
+    size_t i = 0;
+    for(size_t c : alien_sound_count) {
+        if(alien_count >= c) {
+            return float(alien_sound_delay[i])/screen_fps;
+        }
+        ++i;
+    }
+    return float(alien_sound_delay.back())/screen_fps;
+}
+
+constexpr static std::array<int, 9> alien_start_ypos = { 0x78, 0x60, 0x50, 0x48, 0x48, 0x48, 0x40, 0x40, 0x40 };
+static float get_alien_start_ypos(size_t current_level) noexcept {
+    // subtract screen_height/2.0f, since we use centered-origin
+    if (current_level<=1) {
+        return float(0x78) - screen_height/2.0f;
+    }
+    --current_level;
+    return float(alien_start_ypos[current_level%alien_start_ypos.size()]) - screen_height/2.0f;
+}
 
 //
 //
@@ -143,6 +184,7 @@ static const uint8_t rgba_green[/*4*/] = { 0, 255, 0, 255 };
 static const float text_lum = 0.75f;
 static const pixel::f4::vec_t vec4_text_color(text_lum, text_lum, text_lum, 1.0f);
 static bool debug_gfx = false;
+static bool invincible = false;
 
 static pixel::bitmap_ref bmp_bunk;
 static pixel::texture_ref all_images;
@@ -353,281 +395,6 @@ class sprite_t : public gobject_t {
 };
 std::vector<sprite_t> extra_sprites;
 
-class alient_t : public gobject_t {
-  private:
-    int m_value;
-    pixel::animtex_t m_atex;
-    pixel::f2::point_t m_bl;
-    pixel::f2::vec_t m_dim;
-    float m_killanim_d = 0;
-    bool m_killed = false;
-
-  public:
-
-    alient_t(int value, const pixel::f2::point_t& bl, pixel::animtex_t atex_alien) noexcept
-    : m_value(value), m_atex(std::move(atex_alien)),
-      m_bl( bl ), m_dim((float)m_atex.width(), (float)m_atex.height())
-    { }
-
-    /// Returns bottom-left position
-    pixel::f2::point_t pos() const noexcept override { return m_bl; }
-
-    pixel::f2::aabbox_t box() const noexcept override {
-        return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
-    }
-
-    bool tick(const float dt) noexcept override {
-        if( 0 < m_killanim_d ) {
-            m_killanim_d -= dt;
-            if( 0 >= m_killanim_d ) {
-                audio_alienX->stop();
-                m_atex.clear();
-                return false;
-            }
-        }
-        return true;
-    }
-
-    void draw() noexcept override {
-        m_atex.draw(m_bl.x, m_bl.y+m_dim.y);
-        if( debug_gfx ) {
-            pixel::set_pixel_color(rgba_yellow);
-            pixel::f2::rect_t r({m_bl.x, m_bl.y+m_dim.y}, m_dim.x, m_dim.y);
-            r.draw();
-        }
-    }
-
-    bool on_screen() const noexcept override {
-        return box().inside(field_box);
-    }
-
-    bool intersection(const pixel::f2::aabbox_t& o) const noexcept override {
-        return box().intersects(o);
-    }
-
-    constexpr int value() const noexcept { return m_value; }
-
-    void step(const pixel::f2::vec_t& d) noexcept {
-        m_atex.next();
-        m_bl += d;
-    }
-
-    void notify_killed() noexcept {
-        m_atex = pixel::animtex_t("AlienX", 1.0f, tex_alienX);
-        m_killanim_d = alien_explosion_d;
-        audio_alienX->play();
-        m_killed = true;
-    }
-    bool is_killed() noexcept { return m_killed; }
-
-    pixel::animtex_t& atex() { return m_atex; }
-};
-typedef std::shared_ptr<alient_t> alien_ref;
-
-class alien_group_t : public gobject_t {
-  private:
-    constexpr static float m_sec_step_delay = 1.0f/60.0f; // orig 1 alien per frame moves
-    pixel::f2::aabbox_t m_box;
-    pixel::f2::vec_t m_alien_velo = alien_max_velo;
-    pixel::f2::vec_t m_saucer_velo;
-    float m_step_delay_left;
-    float m_saucer_delay_left;
-    size_t m_current_idx = 0;
-    bool m_pause = false;
-    std::vector<alien_ref> m_actives;
-    std::vector<alien_ref> m_killed;
-    alien_ref m_saucer = nullptr;
-
-  public:
-    alien_group_t() = default;
-    alien_group_t(const alien_group_t&) = default;
-    alien_group_t(alien_group_t&&)      = default;
-    alien_group_t& operator=(const alien_group_t&) = default;
-    alien_group_t& operator=(alien_group_t&&)      = default;
-
-    /// Returns bottom-left position
-    pixel::f2::point_t pos() const noexcept override { return m_box.bl; }
-
-    pixel::f2::aabbox_t box() const noexcept override { return m_box; }
-
-    bool on_screen() const noexcept override {
-        return m_box.inside(field_box);
-    }
-
-    bool intersection(const pixel::f2::aabbox_t& o) const noexcept override {
-        return m_box.intersects(o);
-    }
-
-    void reset() {
-        const float cell_height = (float)tex_alien1[0]->height;
-        const float cell_width = (float)tex_alien1[0]->width;
-        m_actives.clear();
-        m_actives.reserve(aliens_total);
-        m_current_idx = 0;
-        m_box.reset();
-        pixel::f2::point_t bl = field_box.bl;
-        bl.y = 2.0f * cell_height * aliens_rows - 2.5f * cell_height;
-        for(int y=0; y<1; ++y) {
-            // bl.x = field_box.bl.x + float( tex_alien1[0]->width - tex_alien3[0]->width )/2.0f;
-            bl.x = field_box.bl.x + 1.0f;
-            for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(30, bl, pixel::animtex_t("Alien3", m_sec_step_delay, tex_alien3)));
-                m_box.resize(m_actives[m_actives.size()-1]->box());
-                bl.x += cell_width * 1.5f;
-            }
-            bl.y -=  2.0f * cell_height;
-        }
-        for(int y=0; y<2; ++y) {
-            bl.x = field_box.bl.x;
-            for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(20, bl, pixel::animtex_t("Alien2", m_sec_step_delay, tex_alien2)));
-                m_box.resize(m_actives[m_actives.size()-1]->box());
-                bl.x += cell_width * 1.5f;
-            }
-            bl.y -=  2.0f * cell_height;
-        }
-        for(int y=0; y<2; ++y) {
-            bl.x = field_box.bl.x;
-            for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(10, bl, pixel::animtex_t("Alien1", m_sec_step_delay, tex_alien1)));
-                bl.x += cell_width * 1.5f;
-            }
-            bl.y -=  2.0f * cell_height;
-        }
-        m_saucer = nullptr;
-        m_step_delay_left = m_sec_step_delay * float(active_count());
-        m_saucer_delay_left = alien_saucer_period;
-    }
-
-    size_t active_count() const noexcept { return m_actives.size(); }
-
-    alien_ref get_random() const noexcept {
-        if( 0 == active_count() ) {
-            return nullptr;
-        }
-        if( 1 == active_count() ) {
-            return m_actives[0];
-        }
-        return m_actives[ next_rnd((size_t)0, m_actives.size()-1) ];
-    }
-
-    /// return the hit alien value or zero if non hit
-    int check_hit(const pixel::f2::aabbox_t& b) noexcept {
-        for(auto it = m_actives.begin(); it != m_actives.end(); ) {
-            const alien_ref& a = *it;
-            if( !a->box().intersects(b) ) {
-                ++it;
-            } else {
-                a->notify_killed();
-                m_killed.push_back(a);
-                it = m_actives.erase(it);
-                return a->value();
-            }
-        }
-        if( m_saucer ) {
-            if( m_saucer->box().intersects(b) ) {
-                audio_saucer->stop();
-                m_saucer->notify_killed();
-                return m_saucer->value();
-            }
-        }
-        return 0;
-    }
-
-    void set_pause(bool v) noexcept { m_pause = v; }
-
-    bool tick(const float /*dt*/) noexcept override {
-        static int sound_idx = 0;
-        static audio_sample_ref audio_sample = nullptr;
-        const float avg_fd = float( pixel::gpu_avg_framedur().to_double() );
-
-        if( m_pause ) {
-            return true;
-        }
-        if( m_saucer ) {
-            pixel::f2::vec_t dxy = avg_fd * m_saucer_velo;
-            if( (m_alien_velo.x > 0 && m_saucer->pos().x > saucer_rpos.x+1) ||
-                (m_alien_velo.x < 0 && m_saucer->pos().x < saucer_lpos.x-1) ) {
-                // exit
-                m_saucer = nullptr;
-                audio_saucer->stop();
-            } else {
-                if( m_saucer->is_killed() ) {
-                    m_saucer->tick(avg_fd);
-                } else {
-                    m_saucer->step(dxy);
-                }
-            }
-        }
-        if( m_killed.size() > 0 ) {
-            for(auto it = m_killed.begin(); it != m_killed.end(); ) {
-                if( (*it)->tick(avg_fd) ) {
-                    ++it;
-                } else {
-                    it = m_killed.erase(it);
-                }
-            }
-            return true;
-        }
-        m_saucer_delay_left -= avg_fd;
-        if( m_saucer_delay_left <= 0 ) {
-            if( !m_saucer ) {
-                const uint8_t lr = next_rnd<uint8_t>(0, 1);
-                m_saucer = std::make_shared<alient_t>(90, lr ? saucer_rpos : saucer_lpos, pixel::animtex_t("Saucer", 1.0f, tex_saucer));
-                m_saucer_velo = { saucer_velo.x * ( lr ? -1.0f : +1.0f), 0 };
-                audio_saucer->play(1);
-                // pixel::log_printf("XX saucer: lr %u, velo %s, bl %s\n", lr, m_saucer_velo.toString().c_str(), m_saucer->pos().toString().c_str());
-            }
-            m_saucer_delay_left = alien_saucer_period;
-        }
-        m_step_delay_left -= avg_fd;
-        if( m_step_delay_left > 0 ) {
-            return true;
-        }
-        m_step_delay_left = m_sec_step_delay * float(active_count());
-        {
-            audio_sample = audio_aliens[sound_idx];
-            sound_idx = ( sound_idx + 1 ) % int(audio_aliens.size());
-            audio_sample->play(1);
-        }
-        {
-            pixel::f2::vec_t dxy = { alien_velo_amp * avg_fd * m_alien_velo.x, 0 };
-
-            constexpr float lx_adjust = 1;
-            if( (m_alien_velo.x > 0 && m_box.tr.x > field_box.tr.x) ||
-                (m_alien_velo.x < 0 && m_box.bl.x < field_box.bl.x - lx_adjust) ) {
-                m_alien_velo.x *= -1;
-                dxy.x *= -1;
-                dxy.y = m_alien_velo.y;
-            }
-            for(const alien_ref& a : m_actives){
-                a->step(dxy);
-            }
-        }
-        return true;
-    }
-
-    void draw() noexcept override {
-        m_box.reset();
-        if( m_saucer ) {
-            m_saucer->draw();
-        }
-        for(const alien_ref& a : m_actives){
-            a->draw();
-            m_box.resize(a->box());
-        }
-        if( debug_gfx ) {
-            pixel::set_pixel_color(rgba_white);
-            pixel::f2::rect_t r({m_box.bl.x, m_box.bl.y+m_box.height()}, m_box.width(), m_box.height());
-            r.draw();
-        }
-        for(const alien_ref& a : m_killed){
-            a->draw();
-        }
-    }
-};
-alien_group_t alien_group;
-
 class bunker_t : public gobject_t {
   private:
     size_t idx;
@@ -715,6 +482,346 @@ class bunker_t : public gobject_t {
     }
 };
 std::vector<bunker_t> bunks;
+
+class alient_t : public gobject_t {
+  private:
+    int m_value;
+    pixel::animtex_t m_atex;
+    size_t m_xi, m_yi;
+    pixel::f2::point_t m_bl;
+    pixel::f2::vec_t m_dim;
+    float m_killanim_d = 0;
+    bool m_killed = false;
+
+    void check_bunker_hit() {
+        pixel::f2::aabbox_t b = box();
+        for(auto it = bunks.begin(); it != bunks.end(); ) {
+            bunker_t& bunk = *it;
+            if( bunk.box().intersects(b) &&
+                bunk.hit(b, pixel::f2::vec_t{ 0.9f, 0.9f }) )
+            {
+                return;
+            } else {
+                ++it;
+            }
+        }
+    }
+
+  public:
+
+    alient_t(int value, size_t xi, size_t yi, const pixel::f2::point_t& bl, pixel::animtex_t atex_alien) noexcept
+    : m_value(value), m_atex(std::move(atex_alien)),
+      m_xi(xi), m_yi(yi), m_bl( bl ), m_dim((float)m_atex.width(), (float)m_atex.height())
+    { }
+
+    size_t xi() const noexcept { return m_xi; }
+    size_t yi() const noexcept { return m_yi; }
+
+    /// Returns bottom-left position
+    pixel::f2::point_t pos() const noexcept override { return m_bl; }
+
+    pixel::f2::aabbox_t box() const noexcept override {
+        return pixel::f2::aabbox_t().resize(m_bl).resize(m_bl.x + m_dim.x, m_bl.y + m_dim.y);
+    }
+
+    bool tick(const float dt) noexcept override {
+        if( 0 < m_killanim_d ) {
+            m_killanim_d -= dt;
+            if( 0 >= m_killanim_d ) {
+                audio_alienX->stop();
+                m_atex.clear();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void draw() noexcept override {
+        m_atex.draw(m_bl.x, m_bl.y+m_dim.y);
+        if( debug_gfx ) {
+            pixel::set_pixel_color(rgba_yellow);
+            pixel::f2::rect_t r({m_bl.x, m_bl.y+m_dim.y}, m_dim.x, m_dim.y);
+            r.draw();
+        }
+    }
+
+    bool on_screen() const noexcept override {
+        return box().inside(field_box);
+    }
+
+    bool intersection(const pixel::f2::aabbox_t& o) const noexcept override {
+        return box().intersects(o);
+    }
+
+    constexpr int value() const noexcept { return m_value; }
+
+    void step(const pixel::f2::vec_t& d) noexcept {
+        m_atex.next();
+        m_bl += d;
+        check_bunker_hit();
+    }
+
+    void notify_killed() noexcept {
+        m_atex = pixel::animtex_t("AlienX", 1.0f, tex_alienX);
+        m_killanim_d = alien_explosion_d;
+        audio_alienX->play();
+        m_killed = true;
+    }
+    bool is_killed() noexcept { return m_killed; }
+
+    pixel::animtex_t& atex() { return m_atex; }
+};
+typedef std::shared_ptr<alient_t> alien_ref;
+
+class alien_group_t : public gobject_t {
+  private:
+    constexpr static float m_sec_step_delay = 1.0f/screen_fps; // orig 1 alien per frame moves
+    pixel::f2::aabbox_t m_box;
+    pixel::f2::vec_t m_alien_velo = { alien_px_per_sec, 0 };
+    float m_alien_velo_horiz = m_alien_velo.x;
+    bool m_alien_turn = false;
+    pixel::f2::vec_t m_saucer_velo;
+    float m_sound_delay_left;
+    float m_saucer_delay_left;
+    size_t m_current_idx = 0;
+    bool m_pause = false;
+    std::vector<alien_ref> m_actives;
+    std::vector<alien_ref> m_killed;
+    alien_ref m_saucer = nullptr;
+
+  public:
+    alien_group_t() = default;
+    alien_group_t(const alien_group_t&) = default;
+    alien_group_t(alien_group_t&&)      = default;
+    alien_group_t& operator=(const alien_group_t&) = default;
+    alien_group_t& operator=(alien_group_t&&)      = default;
+
+    /// Returns bottom-left position
+    pixel::f2::point_t pos() const noexcept override { return m_box.bl; }
+
+    pixel::f2::aabbox_t box() const noexcept override { return m_box; }
+
+    bool on_screen() const noexcept override {
+        return m_box.inside(field_box);
+    }
+
+    bool intersection(const pixel::f2::aabbox_t& o) const noexcept override {
+        return m_box.intersects(o);
+    }
+
+    void reset() {
+        const float cell_height = (float)tex_alien1[0]->height;
+        const float cell_width = (float)tex_alien1[0]->width;
+        m_actives.clear();
+        m_actives.reserve(aliens_total);
+        m_current_idx = 0;
+        m_box.reset();
+        size_t xi=0, yi=0;
+        pixel::f2::point_t bl = field_box.bl;
+        bl.y = get_alien_start_ypos(level);
+        for(int y=0; y<2; ++y) { // bottom
+            xi = 0;
+            bl.x = field_box.bl.x;
+            for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
+                m_actives.emplace_back(std::make_shared<alient_t>(10, xi, yi, bl, pixel::animtex_t("Alien1", m_sec_step_delay, tex_alien1)));
+                bl.x += cell_width * 1.5f;
+            }
+            ++yi;
+            bl.y += 2.0f * cell_height;
+        }
+        for(int y=0; y<2; ++y) { // middle
+            xi = 0;
+            bl.x = field_box.bl.x;
+            for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
+                m_actives.emplace_back(std::make_shared<alient_t>(20, xi, yi, bl, pixel::animtex_t("Alien2", m_sec_step_delay, tex_alien2)));
+                m_box.resize(m_actives[m_actives.size()-1]->box());
+                bl.x += cell_width * 1.5f;
+            }
+            ++yi;
+            bl.y += 2.0f * cell_height;
+        }
+        for(int y=0; y<1; ++y) { // top
+            xi = 0;
+            bl.x = field_box.bl.x + 1.0f;
+            for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
+                m_actives.emplace_back(std::make_shared<alient_t>(30, xi, yi, bl, pixel::animtex_t("Alien3", m_sec_step_delay, tex_alien3)));
+                m_box.resize(m_actives[m_actives.size()-1]->box());
+                bl.x += cell_width * 1.5f;
+            }
+            ++yi;
+            bl.y += 2.0f * cell_height;
+        }
+        m_alien_velo = { alien_px_per_sec, 0 };
+        m_alien_velo_horiz = m_alien_velo.x;
+        m_alien_turn = false;
+
+        m_saucer = nullptr;
+        m_sound_delay_left = get_alien_sound_delay(active_count());
+        m_saucer_delay_left = alien_saucer_period;
+    }
+
+    size_t active_count() const noexcept { return m_actives.size(); }
+
+    // return a random alien, bottom-most in its column
+    alien_ref get_random_of_bottom() const noexcept {
+        if( 0 == active_count() ) {
+            return nullptr;
+        }
+        if( 1 == active_count() ) {
+            return m_actives[0];
+        }
+        const size_t max_count = std::min(size_t(aliens_per_row)*2, m_actives.size())-1;
+        alien_ref res = nullptr;
+        while (!res) {
+            const size_t i = next_rnd((size_t)0, max_count);
+            res = m_actives[ i ];
+            if (i > 0) {
+                for (size_t j = i - 1; j > 0; --j) {
+                    alien_ref b = m_actives[j];
+                    if (b->xi() == res->xi()) {
+                        res = nullptr;
+                        break;
+                    }
+                }
+            }
+        }
+        return res;
+    }
+
+    /// return the hit alien value or zero if non hit
+    int check_hit(const pixel::f2::aabbox_t& b) noexcept {
+        for(auto it = m_actives.begin(); it != m_actives.end(); ) {
+            const alien_ref& a = *it;
+            if( !a->box().intersects(b) ) {
+                ++it;
+            } else {
+                const size_t it_idx = std::distance( m_actives.begin(), it );
+                if (m_current_idx > it_idx) {
+                    // current ship index points to the next ship to move,
+                    // if above removing ship it has to be adjusted to avoid skipping it.
+                    m_current_idx -= 1;
+                }
+                a->notify_killed();
+                m_killed.push_back(a);
+                it = m_actives.erase(it);
+                return a->value();
+            }
+        }
+        if( m_saucer ) {
+            if( m_saucer->box().intersects(b) ) {
+                audio_saucer->stop();
+                m_saucer->notify_killed();
+                return m_saucer->value();
+            }
+        }
+        return 0;
+    }
+
+    void set_pause(bool v) noexcept { m_pause = v; }
+
+    bool tick(const float /*dt*/) noexcept override {
+        static int sound_idx = 0;
+        static audio_sample_ref audio_sample = nullptr;
+        const float avg_fd = float( pixel::gpu_avg_framedur().to_double() );
+
+        if( m_pause ) {
+            return true;
+        }
+        if( m_saucer ) {
+            pixel::f2::vec_t dxy = avg_fd * m_saucer_velo;
+            if( (m_alien_velo.x > 0 && m_saucer->pos().x > saucer_rpos.x+1) ||
+                (m_alien_velo.x < 0 && m_saucer->pos().x < saucer_lpos.x-1) ) {
+                // exit
+                m_saucer = nullptr;
+                audio_saucer->stop();
+            } else {
+                if( m_saucer->is_killed() ) {
+                    m_saucer->tick(avg_fd);
+                } else {
+                    m_saucer->step(dxy);
+                }
+            }
+        }
+        if( m_killed.size() > 0 ) {
+            for(auto it = m_killed.begin(); it != m_killed.end(); ) {
+                if( (*it)->tick(avg_fd) ) {
+                    ++it;
+                } else {
+                    it = m_killed.erase(it);
+                }
+            }
+            // return true;
+        } else {
+            m_saucer_delay_left -= avg_fd;
+            if( m_saucer_delay_left <= 0 ) {
+                if( !m_saucer ) {
+                    const uint8_t lr = next_rnd<uint8_t>(0, 1);
+                    m_saucer = std::make_shared<alient_t>(90, 0, 0, lr ? saucer_rpos : saucer_lpos, pixel::animtex_t("Saucer", 1.0f, tex_saucer));
+                    m_saucer_velo = { saucer_velo.x * ( lr ? -1.0f : +1.0f), 0 };
+                    audio_saucer->play(1);
+                    // pixel::log_printf("XX saucer: lr %u, velo %s, bl %s\n", lr, m_saucer_velo.toString().c_str(), m_saucer->pos().toString().c_str());
+                }
+                m_saucer_delay_left = alien_saucer_period;
+            }
+        }
+
+        m_sound_delay_left -= avg_fd;
+        if( m_sound_delay_left <= 0 ) {
+            m_sound_delay_left = get_alien_sound_delay(active_count());
+            audio_sample = audio_aliens[sound_idx];
+            sound_idx = ( sound_idx + 1 ) % int(audio_aliens.size());
+            audio_sample->play(1);
+        }
+        if( m_killed.empty() && !m_actives.empty() ) {
+            constexpr float lx_adjust = 1;
+            if( (m_alien_velo.x > 0 && m_box.tr.x > field_box.tr.x) ||
+                (m_alien_velo.x < 0 && m_box.bl.x < field_box.bl.x - lx_adjust) ) {
+                m_alien_turn = true;
+            }
+
+            if (m_current_idx >= m_actives.size()) {
+                m_current_idx = 0;
+                if (m_alien_turn) {
+                    m_alien_velo_horiz = m_alien_velo.x;
+                    m_alien_velo.x = 0;
+                    m_alien_velo.y = alien_vertical_px_down;
+                    m_alien_turn = false;
+                } else if (m_alien_velo.y < 0) {
+                    m_alien_velo_horiz *= -1;
+                    m_alien_velo.x = m_alien_velo_horiz;
+                    m_alien_velo.y = 0;
+                }
+            }
+            const pixel::f2::vec_t dxy = { alien_velo_amp * avg_fd * m_alien_velo.x, m_alien_velo.y };
+            {
+                const alien_ref& a = m_actives[m_current_idx];
+                a->step(dxy);
+                ++m_current_idx;
+            }
+        }
+        return true;
+    }
+
+    void draw() noexcept override {
+        m_box.reset();
+        if( m_saucer ) {
+            m_saucer->draw();
+        }
+        for(const alien_ref& a : m_actives){
+            a->draw();
+            m_box.resize(a->box());
+        }
+        if( debug_gfx ) {
+            pixel::set_pixel_color(rgba_white);
+            pixel::f2::rect_t r({m_box.bl.x, m_box.bl.y+m_box.height()}, m_box.width(), m_box.height());
+            r.draw();
+        }
+        for(const alien_ref& a : m_killed){
+            a->draw();
+        }
+    }
+};
+alien_group_t alien_group;
 
 struct hit_result{
     bool hit;
@@ -830,7 +937,7 @@ class base_t : public gobject_t {
         bool m_killed;
 
         bool check_hit() {
-            if( m_killed ) {
+            if( m_killed || invincible ) {
                 return false;
             }
             pixel::f2::aabbox_t b = box();
@@ -1026,7 +1133,7 @@ class player_t : public gobject_t {
         }
 };
 static void peng_from_alien() {
-    const alien_ref& alien = alien_group.get_random();
+    const alien_ref& alien = alien_group.get_random_of_bottom();
     if( nullptr == alien ) {
         return;
     }
@@ -1224,9 +1331,10 @@ void mainloop() {
 
     float fps = pixel::gpu_avg_fps();
     tl_text.set(pixel::cart_coord.min_x(), pixel::cart_coord.max_y());
-    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height, "%s s, fps %4.2f/%d, score %4d, high score %d, level %d",
+    pixel::texture_ref hud_text = pixel::make_text(tl_text, 0, vec4_text_color, text_height,
+                    "%ss, fps %4.2f, score %4.4d, hi-score %4.4d, level %d",
                     to_decstring((t1-t_start)/1000, ',', 5).c_str(),
-                    fps, pixel::expected_fps(), player->score(), high_score, level);
+                    fps, player->score(), high_score, level);
     if( alien_group.box().bl.y < -62-bunks[0].box().height() || player->lives() <= 0) {
         game_over = true;
         animating = false;
@@ -1285,8 +1393,13 @@ int main(int argc, char *argv[])
                 ++i;
             } else if( 0 == strcmp("-noaudio", argv[i])) {
                 use_audio = false;
+            } else if( 0 == strcmp("-invincible", argv[i])) {
+                invincible = true;
+            } else if( 0 == strcmp("-level", argv[i]) && i+1<argc) {
+                level = std::max(1, atoi(argv[i+1]));
+                ++i;
             } else if( 0 == strcmp("-aliens", argv[i]) && i+1<argc) {
-                aliens_total = atoi(argv[i+1]);
+                aliens_total = std::min(aliens_total_default, atoi(argv[i+1]));
                 ++i;
             } else if( 0 == strcmp("-alienva", argv[i]) && i+1<argc) {
                 alien_velo_amp = (float)atof(argv[i+1]);
@@ -1297,7 +1410,9 @@ int main(int argc, char *argv[])
         const uint64_t elapsed_ms = getElapsedMillisecond();
         log_printf(elapsed_ms, "- record %s\n", record_bmpseq_basename.size()==0 ? "disabled" : record_bmpseq_basename.c_str());
         log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
+        log_printf(elapsed_ms, "- invincible %d\n", invincible);
         log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
+        log_printf(elapsed_ms, "- level %d\n", level);
         log_printf(elapsed_ms, "- aliens %zu\n", aliens_total);
         log_printf(elapsed_ms, "- alien velo amp %f\n", alien_velo_amp);
     }
