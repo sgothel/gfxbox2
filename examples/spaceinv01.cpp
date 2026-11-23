@@ -116,7 +116,6 @@ constexpr static int aliens_rows = 5;
 constexpr static int aliens_total_default = aliens_rows * aliens_per_row;
 constexpr static float alien_px_per_frame = 2.0f; // 1/60s
 constexpr static float alien_px_per_sec = alien_px_per_frame * screen_fps; // s
-constexpr static float aliens_total_default_px_per_sec = alien_px_per_sec/aliens_total_default;
 constexpr static float alien_vertical_px_down = -8.0f;
 
 constexpr static float alien_saucer_period = 25.6f;
