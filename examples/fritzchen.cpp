@@ -61,7 +61,7 @@ enum class score_t {
 constexpr int number(score_t v) noexcept { return static_cast<int>(v); }
 
 enum class strategy_t : int {
-    attract  = 0,
+    chase  = 0,
     escape   = 1,
     random   = 2,
     seek_pos = 3
@@ -69,7 +69,7 @@ enum class strategy_t : int {
 constexpr int number(strategy_t v) noexcept { return static_cast<int>(v); }
 static const char *to_string(strategy_t v) noexcept {
     switch(v) {
-        case strategy_t::attract:  return "attrac";
+        case strategy_t::chase:    return "chase";
         case strategy_t::escape:   return "escape";
         case strategy_t::random:   return "random";
         case strategy_t::seek_pos: return "seekpo";
@@ -78,7 +78,7 @@ static const char *to_string(strategy_t v) noexcept {
 }
 
 enum class strategy_duration_t : int {
-    attract = 30,
+    chase   = 30,
     escape  = 30,
     random  = 15,
     seekpos = 10
@@ -86,8 +86,8 @@ enum class strategy_duration_t : int {
 constexpr float number(strategy_duration_t v) noexcept { return static_cast<float>(v); }
 static int to_duration(strategy_t s) noexcept {
     switch (s) {
-        case strategy_t::attract:
-            return number(strategy_duration_t::attract);
+        case strategy_t::chase:
+            return number(strategy_duration_t::chase);
             break;
         case strategy_t::seek_pos:
             return number(strategy_duration_t::seekpos);
@@ -185,9 +185,12 @@ static bool debug_gfx1 = false;
 static bool debug_gfx2 = false;
 static std::string record_bmpseq_basename;
 static uint64_t t_start = 0; // [ms]
+static bool two_player = false;
 
-static strategy_t erna_mode = strategy_t::attract;
-static float erna_mode_to = number(strategy_duration_t::attract);
+static player_id_t tic_id = player_id_t::erna;
+static strategy_t erna_mode = strategy_t::chase;
+static float erna_mode_to = number(strategy_duration_t::chase);
+static float two_player_to = number(strategy_duration_t::chase);
 
 constexpr int audio_ball_maxvol = MIX_MAX_VOLUME/4;
 static audio_sample_ref audio_ball, audio_tic;
@@ -743,6 +746,10 @@ class Player {
         m_score = 0;
     }
 
+    void setPos(const point_t target) noexcept {
+        move(target - pos());
+    }
+
     void setVelo(const float speed) noexcept {
         m_velocity_v = vec_t::from_length_angle(speed, dir_to_angle(m_dir));
         m_velocity_s = speed;
@@ -924,8 +931,8 @@ static void erna_bot_tick(float dt) {
     point_t target_pos;
 
     ball_to -= dt;
-    if(ball_to<=0){
-        ball_to=1_s;
+    if (ball_to <= 0) {
+        ball_to = 1_s;
         erna.throwBall();
     }
 
@@ -938,7 +945,7 @@ static void erna_bot_tick(float dt) {
         target_pos = fritzchen.pos();
         if (fritzchen.contains(erna.pos())) {
             audio_tic->play();
-            if (erna_mode == strategy_t::attract) {
+            if (erna_mode == strategy_t::chase) {
                 erna.score() += number(score_t::tic);
             } else if (erna_mode == strategy_t::escape) {
                 fritzchen.score() += number(score_t::tic);
@@ -949,7 +956,7 @@ static void erna_bot_tick(float dt) {
             target_pos = stored_seek_pos;
         } else if (maze.home_int.contains(erna.pos())) {
             audio_tic->play();
-            fritzchen.score() += erna_mode == strategy_t::attract ?
+            fritzchen.score() += erna_mode == strategy_t::chase ?
                 number(score_t::erna_home_attract) :
                 (erna_mode == strategy_t::escape ? number(score_t::erna_home_escape) : number(score_t::erna_home_random));
             stored_seek_pos = maze.get_random_upper_pos();
@@ -969,7 +976,8 @@ static void erna_bot_tick(float dt) {
         // home:    -> seek_pos
         // tic:     -> seek_pos
         switch (erna_mode) {
-            case strategy_t::attract:
+            case strategy_t::chase:
+                tic_id = player_id_t::fritzchen;
                 erna_mode = strategy_t::escape;
                 erna_mode_to = number(strategy_duration_t::escape);
                 break;
@@ -983,10 +991,15 @@ static void erna_bot_tick(float dt) {
             case strategy_t::random:
                 [[fallthrough]];
             default:
-                erna_mode = strategy_t::attract;
-                erna_mode_to = number(strategy_duration_t::attract);
+                erna_mode = strategy_t::chase;
+                erna_mode_to = number(strategy_duration_t::chase);
                 break;
         }
+    }
+    if (erna_mode == strategy_t::chase) {
+        tic_id = player_id_t::erna;
+    } else {
+        tic_id = player_id_t::fritzchen;
     }
 
     if (erna.is_center()) {
@@ -1048,7 +1061,7 @@ static void erna_bot_tick(float dt) {
                 if( dir_ok[number(bwd_dir)] && d_bwd - d_max > d_threshold_bwd) {
                     new_dir = bwd_dir;
                 }
-            } else if (erna_mode == strategy_t::attract || erna_mode == strategy_t::seek_pos) {
+            } else if (erna_mode == strategy_t::chase || erna_mode == strategy_t::seek_pos) {
                 float d_min = std::numeric_limits<float>::max();
                 if( dir_ok[number(fwd_dir)] ) {
                     d_min = d_fwd;
@@ -1085,6 +1098,32 @@ static void erna_bot_tick(float dt) {
     }
 }
 
+static void two_player_score(float dt) noexcept {
+    if (fritzchen.contains(erna.pos())) {
+        audio_tic->play();
+        if (tic_id == player_id_t::erna) {
+            erna.score() += number(score_t::tic);
+            tic_id = player_id_t::fritzchen;
+        } else if (tic_id == player_id_t::fritzchen) {
+            fritzchen.score() += number(score_t::tic);
+            tic_id = player_id_t::erna;
+        }
+        two_player_to = number(strategy_duration_t::chase);
+        fritzchen.setPos(maze.fritzchen_start);
+        erna.setPos(maze.erna_start);
+    }
+
+    two_player_to -= dt;
+    if (two_player_to <= 0) {
+        two_player_to = number(strategy_duration_t::chase);
+        if (tic_id == player_id_t::erna) {
+            tic_id = player_id_t::fritzchen;
+        } else if (tic_id == player_id_t::fritzchen) {
+            tic_id = player_id_t::erna;
+        }
+    }
+}
+
 ///
 ///
 
@@ -1092,8 +1131,9 @@ static void reset_all() noexcept {
     t_start = jau::getElapsedMillisecond();
     fritzchen.reset();
     erna.reset();
-    erna_mode = strategy_t::attract;
-    erna_mode_to = number(strategy_duration_t::attract);
+    tic_id = player_id_t::erna;
+    erna_mode = strategy_t::chase;
+    erna_mode_to = number(strategy_duration_t::chase);
     erna.setDir(direction_t::LEFT);
 }
 
@@ -1128,7 +1168,6 @@ void mainloop() {
     }
 
     while (pixel::handle_one_event(event)) {
-
         if (event.pressed_and_clr(pixel::input_event_type_t::WINDOW_CLOSE_REQ)) {
             printf("Exit Application\n");
 #if defined(__EMSCRIPTEN__)
@@ -1142,13 +1181,24 @@ void mainloop() {
             reset_all();
         } else if( event.released_and_clr(pixel::input_event_type_t::F12) ) {
             do_snapshot = true;
-        } else if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION3)) {
-            fritzchen.setRun(false);
-        } else if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION2)) {
+        } else if (event.released_and_clr(pixel::input_event_type_t::P1_ACTION4)) {
             fritzchen.throwBall();
         }
-        if (event.pressed(pixel::input_event_type_t::P2_ACTION3)) {
+        if (event.pressed(pixel::input_event_type_t::P1_ACTION3)) {
             fritzchen.setRun(true);
+        } else if (event.released_and_clr(pixel::input_event_type_t::P1_ACTION3)) {
+            fritzchen.setRun(false);
+        }
+
+        if (two_player) {
+            if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION2)) {
+                erna.throwBall();
+            }
+            if (event.pressed(pixel::input_event_type_t::P2_ACTION3)) {
+                erna.setRun(true);
+            } else if (event.released_and_clr(pixel::input_event_type_t::P2_ACTION3)) {
+                erna.setRun(false);
+            }
         }
         if (event.paused()) {
             animating = false;
@@ -1162,20 +1212,34 @@ void mainloop() {
     pixel::set_pixel_color(0 /* r */, 0 /* g */, 0 /* b */, 255 /* a */);
 
     static point_t text_tl = {0, maze.screen_dim.y};
-    std::vector<pixel::texture_ref> hud_texts = {
-        pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f, score[F %4.4d, E %4.4d]",
+    std::vector<pixel::texture_ref> hud_texts;
+    if (two_player) {
+        hud_texts.push_back(pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height,
+            "%c: score %4.4d, run %2.1f, ball %2.1f, %.1fs",
+            tic_id == player_id_t::fritzchen ? 'F' : 'f',
+            fritzchen.score(), fritzchen.ausdauer(), fritzchen.ball_velo(),
+            tic_id == player_id_t::fritzchen ? two_player_to : 0));
+        hud_texts.push_back(pixel::make_text2(text_tl, 1, {0, 0, 0, 1}, text_height,
+            "%c: score %4.4d, run %2.1f, ball %2.1f, %.1fs",
+            tic_id == player_id_t::erna ? 'E' : 'e',
+            erna.score(), erna.ausdauer(), erna.ball_velo(),
+            tic_id == player_id_t::erna ? two_player_to : 0));
+    } else {
+        hud_texts.push_back(pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height,
+            "%s s, fps %4.2f, score[F %4.4d, E %4.4d]",
             to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(),
-            fritzchen.score(), erna.score()),
-        pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "run %2.1f, ball %2.1f, erna[%s, %.1fs]",
-            fritzchen.ausdauer(), fritzchen.ball_velo(), to_string(erna_mode), erna_mode_to)
-    };
+            fritzchen.score(), erna.score()));
+        hud_texts.push_back(pixel::make_text2(text_tl, 1, {0, 0, 0, 1}, text_height,
+            "run %2.1f, ball %2.1f, erna[%s, %.1fs]",
+            fritzchen.ausdauer(), fritzchen.ball_velo(), to_string(erna_mode), erna_mode_to));
+    }
 
     // white background
     pixel::clear_pixel_fb(255, 255, 255, 255);
 
     if (animating) {
         // static/memorized cursor event
-        if (event.pressed(pixel::input_event_type_t::P2_ACTION2)) {
+        if (event.pressed(pixel::input_event_type_t::P1_ACTION4)) {
             fritzchen.add_ball_velocity(dt);
         }
         if( event.pressed_mask(pixel::p1_cursor_mask)) {
@@ -1192,7 +1256,28 @@ void mainloop() {
             fritzchen.setVelo(0);
         }
         fritzchen.tick(dt);
-        erna_bot_tick(dt);
+        if (two_player) {
+            if (event.pressed(pixel::input_event_type_t::P2_ACTION2)) {
+                erna.add_ball_velocity(dt);
+            }
+            if( event.pressed_mask(pixel::p2_cursor_mask)) {
+                if (event.pressed(pixel::input_event_type_t::P2_UP)) {
+                    erna.setDir(direction_t::UP);
+                } else if (event.pressed(pixel::input_event_type_t::P2_DOWN)) {
+                    erna.setDir(direction_t::DOWN);
+                } else if (event.pressed(pixel::input_event_type_t::P2_LEFT)) {
+                    erna.setDir(direction_t::LEFT);
+                } else if (event.pressed(pixel::input_event_type_t::P2_RIGHT)) {
+                    erna.setDir(direction_t::RIGHT);
+                }
+            } else {
+                erna.setVelo(0);
+            }
+            erna.tick(dt);
+            two_player_score(dt);
+        } else {
+            erna_bot_tick(dt);
+        }
     }
 
     if (debug_gfx1) {
@@ -1202,7 +1287,7 @@ void mainloop() {
     maze.draw();
 
     switch (erna_mode) {
-        case strategy_t::attract:
+        case strategy_t::chase:
             pixel::set_pixel_color(    255 /* r */,   0 /* g */, 0 /* b */, 255 /* a */);
             break;
         case strategy_t::escape:
@@ -1265,6 +1350,8 @@ int main(int argc, char *argv[])
                 debug_gfx1 = true;
             } else if( 0 == strcmp("-debug_gfx2", argv[i]) ) {
                 debug_gfx2 = true;
+            } else if( 0 == strcmp("-2p", argv[i]) ) {
+                two_player = true;
             } else if( 0 == strcmp("-record", argv[i]) && i+1<argc) {
                 record_bmpseq_basename = argv[i+1];
                 ++i;
@@ -1275,6 +1362,7 @@ int main(int argc, char *argv[])
         log_printf(elapsed_ms, "- forced_fps %d\n", pixel::gpu_forced_fps());
         log_printf(elapsed_ms, "- debug_gfx1 %d\n", debug_gfx1);
         log_printf(elapsed_ms, "- debug_gfx2 %d\n", debug_gfx2);
+        log_printf(elapsed_ms, "- two_player %d\n", two_player);
     }
     {
         const float origin_norm[] = { 0.5f, 0.5f };
