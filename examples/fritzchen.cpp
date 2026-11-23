@@ -54,7 +54,7 @@ enum class player_id_t {
 enum class score_t {
     ball_hit          =    10,
     erna_home_attract =   100,
-    erna_tic_escape   =   400,
+    tic               =   400,
     erna_home_random  =  1000,
     erna_home_escape  = 10000
 };
@@ -79,7 +79,7 @@ static const char *to_string(strategy_t v) noexcept {
 
 enum class strategy_duration_t : int {
     attract = 30,
-    escape  = 25,
+    escape  = 30,
     random  = 15,
     seekpos = 10
 };
@@ -641,7 +641,7 @@ class Player {
     constexpr static direction_t start_dir = direction_t::LEFT;
     constexpr static si_length_f32 nose_length = height/6;
     constexpr static si_velo_f32 def_velocity = 7.0f; // [m/s]
-    constexpr static size_t max_balls = 10;
+    constexpr static size_t max_balls = 5;
     constexpr static const float ball_radius = 20_cm;
     constexpr static const float ball_angle = 10_deg;
     constexpr static const float ball_velocity_min = 11_m_s; // [m/s]
@@ -686,6 +686,7 @@ class Player {
     }
 
     bool test_ball_erna(physiks::ball_t &ball) const noexcept;
+    bool test_ball_fritzchen(physiks::ball_t &ball) const noexcept;
 
   public:
 
@@ -814,6 +815,13 @@ class Player {
                 if( DEBUG_ON ) {
                     jau::log_printf("ball-erna %s\n", b->box().toString().c_str());
                 }
+            } else if(is_erna() && test_ball_fritzchen(*b)) {
+                // delete i
+                m_balls.erase(i);
+                m_score += number(score_t::ball_hit);
+                if( DEBUG_ON ) {
+                    jau::log_printf("ball-fritzchen %s\n", b->box().toString().c_str());
+                }
             } else {
                 ++i;
             }
@@ -882,6 +890,9 @@ static Player erna(player_id_t::erna);
 bool Player::test_ball_erna(physiks::ball_t &ball) const noexcept {
     return erna.m_aabbox.intersects(ball.box());
 }
+bool Player::test_ball_fritzchen(physiks::ball_t &ball) const noexcept {
+    return fritzchen.m_aabbox.intersects(ball.box());
+}
 
 static float calc_min_dist(const point_t &src, const point_t &dest) noexcept {
     float l1 = (dest - src).length();
@@ -909,7 +920,14 @@ static void next_rnd_strategy() {
 
 static void erna_bot_tick(float dt) {
     static point_t stored_seek_pos;
+    static float ball_to = 1_s;
     point_t target_pos;
+
+    ball_to -= dt;
+    if(ball_to<=0){
+        ball_to=1_s;
+        erna.throwBall();
+    }
 
     if(erna_mode == strategy_t::seek_pos) {
         target_pos = stored_seek_pos;
@@ -920,18 +938,15 @@ static void erna_bot_tick(float dt) {
         target_pos = fritzchen.pos();
         if (fritzchen.contains(erna.pos())) {
             audio_tic->play();
-            if(erna_mode == strategy_t::attract) {
-                erna_mode = strategy_t::escape;
-                erna_mode_to = number(strategy_duration_t::escape);
-            } else {
-                if(erna_mode == strategy_t::escape) {
-                    fritzchen.score() += number(score_t::erna_tic_escape);
-                }
-                stored_seek_pos = maze.get_random_upper_pos();
-                target_pos = stored_seek_pos;
-                erna_mode = strategy_t::seek_pos;
-                erna_mode_to = number(strategy_duration_t::seekpos);
+            if (erna_mode == strategy_t::attract) {
+                erna.score() += number(score_t::tic);
+            } else if (erna_mode == strategy_t::escape) {
+                fritzchen.score() += number(score_t::tic);
             }
+            erna_mode = strategy_t::seek_pos;
+            erna_mode_to = number(strategy_duration_t::seekpos);
+            stored_seek_pos = maze.get_random_upper_pos();
+            target_pos = stored_seek_pos;
         } else if (maze.home_int.contains(erna.pos())) {
             audio_tic->play();
             fritzchen.score() += erna_mode == strategy_t::attract ?
@@ -952,8 +967,7 @@ static void erna_bot_tick(float dt) {
         // random   -> attract
         //
         // home:    -> seek_pos
-        // tic:
-        // !attract -> seek_pos
+        // tic:     -> seek_pos
         switch (erna_mode) {
             case strategy_t::attract:
                 erna_mode = strategy_t::escape;
@@ -1149,8 +1163,9 @@ void mainloop() {
 
     static point_t text_tl = {0, maze.screen_dim.y};
     std::vector<pixel::texture_ref> hud_texts = {
-        pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f, score %4.4d",
-            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(), fritzchen.score()),
+        pixel::make_text2(text_tl, 0, {0, 0, 0, 1}, text_height, "%s s, fps %4.2f, score[F %4.4d, E %4.4d]",
+            to_decstring((t1-t_start)/1000, ',', 5).c_str(), pixel::gpu_avg_fps(),
+            fritzchen.score(), erna.score()),
         pixel::make_text2(text_tl, 1, {0, 0, 0, 0}, text_height, "run %2.1f, ball %2.1f, erna[%s, %.1fs]",
             fritzchen.ausdauer(), fritzchen.ball_velo(), to_string(erna_mode), erna_mode_to)
     };
