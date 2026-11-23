@@ -60,12 +60,13 @@ enum class score_t {
 };
 constexpr int number(score_t v) noexcept { return static_cast<int>(v); }
 
-enum class strategy_t {
-    attract,
-    escape,
-    random,
-    seek_pos
+enum class strategy_t : int {
+    attract  = 0,
+    escape   = 1,
+    random   = 2,
+    seek_pos = 3
 };
+constexpr int number(strategy_t v) noexcept { return static_cast<int>(v); }
 static const char *to_string(strategy_t v) noexcept {
     switch(v) {
         case strategy_t::attract:  return "attrac";
@@ -76,13 +77,30 @@ static const char *to_string(strategy_t v) noexcept {
     }
 }
 
-enum class strategy_duration_t {
+enum class strategy_duration_t : int {
     attract = 30,
     escape  = 25,
     random  = 15,
     seekpos = 10
 };
 constexpr float number(strategy_duration_t v) noexcept { return static_cast<float>(v); }
+static int to_duration(strategy_t s) noexcept {
+    switch (s) {
+        case strategy_t::attract:
+            return number(strategy_duration_t::attract);
+            break;
+        case strategy_t::seek_pos:
+            return number(strategy_duration_t::seekpos);
+            break;
+        case strategy_t::escape:
+            return number(strategy_duration_t::escape);
+            break;
+        case strategy_t::random:
+        default:
+            return number(strategy_duration_t::random);
+            break;
+    }
+}
 
 enum class tile_t : int {
     EMPTY = 0,
@@ -879,6 +897,16 @@ static float calc_min_dist(const point_t &src, const point_t &dest) noexcept {
     return std::min(l1, l2);
 }
 
+static void next_rnd_strategy() {
+    strategy_t s = strategy_t::seek_pos;
+    while (s == strategy_t::seek_pos) {
+        int i = (int)std::round(next_rnd() * float(3 - 0) + float(0)) % 3;
+        s = (strategy_t)i;
+    }
+    erna_mode = s;
+    erna_mode_to = (float)to_duration(erna_mode);
+}
+
 static void erna_bot_tick(float dt) {
     static point_t stored_seek_pos;
     point_t target_pos;
@@ -886,8 +914,7 @@ static void erna_bot_tick(float dt) {
     if(erna_mode == strategy_t::seek_pos) {
         target_pos = stored_seek_pos;
         if ((target_pos - erna.pos()).length() < 2.0f) {
-            erna_mode = strategy_t::escape;
-            erna_mode_to = number(strategy_duration_t::escape);
+            next_rnd_strategy();
         }
     } else {
         target_pos = fritzchen.pos();
@@ -919,12 +946,21 @@ static void erna_bot_tick(float dt) {
     if (erna_mode_to >= dt) {
         erna_mode_to -= dt;
     } else {
+        // attract  -> escape
+        // seek_pos -> rnd{ attract, escape, random }
+        // escape   -> random
+        // random   -> attract
+        //
+        // home:    -> seek_pos
+        // tic:
+        // !attract -> seek_pos
         switch (erna_mode) {
             case strategy_t::attract:
-                [[fallthrough]];
-            case strategy_t::seek_pos:
                 erna_mode = strategy_t::escape;
                 erna_mode_to = number(strategy_duration_t::escape);
+                break;
+            case strategy_t::seek_pos:
+                next_rnd_strategy();
                 break;
             case strategy_t::escape:
                 erna_mode = strategy_t::random;
