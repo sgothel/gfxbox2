@@ -576,8 +576,9 @@ class alien_group_t : public gobject_t {
   private:
     constexpr static float m_sec_step_delay = 1.0f/screen_fps; // orig 1 alien per frame moves
     pixel::f2::aabbox_t m_box;
-    pixel::f2::vec_t m_alien_velo = { alien_px_per_sec, 0 };
+    pixel::f2::vec_t m_alien_velo = { alien_px_per_frame, 0 };
     float m_alien_velo_horiz = m_alien_velo.x;
+    float m_pixel_move_left = 0;
     bool m_alien_turn = false;
     pixel::f2::vec_t m_saucer_velo;
     float m_sound_delay_left;
@@ -650,8 +651,9 @@ class alien_group_t : public gobject_t {
             ++yi;
             bl.y += 2.0f * cell_height;
         }
-        m_alien_velo = { alien_px_per_sec, 0 };
+        m_alien_velo = { alien_px_per_frame, 0 };
         m_alien_velo_horiz = m_alien_velo.x;
+        m_pixel_move_left = 0;
         m_alien_turn = false;
 
         m_saucer = nullptr;
@@ -718,16 +720,17 @@ class alien_group_t : public gobject_t {
 
     void set_pause(bool v) noexcept { m_pause = v; }
 
-    bool tick(const float /*dt*/) noexcept override {
+    bool tick(const float dt) noexcept override {
         static int sound_idx = 0;
         static audio_sample_ref audio_sample = nullptr;
-        const float avg_fd = float( pixel::gpu_avg_framedur().to_double() );
+        // const float used_dt = float( pixel::gpu_avg_framedur().to_double() );
+        const float used_dt = dt;
 
         if( m_pause ) {
             return true;
         }
         if( m_saucer ) {
-            pixel::f2::vec_t dxy = avg_fd * m_saucer_velo;
+            pixel::f2::vec_t dxy = used_dt * m_saucer_velo;
             if( (m_alien_velo.x > 0 && m_saucer->pos().x > saucer_rpos.x+1) ||
                 (m_alien_velo.x < 0 && m_saucer->pos().x < saucer_lpos.x-1) ) {
                 // exit
@@ -735,7 +738,7 @@ class alien_group_t : public gobject_t {
                 audio_saucer->stop();
             } else {
                 if( m_saucer->is_killed() ) {
-                    m_saucer->tick(avg_fd);
+                    m_saucer->tick(used_dt);
                 } else {
                     m_saucer->step(dxy);
                 }
@@ -743,7 +746,7 @@ class alien_group_t : public gobject_t {
         }
         if( m_killed.size() > 0 ) {
             for(auto it = m_killed.begin(); it != m_killed.end(); ) {
-                if( (*it)->tick(avg_fd) ) {
+                if( (*it)->tick(used_dt) ) {
                     ++it;
                 } else {
                     it = m_killed.erase(it);
@@ -751,7 +754,7 @@ class alien_group_t : public gobject_t {
             }
             // return true;
         } else {
-            m_saucer_delay_left -= avg_fd;
+            m_saucer_delay_left -= used_dt;
             if( m_saucer_delay_left <= 0 ) {
                 if( !m_saucer ) {
                     const uint8_t lr = next_rnd<uint8_t>(0, 1);
@@ -764,7 +767,7 @@ class alien_group_t : public gobject_t {
             }
         }
 
-        m_sound_delay_left -= avg_fd;
+        m_sound_delay_left -= used_dt;
         if( m_sound_delay_left <= 0 ) {
             m_sound_delay_left = get_alien_sound_delay(active_count());
             audio_sample = audio_aliens[sound_idx];
@@ -772,30 +775,35 @@ class alien_group_t : public gobject_t {
             audio_sample->play(1);
         }
         if( m_killed.empty() && !m_actives.empty() ) {
-            constexpr float lx_adjust = 1;
-            if( (m_alien_velo.x > 0 && m_box.tr.x > field_box.tr.x) ||
-                (m_alien_velo.x < 0 && m_box.bl.x < field_box.bl.x - lx_adjust) ) {
-                m_alien_turn = true;
-            }
-
-            if (m_current_idx >= m_actives.size()) {
-                m_current_idx = 0;
-                if (m_alien_turn) {
-                    m_alien_velo_horiz = m_alien_velo.x;
-                    m_alien_velo.x = 0;
-                    m_alien_velo.y = alien_vertical_px_down;
-                    m_alien_turn = false;
-                } else if (m_alien_velo.y < 0) {
-                    m_alien_velo_horiz *= -1;
-                    m_alien_velo.x = m_alien_velo_horiz;
-                    m_alien_velo.y = 0;
+            m_pixel_move_left += used_dt * alien_px_per_sec;
+            // fprintf(stderr, "XXX: px %f, ships %f, fd %f\n", m_pixel_move_left, m_pixel_move_left/alien_px_per_frame, used_dt);
+            while (m_pixel_move_left >= alien_px_per_frame) {
+                constexpr float lx_adjust = 1;
+                if( (m_alien_velo.x > 0 && m_box.tr.x > field_box.tr.x) ||
+                    (m_alien_velo.x < 0 && m_box.bl.x < field_box.bl.x - lx_adjust) ) {
+                    m_alien_turn = true;
                 }
-            }
-            const pixel::f2::vec_t dxy = { alien_velo_amp * avg_fd * m_alien_velo.x, m_alien_velo.y };
-            {
-                const alien_ref& a = m_actives[m_current_idx];
-                a->step(dxy);
-                ++m_current_idx;
+
+                if (m_current_idx >= m_actives.size()) {
+                    m_current_idx = 0;
+                    if (m_alien_turn) {
+                        m_alien_velo_horiz = m_alien_velo.x;
+                        m_alien_velo.x = 0;
+                        m_alien_velo.y = alien_vertical_px_down;
+                        m_alien_turn = false;
+                    } else if (m_alien_velo.y < 0) {
+                        m_alien_velo_horiz *= -1;
+                        m_alien_velo.x = m_alien_velo_horiz;
+                        m_alien_velo.y = 0;
+                    }
+                }
+                const pixel::f2::vec_t dxy = { alien_velo_amp * m_alien_velo.x, m_alien_velo.y };
+                {
+                    const alien_ref& a = m_actives[m_current_idx];
+                    a->step(dxy);
+                    ++m_current_idx;
+                }
+                m_pixel_move_left -= alien_px_per_frame;
             }
         }
         return true;
