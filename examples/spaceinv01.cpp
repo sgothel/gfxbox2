@@ -25,6 +25,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 #include <memory>
 #include <pixel/pixel3f.hpp>
@@ -111,9 +112,9 @@ constexpr static float base_velo_h = 1.0f*screen_fps; // 1 pixel per frame, half
 constexpr static float base_peng_velo = field_height / 1.0f; // approx 1s for field
 constexpr static int base_peng_inventory_max = 1;
 
-constexpr static int aliens_per_row = 11;
-constexpr static int aliens_rows = 5;
-constexpr static int aliens_total_default = aliens_rows * aliens_per_row;
+constexpr static uint32_t alien_columns = 11;
+constexpr static uint32_t alien_rows = 5;
+constexpr static uint32_t alien_total_default = alien_rows * alien_columns;
 constexpr static float alien_px_per_frame = 2.0f; // 1/60s
 constexpr static float alien_px_per_sec = alien_px_per_frame * screen_fps; // s
 constexpr static float alien_vertical_px_down = -8.0f;
@@ -169,7 +170,7 @@ static float get_alien_start_ypos(size_t current_level) noexcept {
 //
 //
 //
-static size_t aliens_total = aliens_total_default;
+static uint32_t alien_total = alien_total_default;
 static float alien_velo_amp = 1.0f;
 
 constexpr static int base_id = 1;
@@ -482,11 +483,11 @@ class bunker_t : public gobject_t {
 };
 std::vector<bunker_t> bunks;
 
-class alient_t : public gobject_t {
+class alien_t : public gobject_t {
   private:
     int m_value;
     pixel::animtex_t m_atex;
-    size_t m_xi, m_yi;
+    uint32_t m_xi, m_yi;
     pixel::f2::point_t m_bl;
     pixel::f2::vec_t m_dim;
     float m_killanim_d = 0;
@@ -508,13 +509,13 @@ class alient_t : public gobject_t {
 
   public:
 
-    alient_t(int value, size_t xi, size_t yi, const pixel::f2::point_t& bl, pixel::animtex_t atex_alien) noexcept
+    alien_t(int value, uint32_t xi, uint32_t yi, const pixel::f2::point_t& bl, pixel::animtex_t atex_alien) noexcept
     : m_value(value), m_atex(std::move(atex_alien)),
       m_xi(xi), m_yi(yi), m_bl( bl ), m_dim((float)m_atex.width(), (float)m_atex.height())
     { }
 
-    size_t xi() const noexcept { return m_xi; }
-    size_t yi() const noexcept { return m_yi; }
+    uint32_t xi() const noexcept { return m_xi; }
+    uint32_t yi() const noexcept { return m_yi; }
 
     /// Returns bottom-left position
     pixel::f2::point_t pos() const noexcept override { return m_bl; }
@@ -570,7 +571,7 @@ class alient_t : public gobject_t {
 
     pixel::animtex_t& atex() { return m_atex; }
 };
-typedef std::shared_ptr<alient_t> alien_ref;
+typedef std::shared_ptr<alien_t> alien_ref;
 
 class alien_group_t : public gobject_t {
   private:
@@ -585,9 +586,24 @@ class alien_group_t : public gobject_t {
     float m_saucer_delay_left;
     size_t m_current_idx = 0;
     bool m_pause = false;
+    std::array<bool, alien_total_default> m_array;
     std::vector<alien_ref> m_actives;
     std::vector<alien_ref> m_killed;
     alien_ref m_saucer = nullptr;
+
+    void clear() noexcept {
+        for(auto & a : m_array) {
+            a = false;
+        }
+        m_actives.clear();
+    }
+
+    bool& alien(uint32_t x, uint32_t y) noexcept {
+        return m_array[y*alien_columns+x];
+    }
+    const bool& alien(uint32_t x, uint32_t y) const noexcept {
+        return m_array[y*alien_columns+x];
+    }
 
   public:
     alien_group_t() = default;
@@ -595,6 +611,8 @@ class alien_group_t : public gobject_t {
     alien_group_t(alien_group_t&&)      = default;
     alien_group_t& operator=(const alien_group_t&) = default;
     alien_group_t& operator=(alien_group_t&&)      = default;
+
+    ~alien_group_t() noexcept override { clear(); }
 
     /// Returns bottom-left position
     pixel::f2::point_t pos() const noexcept override { return m_box.bl; }
@@ -612,43 +630,40 @@ class alien_group_t : public gobject_t {
     void reset() {
         const float cell_height = (float)tex_alien1[0]->height;
         const float cell_width = (float)tex_alien1[0]->width;
-        m_actives.clear();
-        m_actives.reserve(aliens_total);
         m_current_idx = 0;
         m_box.reset();
-        size_t xi=0, yi=0;
         pixel::f2::point_t bl = field_box.bl;
         bl.y = get_alien_start_ypos(level);
-        for(int y=0; y<2; ++y) { // bottom
-            xi = 0;
+        clear();
+        m_actives.reserve(alien_total_default);
+        uint32_t y=0;
+        for(; y<2; ++y) { // bottom
             bl.x = field_box.bl.x;
-            for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(10, xi, yi, bl, pixel::animtex_t("Alien1", m_sec_step_delay, tex_alien1)));
+            for(uint32_t x=0; x<alien_columns && m_actives.size()<alien_total; ++x) {
+                m_actives.push_back(std::make_shared<alien_t>(10, x, y, bl, pixel::animtex_t("Alien1", m_sec_step_delay, tex_alien1)));
+                alien(x, y) = true;
                 bl.x += cell_width * 1.5f;
             }
-            ++yi;
             bl.y += 2.0f * cell_height;
         }
-        for(int y=0; y<2; ++y) { // middle
-            xi = 0;
+        for(; y<2+2; ++y) { // middle
             bl.x = field_box.bl.x;
-            for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(20, xi, yi, bl, pixel::animtex_t("Alien2", m_sec_step_delay, tex_alien2)));
+            for(uint32_t x=0; x<alien_columns && m_actives.size()<alien_total; ++x) {
+                m_actives.push_back(std::make_shared<alien_t>(20, x, y, bl, pixel::animtex_t("Alien2", m_sec_step_delay, tex_alien2)));
+                alien(x, y) = true;
                 m_box.resize(m_actives[m_actives.size()-1]->box());
                 bl.x += cell_width * 1.5f;
             }
-            ++yi;
             bl.y += 2.0f * cell_height;
         }
-        for(int y=0; y<1; ++y) { // top
-            xi = 0;
+        for(; y<2+2+1; ++y) { // top
             bl.x = field_box.bl.x + 1.0f;
-            for(int x=0; x<aliens_per_row && m_actives.size()<aliens_total; ++x) {
-                m_actives.emplace_back(std::make_shared<alient_t>(30, xi, yi, bl, pixel::animtex_t("Alien3", m_sec_step_delay, tex_alien3)));
+            for(uint32_t x=0; x<alien_columns && m_actives.size()<alien_total; ++x) {
+                m_actives.push_back(std::make_shared<alien_t>(30, x, y, bl, pixel::animtex_t("Alien3", m_sec_step_delay, tex_alien3)));
+                alien(x, y) = true;
                 m_box.resize(m_actives[m_actives.size()-1]->box());
                 bl.x += cell_width * 1.5f;
             }
-            ++yi;
             bl.y += 2.0f * cell_height;
         }
         m_alien_velo = { alien_px_per_frame, 0 };
@@ -661,7 +676,7 @@ class alien_group_t : public gobject_t {
         m_saucer_delay_left = alien_saucer_period;
     }
 
-    size_t active_count() const noexcept { return m_actives.size(); }
+    constexpr size_t active_count() const noexcept { return m_actives.size(); }
 
     // return a random alien, bottom-most in its column
     alien_ref get_random_of_bottom() const noexcept {
@@ -671,15 +686,13 @@ class alien_group_t : public gobject_t {
         if( 1 == active_count() ) {
             return m_actives[0];
         }
-        const size_t max_count = std::min(size_t(aliens_per_row)*2, m_actives.size())-1;
         alien_ref res = nullptr;
         while (!res) {
-            const size_t i = next_rnd((size_t)0, max_count);
+            const uint32_t i = next_rnd<uint32_t>(0, active_count()-1);
             res = m_actives[ i ];
             if (i > 0) {
-                for (size_t j = i - 1; j > 0; --j) {
-                    alien_ref b = m_actives[j];
-                    if (b->xi() == res->xi()) {
+                for(uint32_t yi = res->yi(); yi-- > 0;) {
+                    if (alien(res->xi(), yi)) {
                         res = nullptr;
                         break;
                     }
@@ -704,6 +717,7 @@ class alien_group_t : public gobject_t {
                 }
                 a->notify_killed();
                 m_killed.push_back(a);
+                alien(a->xi(), a->yi()) = false;
                 it = m_actives.erase(it);
                 return a->value();
             }
@@ -758,7 +772,7 @@ class alien_group_t : public gobject_t {
             if( m_saucer_delay_left <= 0 ) {
                 if( !m_saucer ) {
                     const uint8_t lr = next_rnd<uint8_t>(0, 1);
-                    m_saucer = std::make_shared<alient_t>(90, 0, 0, lr ? saucer_rpos : saucer_lpos, pixel::animtex_t("Saucer", 1.0f, tex_saucer));
+                    m_saucer = std::make_shared<alien_t>(90, 0, 0, lr ? saucer_rpos : saucer_lpos, pixel::animtex_t("Saucer", 1.0f, tex_saucer));
                     m_saucer_velo = { saucer_velo.x * ( lr ? -1.0f : +1.0f), 0 };
                     audio_saucer->play(1);
                     // pixel::log_printf("XX saucer: lr %u, velo %s, bl %s\n", lr, m_saucer_velo.toString().c_str(), m_saucer->pos().toString().c_str());
@@ -1406,7 +1420,7 @@ int main(int argc, char *argv[])
                 level = std::max(1, atoi(argv[i+1]));
                 ++i;
             } else if( 0 == strcmp("-aliens", argv[i]) && i+1<argc) {
-                aliens_total = std::min(aliens_total_default, atoi(argv[i+1]));
+                alien_total = std::min<uint32_t>(alien_total_default, atoi(argv[i+1]));
                 ++i;
             } else if( 0 == strcmp("-alienva", argv[i]) && i+1<argc) {
                 alien_velo_amp = (float)atof(argv[i+1]);
@@ -1420,7 +1434,7 @@ int main(int argc, char *argv[])
         log_printf(elapsed_ms, "- invincible %d\n", invincible);
         log_printf(elapsed_ms, "- debug_gfx %d\n", debug_gfx);
         log_printf(elapsed_ms, "- level %d\n", level);
-        log_printf(elapsed_ms, "- aliens %zu\n", aliens_total);
+        log_printf(elapsed_ms, "- aliens %" PRIu32 "\n", alien_total);
         log_printf(elapsed_ms, "- alien velo amp %f\n", alien_velo_amp);
     }
     {
